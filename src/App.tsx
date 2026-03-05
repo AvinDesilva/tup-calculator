@@ -67,7 +67,6 @@ interface ScorecardState {
 }
 
 export default function App() {
-  const [apiKey] = useState(import.meta.env.VITE_FMP_API_KEY || "");
   const [ticker, setTicker] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -99,12 +98,11 @@ export default function App() {
 
   const doFetch = async () => {
     if (!ticker.trim()) { setError("Enter a ticker symbol."); return; }
-    if (!apiKey.trim()) { setError("Paste your FMP API key in the field above."); return; }
     setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setDivNote(""); setValuation({ lynchRatio: null, dcf: null, altmanZ: null, piotroski: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [] }); setShowScorecard(false); setHasSearched(true);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
     try {
-      const data = await lookupTicker(ticker.toUpperCase(), apiKey, log);
+      const data = await lookupTicker(ticker.toUpperCase(), log);
 
       setCompany(data.companyName);
       setMeta({ sector: data.sector, industry: data.industry });

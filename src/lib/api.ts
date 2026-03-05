@@ -1,4 +1,4 @@
-import { FMP, ADR_RATIO_TABLE, EXCHANGE_CCY, FALLBACK_FX } from "./constants.ts";
+import { ADR_RATIO_TABLE, EXCHANGE_CCY, FALLBACK_FX } from "./constants.ts";
 import { f, fB } from "./utils.ts";
 import type {
   TickerData,
@@ -10,11 +10,14 @@ import type {
 
 // ─── Low-level HTTP wrapper ───────────────────────────────────────────────────
 
-export async function fetchFMP<T = unknown>(endpoint: string, apiKey: string): Promise<T> {
-  const sep = endpoint.includes("?") ? "&" : "?";
-  const url = `${FMP}/${endpoint}${sep}apikey=${apiKey}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`FMP ${res.status}: ${res.statusText} — ${endpoint}`);
+export async function fetchFMP<T = unknown>(endpoint: string): Promise<T> {
+  const res = await fetch(`/api/fmp/${endpoint}`);
+  if (!res.ok) {
+    if (import.meta.env.DEV) console.error(`FMP proxy ${res.status}: ${endpoint}`);
+    if (res.status === 401) throw new Error("Invalid API key.");
+    if (res.status === 429) throw new Error("API rate limit reached. Try again later.");
+    throw new Error("Unable to fetch market data. Please try again.");
+  }
   return res.json() as T;
 }
 
@@ -25,56 +28,58 @@ export async function fetchFMP<T = unknown>(endpoint: string, apiKey: string): P
  */
 export async function lookupTicker(
   ticker: string,
-  apiKey: string,
   log: (msg: string) => void,
 ): Promise<TickerData> {
-  const t = ticker.toUpperCase();
+  const t = ticker.trim().toUpperCase();
+  if (!/^[A-Z0-9$.]{1,10}$/.test(t)) {
+    throw new Error("Invalid ticker symbol. Use letters, numbers, $ or . only (max 10 characters).");
+  }
 
   log(`Fetching data for ${t} from FMP endpoints...`);
 
   const [profile, quote, balanceSheet, income, growth, estimates, keyMetrics, divHistory, dcfData, earningsSurprises, cashFlows] = await Promise.all([
     // 1) Company Profile
-    fetchFMP<FMPProfile[]>(`profile?symbol=${t}`, apiKey).then(d => { log("  ✓ /profile — company info, market cap"); return d; }),
+    fetchFMP<FMPProfile[]>(`profile?symbol=${t}`).then(d => { log("  ✓ /profile — company info, market cap"); return d; }),
 
     // 2) Real-time Quote
-    fetchFMP<FMPQuote[]>(`quote?symbol=${t}`, apiKey).then(d => { log("  ✓ /quote — price, TTM EPS, shares, 200-SMA, dividendYield"); return d; }),
+    fetchFMP<FMPQuote[]>(`quote?symbol=${t}`).then(d => { log("  ✓ /quote — price, TTM EPS, shares, 200-SMA, dividendYield"); return d; }),
 
     // 3) Balance Sheet (2 years)
-    fetchFMP<FMPBalanceSheet[]>(`balance-sheet-statement?symbol=${t}&limit=2`, apiKey).then(d => { log("  ✓ /balance-sheet-statement — debt, cash (2 yrs)"); return d; }),
+    fetchFMP<FMPBalanceSheet[]>(`balance-sheet-statement?symbol=${t}&limit=2`).then(d => { log("  ✓ /balance-sheet-statement — debt, cash (2 yrs)"); return d; }),
 
     // 4) Income Statement (10 years)
-    fetchFMP<FMPIncomeStatement[]>(`income-statement?symbol=${t}&limit=10`, apiKey).then(d => { log("  ✓ /income-statement — revenue, net income (10 yrs)"); return d; }),
+    fetchFMP<FMPIncomeStatement[]>(`income-statement?symbol=${t}&limit=10`).then(d => { log("  ✓ /income-statement — revenue, net income (10 yrs)"); return d; }),
 
     // 5) Financial Growth (10 years)
-    fetchFMP<FMPFinancialGrowth[]>(`financial-growth?symbol=${t}&limit=10`, apiKey).then(d => { log("  ✓ /financial-growth — EPS growth history (10 yrs)"); return d; }),
+    fetchFMP<FMPFinancialGrowth[]>(`financial-growth?symbol=${t}&limit=10`).then(d => { log("  ✓ /financial-growth — EPS growth history (10 yrs)"); return d; }),
 
     // 6) Analyst Estimates
-    fetchFMP<FMPEstimate[]>(`analyst-estimates?symbol=${t}&period=annual&limit=5`, apiKey)
+    fetchFMP<FMPEstimate[]>(`analyst-estimates?symbol=${t}&period=annual&limit=5`)
       .then(d => { log("  ✓ /analyst-estimates — forward EPS & revenue est."); return d; })
       .catch(() => { log("  ⚠ /analyst-estimates — not available (free plan)"); return [] as FMPEstimate[]; }),
 
     // 7) Key Metrics TTM
-    fetchFMP<FMPKeyMetrics[]>(`key-metrics-ttm?symbol=${t}`, apiKey)
+    fetchFMP<FMPKeyMetrics[]>(`key-metrics-ttm?symbol=${t}`)
       .then(d => { log("  ✓ /key-metrics-ttm — dividend yield TTM fallback"); return d; })
       .catch(() => { log("  ⚠ /key-metrics-ttm — not available"); return [] as FMPKeyMetrics[]; }),
 
     // 8) Dividend history
-    fetchFMP<FMPDividend[] | FMPDividendHistory>(`dividends?symbol=${t}&limit=8`, apiKey)
+    fetchFMP<FMPDividend[] | FMPDividendHistory>(`dividends?symbol=${t}&limit=8`)
       .then(d => { log("  ✓ /dividends — dividend history for forward yield"); return d; })
       .catch(() => { log("  ⚠ /dividends — not available"); return [] as FMPDividend[]; }),
 
     // 9) Discounted Cash Flow
-    fetchFMP<FMPDCF[]>(`discounted-cash-flow?symbol=${t}`, apiKey)
+    fetchFMP<FMPDCF[]>(`discounted-cash-flow?symbol=${t}`)
       .then(d => { log("  ✓ /discounted-cash-flow — DCF intrinsic value"); return d; })
       .catch(() => { log("  ⚠ /discounted-cash-flow — not available"); return [] as FMPDCF[]; }),
 
     // 10) Earnings Surprises
-    fetchFMP<FMPEarningSurprise[]>(`earnings-surprises?symbol=${t}`, apiKey)
+    fetchFMP<FMPEarningSurprise[]>(`earnings-surprises?symbol=${t}`)
       .then(d => { log("  ✓ /earnings-surprises — analyst beat/miss history"); return d; })
       .catch(() => { log("  ⚠ /earnings-surprises — not available"); return [] as FMPEarningSurprise[]; }),
 
     // 11) Cash Flow Statement (10 years)
-    fetchFMP<FMPCashFlow[]>(`cash-flow-statement?symbol=${t}&limit=10`, apiKey)
+    fetchFMP<FMPCashFlow[]>(`cash-flow-statement?symbol=${t}&limit=10`)
       .then(d => { log("  ✓ /cash-flow-statement — operating/investing/financing flows"); return d; })
       .catch(() => { log("  ⚠ /cash-flow-statement — not available"); return [] as FMPCashFlow[]; }),
   ]);
@@ -92,7 +97,7 @@ export async function lookupTicker(
   const priceCurrency   = EXCHANGE_CCY[exchange] || p.currency || "USD";
   const financialsCurrency = inc[0]?.reportingCurrency || p.currency || "USD";
 
-  console.log(`[TUP FX] ticker=${t} exchange=${exchange} priceCurrency=${priceCurrency} financialsCurrency=${financialsCurrency}`);
+  if (import.meta.env.DEV) console.log(`[TUP FX] ticker=${t} exchange=${exchange} priceCurrency=${priceCurrency} financialsCurrency=${financialsCurrency}`);
 
   let fxRate = 1;
   let isConverted = false;
@@ -101,18 +106,18 @@ export async function lookupTicker(
   if (priceCurrency !== financialsCurrency) {
     const fxSymbol = `${financialsCurrency}${priceCurrency}`;
     try {
-      let fxData = await fetchFMP<Array<{ price?: number; bid?: number; ask?: number }>>(`fx?symbol=${fxSymbol}`, apiKey).catch(() => []);
+      let fxData = await fetchFMP<Array<{ price?: number; bid?: number; ask?: number }>>(`fx?symbol=${fxSymbol}`).catch(() => []);
       let rate   = fxData?.[0]?.price ?? fxData?.[0]?.bid ?? fxData?.[0]?.ask;
       if (!(rate != null && rate > 0)) {
         log(`  … /fx returned no rate, trying /quote/${fxSymbol}`);
-        fxData = await fetchFMP<Array<{ price?: number; bid?: number }>>(`quote/${fxSymbol}`, apiKey).catch(() => []);
+        fxData = await fetchFMP<Array<{ price?: number; bid?: number }>>(`quote/${fxSymbol}`).catch(() => []);
         rate   = fxData?.[0]?.price ?? fxData?.[0]?.bid;
       }
       if (!(rate != null && rate > 0) && FALLBACK_FX[fxSymbol]) {
         rate = FALLBACK_FX[fxSymbol];
         log(`  ⚠ FX API returned no rate — using hardcoded ${fxSymbol} fallback: ${rate}`);
       }
-      console.log(`[TUP FX] ${fxSymbol} rate=${rate} raw=`, fxData?.[0]);
+      if (import.meta.env.DEV) console.log(`[TUP FX] ${fxSymbol} rate=${rate} raw=`, fxData?.[0]);
       if (rate != null && rate > 0) {
         fxRate       = rate;
         isConverted  = true;
@@ -122,7 +127,7 @@ export async function lookupTicker(
         log(`  ⚠ FX rate unavailable for ${fxSymbol} — proceeding with unconverted values`);
       }
     } catch (e) {
-      console.error(`[TUP FX] fetch error for ${fxSymbol}:`, e);
+      if (import.meta.env.DEV) console.error(`[TUP FX] fetch error for ${fxSymbol}:`, e);
       const fallbackRate = FALLBACK_FX[`${financialsCurrency}${priceCurrency}`];
       if (fallbackRate) {
         fxRate       = fallbackRate;
@@ -169,7 +174,7 @@ export async function lookupTicker(
   const rawTTMEPS    = rawQuoteEPS || rawIncomeEPS;
   const ttmEPS       = (rawTTMEPS / adrRatio) * fxRate;
 
-  console.log(
+  if (import.meta.env.DEV) console.log(
     `[TUP EPS] ${t} | rawEPS=${rawTTMEPS.toFixed(4)} ${financialsCurrency}` +
     ` | ÷${adrRatio} → adrAdj=${(rawTTMEPS / adrRatio).toFixed(4)}` +
     ` | ×${fxRate.toFixed(6)} → finalEPS=${ttmEPS.toFixed(4)} ${priceCurrency}`
