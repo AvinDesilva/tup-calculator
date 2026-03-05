@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-KEY="/Users/avindesilva/.ssh/tup-calculator-key.pem"
-SERVER="ubuntu@98.89.216.65"
+KEY="${TUP_SSH_KEY:-$HOME/.ssh/tup-calculator-key.pem}"
+SERVER="${TUP_SERVER:-ubuntu@98.89.216.65}"
 DEST="/var/www/tupcalculator.org/"
 SERVER_DEST="/opt/tup-proxy/"
 
