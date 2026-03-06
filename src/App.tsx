@@ -120,6 +120,7 @@ export default function App() {
   const [mode, setMode] = useState<Mode>("standard");
   const [noiseFilter, setNoiseFilter] = useState(false);
   const [showMethodology, setShowMethodology] = useState(false);
+  const [growthUncapped, setGrowthUncapped] = useState(false);
   const [company, setCompany] = useState("");
   const [meta, setMeta] = useState<{ sector: string; industry: string }>({ sector: "", industry: "" });
   const [isConverted, setIsConverted] = useState(false);
@@ -139,11 +140,29 @@ export default function App() {
   });
 
   const set = useCallback(<K extends keyof InputState>(k: K, v: InputState[K]) => setInp(p => ({ ...p, [k]: v })), []);
-  const result: TUPResult | null = useMemo(() => calcTUP(inp, mode), [inp, mode]);
+
+  const GROWTH_CAP = 30;
+  const rawBlended = mode === "standard"
+    ? (inp.historicalGrowth + inp.analystGrowth) / 2
+    : (inp.inceptionGrowth + inp.analystGrowth) / 2;
+  const isOverCap = rawBlended > GROWTH_CAP;
+  const growthScale = isOverCap && !growthUncapped ? GROWTH_CAP / rawBlended : 1;
+
+  const effectiveInp = useMemo(() => {
+    if (growthScale === 1) return inp;
+    return {
+      ...inp,
+      historicalGrowth: inp.historicalGrowth * growthScale,
+      analystGrowth: inp.analystGrowth * growthScale,
+      inceptionGrowth: inp.inceptionGrowth * growthScale,
+    };
+  }, [inp, growthScale]);
+
+  const result: TUPResult | null = useMemo(() => calcTUP(effectiveInp, mode), [effectiveInp, mode]);
 
   const doFetch = async () => {
     if (!ticker.trim()) { setError("Enter a ticker symbol."); return; }
-    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setDivNote(""); setValuation({ lynchRatio: null, dcf: null, altmanZ: null, piotroski: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [] }); setShowScorecard(false); setHasSearched(true);
+    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setDivNote(""); setValuation({ lynchRatio: null, dcf: null, altmanZ: null, piotroski: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [] }); setShowScorecard(false); setHasSearched(true); setGrowthUncapped(false);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
     try {
@@ -505,7 +524,6 @@ export default function App() {
               {(() => {
                 const blended = mode === "standard" ? (inp.historicalGrowth + inp.analystGrowth) / 2 : (inp.inceptionGrowth + inp.analystGrowth) / 2;
                 const divYield = inp.dividendYield || 0;
-                const total = blended + divYield;
                 const divIsAccelerator = divYield > 3;
                 return (
                   <>
@@ -537,11 +555,52 @@ export default function App() {
                         </span>
                       ) : undefined}
                     />
-                    <DerivedStat label="Blended Growth Rate" value={`${f(blended)}%`} accent="#10d97e" />
+                    {isOverCap && !growthUncapped ? (
+                      <>
+                        <DerivedStat label="Blended Growth Rate" value={`${f(GROWTH_CAP)}% (capped from ${f(blended)}%)`} accent="#f5a020" />
+                        <div style={{ marginTop: "8px", padding: "8px 12px", borderLeft: "2px solid #f5a020", background: "rgba(245,160,32,0.04)", display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                          <span style={{ color: "#f5a020", flexShrink: 0, fontSize: "11px" }}>⚠</span>
+                          <div>
+                            <span style={{ fontSize: "10px", color: "#f5a020", lineHeight: 1.6 }}>
+                              Capped at {GROWTH_CAP}% — sustaining {f(blended)}% growth for 10+ years is unrealistic for most companies.
+                            </span>
+                            <button
+                              onClick={() => setGrowthUncapped(true)}
+                              style={{
+                                display: "block", marginTop: "6px", background: "none", border: "1px solid rgba(245,160,32,0.4)",
+                                color: "#f5a020", fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase",
+                                padding: "3px 8px", cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif",
+                              }}
+                            >
+                              Use Original: {f(blended)}%
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <DerivedStat label="Blended Growth Rate" value={`${f(blended)}%`} accent="#10d97e" />
+                        {isOverCap && growthUncapped && (
+                          <div style={{ marginTop: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "9px", color: "#f5a020", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Uncapped</span>
+                            <button
+                              onClick={() => setGrowthUncapped(false)}
+                              style={{
+                                background: "none", border: "1px solid rgba(255,255,255,0.12)",
+                                color: "#888888", fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase",
+                                padding: "2px 7px", cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif",
+                              }}
+                            >
+                              Re-apply Cap
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
                     {divYield > 0 && (
                       <DerivedStat
                         label="Total TUP Growth Rate"
-                        value={`(${f(blended)}% + ${f(divYield)}%) = ${f(total)}%`}
+                        value={`(${f(isOverCap && !growthUncapped ? GROWTH_CAP : blended)}% + ${f(divYield)}%) = ${f((isOverCap && !growthUncapped ? GROWTH_CAP : blended) + divYield)}%`}
                         accent="#C4A06E"
                       />
                     )}
