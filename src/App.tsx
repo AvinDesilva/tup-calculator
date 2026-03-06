@@ -103,7 +103,6 @@ interface ValuationState {
   lynchRatio: number | null;
   dcf: number | null;
   altmanZ: number | null;
-  piotroski: number | null;
 }
 
 interface ScorecardState {
@@ -117,7 +116,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fetchLog, setFetchLog] = useState<string[]>([]);
-  const [mode, setMode] = useState<Mode>("standard");
+  const mode: Mode = "standard";
   const [noiseFilter, setNoiseFilter] = useState(false);
   const [showMethodology, setShowMethodology] = useState(false);
   const [growthUncapped, setGrowthUncapped] = useState(false);
@@ -127,7 +126,7 @@ export default function App() {
   const [currencyNote, setCurrencyNote] = useState("");
   const [currencyMismatchWarning, setCurrencyMismatchWarning] = useState("");
   const [divNote, setDivNote] = useState("");
-  const [valuation, setValuation] = useState<ValuationState>({ lynchRatio: null, dcf: null, altmanZ: null, piotroski: null });
+  const [valuation, setValuation] = useState<ValuationState>({ lynchRatio: null, dcf: null, altmanZ: null });
   const [scorecard, setScorecard] = useState<ScorecardState>({ earnings: [], cashFlows: [], incomeHistory: [] });
   const [showScorecard, setShowScorecard] = useState(true);
   const [hasSearched, setHasSearched] = useState(false);
@@ -160,23 +159,22 @@ export default function App() {
 
   const result: TUPResult | null = useMemo(() => calcTUP(effectiveInp, mode), [effectiveInp, mode]);
 
-  // Reverse-engineer the stock price at which TUP = strong buy threshold
+  // Reverse-engineer the stock price at which TUP ≤ 7 years (strong buy)
   const strongBuyPrice = useMemo(() => {
     if (!result || result.epsBase <= 0 || result.gr <= 0) return null;
-    const maxYr = Math.floor(result.threshold * 0.6);
+    // Reuse epsBase and gr already computed by calcTUP — no extra API calls
     let cum = 0, eps = result.epsBase;
-    for (let y = 1; y <= maxYr; y++) {
+    for (let y = 1; y <= 7; y++) {
       if (y > 1) eps *= (1 + result.gr);
-      if (y >= result.startYr) cum += eps;
+      cum += eps;
     }
-    // cum = max adjPrice for strong buy; adjPrice = price + (debt-cash)/shares
     const price = cum - (inp.debt - inp.cash) / inp.shares;
     return price > 0 ? price : null;
   }, [result, inp.debt, inp.cash, inp.shares]);
 
   const doFetch = async () => {
     if (!ticker.trim()) { setError("Enter a ticker symbol."); return; }
-    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setDivNote(""); setValuation({ lynchRatio: null, dcf: null, altmanZ: null, piotroski: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [] }); setShowScorecard(false); setHasSearched(true); setGrowthUncapped(false);
+    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setDivNote(""); setValuation({ lynchRatio: null, dcf: null, altmanZ: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [] }); setShowScorecard(false); setHasSearched(true); setGrowthUncapped(false);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
     try {
@@ -188,7 +186,7 @@ export default function App() {
       setCurrencyNote(data.currencyNote || "");
       setCurrencyMismatchWarning(data.currencyMismatchWarning || "");
       setDivNote(data.divNote || "");
-      setValuation({ lynchRatio: data.peterLynchRatio, dcf: data.dcfValue, altmanZ: data.altmanZ, piotroski: data.piotroski });
+      setValuation({ lynchRatio: data.peterLynchRatio, dcf: data.dcfValue, altmanZ: data.altmanZ });
       setScorecard({ earnings: data.earningsSurprises, cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory });
       setInp({
         marketCap: data.marketCap, debt: data.debt, cash: data.cash, shares: data.shares,
@@ -317,26 +315,6 @@ export default function App() {
             <button onClick={() => setNoiseFilter(!noiseFilter)} style={toggleBtn(noiseFilter)}>
               {noiseFilter ? "◉" : "○"} Noise Filter
             </button>
-            <div style={{ display: "flex", border: `1px solid ${C.borderWeak}` }}>
-              {(["standard", "preprofit"] as Mode[]).map(m => (
-                <button key={m} onClick={() => setMode(m)} style={{
-                  padding: "5px 12px",
-                  fontSize: "9px",
-                  fontWeight: 700,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  background: mode === m ? C.accent : "transparent",
-                  color: mode === m ? "#080808" : C.text2,
-                  border: "none",
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                  fontFamily: C.body,
-                  borderLeft: m === "preprofit" ? `1px solid ${C.borderWeak}` : "none",
-                }}>
-                  {m === "standard" ? "Standard" : "Pre-Profit"}
-                </button>
-              ))}
-            </div>
           </div>
         </header>
 
@@ -515,44 +493,26 @@ export default function App() {
 
             {/* 02 Earnings */}
             <div style={{ marginBottom: "32px" }}>
-              <SectionLabel num="02" title={mode === "standard" ? "Earnings" : "Revenue-Based Earnings"} />
-              {mode === "standard" ? (
-                <>
-                  <DataRow label="TTM EPS"            value={company ? `$${f(inp.ttmEPS)}` : "—"} />
-                  <DataRow label="Forward EPS (est.)" value={company ? `$${f(inp.forwardEPS)}` : "—"} />
-                  {company && <DerivedStat label="Blended EPS = Avg(TTM, Forward)" value={`$${f((inp.ttmEPS + inp.forwardEPS) / 2)}`} />}
-                </>
-              ) : (
-                <>
-                  <DataRow label="Revenue / Share"   value={company ? `$${f(inp.revenuePerShare)}` : "—"} />
-                  <DataRow label="Target Net Margin" value={company ? `${f(inp.targetMargin)}%` : "—"} />
-                  <DataRow label="Breakeven Year"    value={company ? inp.breakEvenYear : "—"} />
-                  {company && <DerivedStat label="Implied EPS = Rev/Share × Margin" value={`$${f(inp.revenuePerShare * (inp.targetMargin / 100))}`} accent="#f5a020" />}
-                </>
-              )}
+              <SectionLabel num="02" title="Earnings" />
+              <DataRow label="TTM EPS"            value={company ? `$${f(inp.ttmEPS)}` : "—"} />
+              <DataRow label="Forward EPS (est.)" value={company ? `$${f(inp.forwardEPS)}` : "—"} />
+              {company && <DerivedStat label="Blended EPS = Avg(TTM, Forward)" value={`$${f((inp.ttmEPS + inp.forwardEPS) / 2)}`} />}
             </div>
 
             {/* 03 Growth */}
             <div style={{ marginBottom: "32px" }}>
               <SectionLabel num="03" title="Growth Assumptions" />
               {(() => {
-                const blended = mode === "standard" ? (inp.historicalGrowth + inp.analystGrowth) / 2 : (inp.inceptionGrowth + inp.analystGrowth) / 2;
+                const blended = (inp.historicalGrowth + inp.analystGrowth) / 2;
                 const divYield = inp.dividendYield || 0;
                 const divIsAccelerator = divYield > 3;
                 return (
                   <>
-                    {mode === "standard"
-                      ? <StepperRow
-                          label="Historical EPS Growth (avg 10yr)"
-                          value={inp.historicalGrowth}
-                          onStep={d => set("historicalGrowth", Math.max(0, inp.historicalGrowth + d))}
-                        />
-                      : <StepperRow
-                          label="Inception Revenue CAGR"
-                          value={inp.inceptionGrowth}
-                          onStep={d => set("inceptionGrowth", Math.max(0, inp.inceptionGrowth + d))}
-                        />
-                    }
+                    <StepperRow
+                      label="Historical EPS Growth (avg 10yr)"
+                      value={inp.historicalGrowth}
+                      onStep={d => set("historicalGrowth", Math.max(0, inp.historicalGrowth + d))}
+                    />
                     <StepperRow
                       label="Analyst Forward Growth (2yr)"
                       value={inp.analystGrowth}
@@ -661,8 +621,7 @@ export default function App() {
           <div className="rsp-right-top" style={{ paddingLeft: "40px", paddingTop: "28px", animation: "fadeInUp 0.5s 0.2s ease both" }}>
 
             <VerdictCard result={result} mode={mode} noiseFilter={noiseFilter} onGrowthStep={(d: number) => {
-              if (mode === "standard") set("historicalGrowth", Math.max(0, inp.historicalGrowth + d));
-              else set("inceptionGrowth", Math.max(0, inp.inceptionGrowth + d));
+              set("historicalGrowth", Math.max(0, inp.historicalGrowth + d));
               set("analystGrowth", Math.max(0, inp.analystGrowth + d));
             }} />
 
@@ -672,7 +631,6 @@ export default function App() {
               dcf={valuation.dcf}
               currentPrice={inp.currentPrice}
               altmanZ={valuation.altmanZ}
-              piotroski={valuation.piotroski}
             />
 
             {company && (scorecard.earnings.length > 0 || scorecard.cashFlows.length > 0) && (
@@ -789,25 +747,16 @@ export default function App() {
             <div style={{ marginTop: "20px", paddingTop: "16px", borderTop: `1px solid ${C.borderWeak}` }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
                 <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3 }}>
-                  {mode === "standard" ? "Standard TUP" : "Pre-Profit TUP-P"} — How It Works
+                  Standard TUP — How It Works
                 </div>
-                {mode === "standard" && (
-                  <button onClick={() => { setShowMethodology(true); window.scrollTo(0, 0); }} style={{
-                    background: "none", border: "none", padding: 0, cursor: "pointer",
-                    fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase",
-                    color: C.accent, fontFamily: C.body, flexShrink: 0,
-                  }}>
-                    Read Methodology →
-                  </button>
-                )}
+                <button onClick={() => { setShowMethodology(true); window.scrollTo(0, 0); }} style={{
+                  background: "none", border: "none", padding: 0, cursor: "pointer",
+                  fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase",
+                  color: C.accent, fontFamily: C.body, flexShrink: 0,
+                }}>
+                  Read Methodology →
+                </button>
               </div>
-              {mode === "preprofit" && (
-                <p style={{ fontSize: "11px", color: C.text2, lineHeight: 1.8, margin: "12px 0 0" }}>
-                  For high-growth pre-profit companies. Uses revenue/share × target margin as implied EPS, starts
-                  summing from the breakeven year, blends inception + analyst growth. Stricter threshold:{" "}
-                  <strong style={{ color: C.text1 }}>8 years</strong>.
-                </p>
-              )}
             </div>
 
           </div>

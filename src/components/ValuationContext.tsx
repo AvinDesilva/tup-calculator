@@ -4,7 +4,6 @@ interface ValuationContextProps {
   dcf: number | null;
   currentPrice: number;
   altmanZ: number | null;
-  piotroski: number | null;
 }
 
 interface PanelData {
@@ -16,15 +15,14 @@ interface PanelData {
   sub: string;
 }
 
-export function ValuationContext({ strongBuyPrice, lynchRatio, dcf, currentPrice, altmanZ, piotroski }: ValuationContextProps) {
+export function ValuationContext({ strongBuyPrice, lynchRatio, dcf, currentPrice, altmanZ }: ValuationContextProps) {
   const mono = "'JetBrains Mono', monospace";
 
   const hasStrongBuy = strongBuyPrice != null && strongBuyPrice > 0 && currentPrice > 0;
   const hasLynch     = lynchRatio != null && isFinite(lynchRatio);
   const hasDCF       = dcf != null && dcf > 0 && currentPrice > 0;
   const hasAltman    = altmanZ != null && isFinite(altmanZ);
-  const hasPiotroski = piotroski != null && isFinite(piotroski);
-  if (!hasStrongBuy && !hasLynch && !hasDCF && !hasAltman && !hasPiotroski) return null;
+  if (!hasStrongBuy && !hasLynch && !hasDCF && !hasAltman) return null;
 
   // Lynch PEG
   const lynchIcon  = (lynchRatio as number) < 1 ? "✓" : (lynchRatio as number) <= 2 ? "■" : "!";
@@ -45,14 +43,6 @@ export function ValuationContext({ strongBuyPrice, lynchRatio, dcf, currentPrice
     : "#888";
   const altmanLabel = hasAltman
     ? ((altmanZ as number) > 2.99 ? "Safe Zone" : (altmanZ as number) >= 1.81 ? "Grey Zone" : "Distress Zone")
-    : "";
-
-  // Piotroski zones
-  const pioColor = hasPiotroski
-    ? ((piotroski as number) >= 7 ? "#10d97e" : (piotroski as number) >= 4 ? "#f5a020" : "#FF4D00")
-    : "#888";
-  const pioLabel = hasPiotroski
-    ? ((piotroski as number) >= 7 ? "Strong fundamentals" : (piotroski as number) >= 4 ? "Neutral" : "Weak fundamentals")
     : "";
 
   // Strong Buy target
@@ -96,14 +86,6 @@ export function ValuationContext({ strongBuyPrice, lynchRatio, dcf, currentPrice
       icon: null,
       color: altmanColor,
       sub: altmanLabel,
-    },
-    hasPiotroski && {
-      key: "piotroski",
-      title: "Piotroski F-Score",
-      value: `${piotroski}/9`,
-      icon: null,
-      color: pioColor,
-      sub: pioLabel,
     },
   ].filter((p): p is PanelData => Boolean(p));
 
