@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import type React from "react";
 
 import { calcTUP } from "./lib/calcTUP.ts";
@@ -14,7 +14,53 @@ import { Table } from "./components/Table.tsx";
 import { MethodologyPage } from "./components/MethodologyPage.tsx";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// STEPPER ROW — ▼ value ▲ for editable numeric fields
+// HOLD-TO-REPEAT HOOK
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function useHoldRepeat(callback: () => void, delay = 400, interval = 80) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const iv    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cbRef = useRef(callback);
+  cbRef.current = callback;
+
+  const stop = useCallback(() => {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+    if (iv.current)    { clearInterval(iv.current);   iv.current = null; }
+  }, []);
+
+  const start = useCallback(() => {
+    cbRef.current();
+    timer.current = setTimeout(() => {
+      iv.current = setInterval(() => cbRef.current(), interval);
+    }, delay);
+  }, [delay, interval]);
+
+  return { onPointerDown: start, onPointerUp: stop, onPointerLeave: stop };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HOLD BUTTON — single arrow with hold-to-repeat
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function HoldButton({ onStep, children, style }: {
+  onStep: () => void;
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+}) {
+  const hold = useHoldRepeat(onStep);
+  return (
+    <button
+      {...hold}
+      onClick={e => e.preventDefault()}
+      style={style}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STEPPER ROW — ▼ value ▲ for editable numeric fields (hold-to-repeat)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function StepperRow({ label, value, onStep, badge, stepSize = 1, suffix = "%" }: {
@@ -39,11 +85,11 @@ function StepperRow({ label, value, onStep, badge, stepSize = 1, suffix = "%" }:
         {badge}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-        <button onClick={() => onStep(-stepSize)} style={btnStyle}>▼</button>
+        <HoldButton onStep={() => onStep(-stepSize)} style={btnStyle}>▼</HoldButton>
         <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", fontWeight: 600, color: "#00BFA5", minWidth: "52px", textAlign: "center" }}>
           {value.toFixed(1)}{suffix}
         </span>
-        <button onClick={() => onStep(stepSize)} style={btnStyle}>▲</button>
+        <HoldButton onStep={() => onStep(stepSize)} style={btnStyle}>▲</HoldButton>
       </div>
     </div>
   );
@@ -73,7 +119,6 @@ export default function App() {
   const [fetchLog, setFetchLog] = useState<string[]>([]);
   const [mode, setMode] = useState<Mode>("standard");
   const [noiseFilter, setNoiseFilter] = useState(false);
-  const [editingRate, setEditingRate] = useState(false);
   const [showMethodology, setShowMethodology] = useState(false);
   const [company, setCompany] = useState("");
   const [meta, setMeta] = useState<{ sector: string; industry: string }>({ sector: "", industry: "" });
@@ -462,79 +507,43 @@ export default function App() {
                 const divYield = inp.dividendYield || 0;
                 const total = blended + divYield;
                 const divIsAccelerator = divYield > 3;
-                if (editingRate) {
-                  return (
-                    <>
-                      {mode === "standard"
-                        ? <StepperRow
-                            label="Historical EPS Growth (avg 10yr)"
-                            value={inp.historicalGrowth}
-                            onStep={d => set("historicalGrowth", Math.max(0, inp.historicalGrowth + d))}
-                          />
-                        : <StepperRow
-                            label="Inception Revenue CAGR"
-                            value={inp.inceptionGrowth}
-                            onStep={d => set("inceptionGrowth", Math.max(0, inp.inceptionGrowth + d))}
-                          />
-                      }
-                      <StepperRow
-                        label="Analyst Forward Growth (2yr)"
-                        value={inp.analystGrowth}
-                        onStep={d => set("analystGrowth", Math.max(0, inp.analystGrowth + d))}
-                      />
-                      <StepperRow
-                        label="Dividend Yield"
-                        value={divYield}
-                        onStep={d => set("dividendYield", Math.max(0, divYield + d))}
-                        stepSize={0.1}
-                        badge={divIsAccelerator ? (
-                          <span style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#10d97e", border: "1px solid rgba(16,217,126,0.3)", padding: "1px 5px" }}>
-                            ★ Accelerator
-                          </span>
-                        ) : undefined}
-                      />
-                      <DerivedStat label="Blended Growth Rate" value={`${f(blended)}%`} accent="#10d97e" />
-                      {divYield > 0 && (
-                        <DerivedStat
-                          label="Total TUP Growth Rate"
-                          value={`(${f(blended)}% + ${f(divYield)}%) = ${f(total)}%`}
-                          accent="#C4A06E"
-                        />
-                      )}
-                    </>
-                  );
-                }
                 return (
                   <>
                     {mode === "standard"
-                      ? <DataRow label="Historical EPS Growth (avg 10yr)" value={company ? `${f(inp.historicalGrowth)}%` : "—"} />
-                      : <DataRow label="Inception Revenue CAGR"          value={company ? `${f(inp.inceptionGrowth)}%` : "—"} />
+                      ? <StepperRow
+                          label="Historical EPS Growth (avg 10yr)"
+                          value={inp.historicalGrowth}
+                          onStep={d => set("historicalGrowth", Math.max(0, inp.historicalGrowth + d))}
+                        />
+                      : <StepperRow
+                          label="Inception Revenue CAGR"
+                          value={inp.inceptionGrowth}
+                          onStep={d => set("inceptionGrowth", Math.max(0, inp.inceptionGrowth + d))}
+                        />
                     }
-                    <DataRow label="Analyst Forward Growth (2yr)" value={company ? `${f(inp.analystGrowth)}%` : "—"} />
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888" }}>Dividend Yield</span>
-                        {company && divIsAccelerator && (
-                          <span style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#10d97e", border: "1px solid rgba(16,217,126,0.3)", padding: "1px 5px" }}>
-                            ★ Accelerator
-                          </span>
-                        )}
-                      </div>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", fontWeight: 600, color: company && divIsAccelerator ? "#10d97e" : "#e8e4dc" }}>
-                        {company ? `${f(divYield)}%` : "—"}
-                      </span>
-                    </div>
-                    {company && (
-                      <>
-                        <DerivedStat label="Blended Growth Rate" value={`${f(blended)}%`} accent="#10d97e" />
-                        {divYield > 0 && (
-                          <DerivedStat
-                            label="Total TUP Growth Rate"
-                            value={`(${f(blended)}% + ${f(divYield)}%) = ${f(total)}%`}
-                            accent="#C4A06E"
-                          />
-                        )}
-                      </>
+                    <StepperRow
+                      label="Analyst Forward Growth (2yr)"
+                      value={inp.analystGrowth}
+                      onStep={d => set("analystGrowth", Math.max(0, inp.analystGrowth + d))}
+                    />
+                    <StepperRow
+                      label="Dividend Yield"
+                      value={divYield}
+                      onStep={d => set("dividendYield", Math.max(0, divYield + d))}
+                      stepSize={0.1}
+                      badge={divIsAccelerator ? (
+                        <span style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#10d97e", border: "1px solid rgba(16,217,126,0.3)", padding: "1px 5px" }}>
+                          ★ Accelerator
+                        </span>
+                      ) : undefined}
+                    />
+                    <DerivedStat label="Blended Growth Rate" value={`${f(blended)}%`} accent="#10d97e" />
+                    {divYield > 0 && (
+                      <DerivedStat
+                        label="Total TUP Growth Rate"
+                        value={`(${f(blended)}% + ${f(divYield)}%) = ${f(total)}%`}
+                        accent="#C4A06E"
+                      />
                     )}
                   </>
                 );
@@ -578,7 +587,11 @@ export default function App() {
           {/* ── RIGHT COLUMN TOP: Verdict + Valuation + Scorecard ─────────── */}
           <div className="rsp-right-top" style={{ paddingLeft: "40px", paddingTop: "28px", animation: "fadeInUp 0.5s 0.2s ease both" }}>
 
-            <VerdictCard result={result} mode={mode} noiseFilter={noiseFilter} editingRate={editingRate} onChangeRate={() => setEditingRate(r => !r)} />
+            <VerdictCard result={result} mode={mode} noiseFilter={noiseFilter} onGrowthStep={(d: number) => {
+              if (mode === "standard") set("historicalGrowth", Math.max(0, inp.historicalGrowth + d));
+              else set("inceptionGrowth", Math.max(0, inp.inceptionGrowth + d));
+              set("analystGrowth", Math.max(0, inp.analystGrowth + d));
+            }} />
 
             <ValuationContext
               lynchRatio={valuation.lynchRatio}

@@ -1,20 +1,44 @@
+import { useRef, useCallback } from "react";
 import { VERDICT, STD_THRESHOLD, PP_THRESHOLD } from "../lib/constants.ts";
 import { f } from "../lib/utils.ts";
 import type { TUPResult, Mode } from "../lib/types.ts";
+
+function useHoldRepeat(callback: () => void, delay = 400, interval = 80) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const iv    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cbRef = useRef(callback);
+  cbRef.current = callback;
+
+  const stop = useCallback(() => {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+    if (iv.current)    { clearInterval(iv.current);   iv.current = null; }
+  }, []);
+
+  const start = useCallback(() => {
+    cbRef.current();
+    timer.current = setTimeout(() => {
+      iv.current = setInterval(() => cbRef.current(), interval);
+    }, delay);
+  }, [delay, interval]);
+
+  return { onPointerDown: start, onPointerUp: stop, onPointerLeave: stop };
+}
 
 interface VerdictCardProps {
   result: TUPResult | null;
   mode: Mode;
   noiseFilter: boolean;
-  editingRate: boolean;
-  onChangeRate: () => void;
+  onGrowthStep: (delta: number) => void;
 }
 
-export function VerdictCard({ result, mode, noiseFilter, editingRate, onChangeRate }: VerdictCardProps) {
+export function VerdictCard({ result, mode, noiseFilter, onGrowthStep }: VerdictCardProps) {
   if (!result) return null;
   const v   = VERDICT[result.verdict];
   const thr = mode === "standard" ? STD_THRESHOLD : PP_THRESHOLD;
   const paybackPct = Math.min(100, ((result.payback || 30) / 30) * 100);
+
+  const holdDown = useHoldRepeat(() => onGrowthStep(-1));
+  const holdUp   = useHoldRepeat(() => onGrowthStep(1));
 
   const labelStyle = {
     fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em",
@@ -24,17 +48,13 @@ export function VerdictCard({ result, mode, noiseFilter, editingRate, onChangeRa
     fontFamily: "'JetBrains Mono', monospace", fontSize: "13px",
     fontWeight: 600, color: "#00BFA5",
   };
-  const changeRateBtnStyle = {
-    fontSize: "8px", fontWeight: 700, letterSpacing: "0.12em",
-    textTransform: "uppercase" as const,
-    padding: "2px 7px",
-    border: `1px solid ${editingRate ? "#C4A06E" : "rgba(255,255,255,0.15)"}`,
-    background: editingRate ? "#C4A06E" : "transparent",
-    color: editingRate ? "#080808" : "#888888",
-    cursor: "pointer",
-    fontFamily: "'Space Grotesk', sans-serif",
-    lineHeight: 1.5,
-    flexShrink: 0,
+  const arrowBtnStyle: React.CSSProperties = {
+    width: "20px", height: "20px",
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    background: "transparent", border: "1px solid rgba(255,255,255,0.15)",
+    color: "#888888", cursor: "pointer", fontSize: "9px",
+    fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, lineHeight: 1,
+    padding: 0, userSelect: "none",
   };
 
   if (noiseFilter) {
@@ -96,13 +116,12 @@ export function VerdictCard({ result, mode, noiseFilter, editingRate, onChangeRa
         {/* Growth + Change Rate button */}
         <div style={{ padding: "12px 16px", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
           <div style={labelStyle}>Growth</div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <button {...holdDown} onClick={e => e.preventDefault()} style={arrowBtnStyle}>▼</button>
             <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", fontWeight: 600, color: "#10d97e" }}>
               {f(result.gr * 100)}%
             </span>
-            <button onClick={onChangeRate} style={changeRateBtnStyle}>
-              {editingRate ? "← Done" : "Change Rate"}
-            </button>
+            <button {...holdUp} onClick={e => e.preventDefault()} style={arrowBtnStyle}>▲</button>
           </div>
         </div>
       </div>
