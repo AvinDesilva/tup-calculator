@@ -69,15 +69,47 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         {/* Overview */}
         <div style={{ padding: "32px 0 40px", borderBottom: `1px solid ${M.borderWeak}` }}>
           <p style={{ fontSize: "13px", color: M.text2, lineHeight: 1.9, margin: 0 }}>
-            TUP uses the average of trailing and forward EPS, compounded at the blended historical + analyst
+            TUP works most effectively for profitable growth stocks. It uses the average of trailing and forward EPS, compounded at the blended historical + analyst
             growth rate. Annual EPS is summed until cumulative earnings equal the adjusted price. A payback
             period under <strong style={{ color: M.text1 }}>10 years</strong> indicates a buy.
           </p>
         </div>
 
-        {/* 01 Historical EPS Growth */}
+        {/* 01 Adjusted Share Price */}
         <section style={{ padding: "40px 0", borderBottom: `1px solid ${M.borderWeak}` }}>
-          <SectionNum n="01" title="Historical EPS Growth" sub="%" />
+          <SectionNum n="01" title="Adjusted Share Price" sub="Enterprise Value Per Share" />
+          <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
+            Before comparing earnings against the stock price, TUP adjusts for the company's balance sheet.
+            Debt is added because it represents obligations that must be serviced before shareholders see returns,
+            while cash is subtracted because it's already owned by shareholders. The result is the enterprise
+            value per share — the true cost an investor is paying for the business.
+          </p>
+          <FormulaBlock label="Formula">
+            Adjusted Price = (Market Cap + Total Debt − Cash) / Shares Outstanding
+          </FormulaBlock>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "24px" }}>
+            {[
+              ["Market Cap", "Current share price × total shares outstanding"],
+              ["Total Debt", "All short-term and long-term borrowings on the balance sheet"],
+              ["Cash", "Cash and cash equivalents (liquid assets immediately available)"],
+              ["Shares", "Diluted shares outstanding"],
+            ].map(([term, def]) => (
+              <div key={term} style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "16px", fontSize: "12px", lineHeight: 1.7 }}>
+                <span style={{ fontFamily: M.mono, color: "#00BFA5" }}>{term}</span>
+                <span style={{ color: M.text2 }}>{def}</span>
+              </div>
+            ))}
+          </div>
+          <CalloutBlock label="Why Not Just Use the Stock Price?">
+            Two companies trading at $100/share may have very different enterprise values. A company
+            with $50B in debt is far more expensive to "own" than one with $50B in cash — even if
+            their market caps are identical. The adjusted price captures this difference.
+          </CalloutBlock>
+        </section>
+
+        {/* 02 Historical EPS Growth */}
+        <section style={{ padding: "40px 0", borderBottom: `1px solid ${M.borderWeak}` }}>
+          <SectionNum n="02" title="Historical EPS Growth" sub="%" />
           <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             Calculated as the Compound Annual Growth Rate (CAGR) from the company's inception
             (or first year of positive earnings) to the present.
@@ -104,9 +136,9 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
           </CalloutBlock>
         </section>
 
-        {/* 02 Analyst Forward Growth */}
+        {/* 03 Analyst Forward Growth */}
         <section style={{ padding: "40px 0", borderBottom: `1px solid ${M.borderWeak}` }}>
-          <SectionNum n="02" title="Analyst Forward Growth (2yr)" sub="Consensus Estimate" />
+          <SectionNum n="03" title="Analyst Forward Growth (2yr)" sub="Consensus Estimate" />
           <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             The consensus view of professional researchers covering the stock — typically the estimated EPS
             growth for the next fiscal year or a 5-year annualized projection.
@@ -136,9 +168,34 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
           </CalloutBlock>
         </section>
 
-        {/* 03 TUP Combined Growth Rate */}
+        {/* 04 Dividend Yield */}
         <section style={{ padding: "40px 0", borderBottom: `1px solid ${M.borderWeak}` }}>
-          <SectionNum n="03" title="TUP Combined Growth Rate" sub="Blended Assumption" />
+          <SectionNum n="04" title="Dividend Yield" sub="Total Return Component" />
+          <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
+            For income-generating companies, the dividend yield represents a guaranteed annual return
+            to shareholders independent of share price appreciation. TUP adds it to the compounding
+            rate because it effectively accelerates EPS recovery from the investor's perspective.
+          </p>
+          <FormulaBlock label="Formula">
+            Dividend Yield = Annual Dividends Per Share / Current Price × 100
+          </FormulaBlock>
+          <CalloutBlock label="Why Add It Post-Blend?">
+            Averaging the yield in with the two growth rates would dilute the signal from historical
+            and analyst EPS estimates. Adding it afterward preserves the integrity of the growth
+            analysis while correctly boosting the total compounding rate. A company that grows EPS
+            at 17% and pays a 5% dividend is genuinely compounding at 22% for a holder who
+            reinvests dividends.
+          </CalloutBlock>
+          <CalloutBlock label="Auto-Populated">
+            When you fetch a ticker, the dividend yield is pulled automatically from the FMP
+            profile endpoint. For non-dividend payers it defaults to 0% and has no effect on the
+            calculation.
+          </CalloutBlock>
+        </section>
+
+        {/* 05 TUP Combined Growth Rate */}
+        <section style={{ padding: "40px 0" }}>
+          <SectionNum n="05" title="TUP Combined Growth Rate" sub="Blended Assumption" />
           <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             Average the two inputs to produce a blended growth rate. If the company pays a dividend,
             its yield is added on top — because shareholders receive that return regardless of EPS growth.
@@ -190,31 +247,6 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
               <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: 0 }}>{bodyText}</p>
             </div>
           ))}
-        </section>
-
-        {/* 04 Dividend Yield */}
-        <section style={{ padding: "40px 0" }}>
-          <SectionNum n="04" title="Dividend Yield" sub="Total Return Component" />
-          <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
-            For income-generating companies, the dividend yield represents a guaranteed annual return
-            to shareholders independent of share price appreciation. TUP adds it to the compounding
-            rate because it effectively accelerates EPS recovery from the investor's perspective.
-          </p>
-          <FormulaBlock label="Formula">
-            Dividend Yield = Annual Dividends Per Share / Current Price × 100
-          </FormulaBlock>
-          <CalloutBlock label="Why Add It Post-Blend?">
-            Averaging the yield in with the two growth rates would dilute the signal from historical
-            and analyst EPS estimates. Adding it afterward preserves the integrity of the growth
-            analysis while correctly boosting the total compounding rate. A company that grows EPS
-            at 17% and pays a 5% dividend is genuinely compounding at 22% for a holder who
-            reinvests dividends.
-          </CalloutBlock>
-          <CalloutBlock label="Auto-Populated">
-            When you fetch a ticker, the dividend yield is pulled automatically from the FMP
-            profile endpoint. For non-dividend payers it defaults to 0% and has no effect on the
-            calculation.
-          </CalloutBlock>
         </section>
 
         <footer style={{ paddingTop: "24px", paddingBottom: "40px", borderTop: `1px solid ${M.borderWeak}` }}>
