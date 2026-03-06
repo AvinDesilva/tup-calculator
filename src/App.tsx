@@ -160,6 +160,20 @@ export default function App() {
 
   const result: TUPResult | null = useMemo(() => calcTUP(effectiveInp, mode), [effectiveInp, mode]);
 
+  // Reverse-engineer the stock price at which TUP = strong buy threshold
+  const strongBuyPrice = useMemo(() => {
+    if (!result || result.epsBase <= 0 || result.gr <= 0) return null;
+    const maxYr = Math.floor(result.threshold * 0.6);
+    let cum = 0, eps = result.epsBase;
+    for (let y = 1; y <= maxYr; y++) {
+      if (y > 1) eps *= (1 + result.gr);
+      if (y >= result.startYr) cum += eps;
+    }
+    // cum = max adjPrice for strong buy; adjPrice = price + (debt-cash)/shares
+    const price = cum - (inp.debt - inp.cash) / inp.shares;
+    return price > 0 ? price : null;
+  }, [result, inp.debt, inp.cash, inp.shares]);
+
   const doFetch = async () => {
     if (!ticker.trim()) { setError("Enter a ticker symbol."); return; }
     setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setDivNote(""); setValuation({ lynchRatio: null, dcf: null, altmanZ: null, piotroski: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [] }); setShowScorecard(false); setHasSearched(true); setGrowthUncapped(false);
@@ -653,6 +667,7 @@ export default function App() {
             }} />
 
             <ValuationContext
+              strongBuyPrice={strongBuyPrice}
               lynchRatio={valuation.lynchRatio}
               dcf={valuation.dcf}
               currentPrice={inp.currentPrice}

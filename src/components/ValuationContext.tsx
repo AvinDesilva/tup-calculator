@@ -1,4 +1,5 @@
 interface ValuationContextProps {
+  strongBuyPrice: number | null;
   lynchRatio: number | null;
   dcf: number | null;
   currentPrice: number;
@@ -15,14 +16,15 @@ interface PanelData {
   sub: string;
 }
 
-export function ValuationContext({ lynchRatio, dcf, currentPrice, altmanZ, piotroski }: ValuationContextProps) {
+export function ValuationContext({ strongBuyPrice, lynchRatio, dcf, currentPrice, altmanZ, piotroski }: ValuationContextProps) {
   const mono = "'JetBrains Mono', monospace";
 
+  const hasStrongBuy = strongBuyPrice != null && strongBuyPrice > 0 && currentPrice > 0;
   const hasLynch     = lynchRatio != null && isFinite(lynchRatio);
   const hasDCF       = dcf != null && dcf > 0 && currentPrice > 0;
   const hasAltman    = altmanZ != null && isFinite(altmanZ);
   const hasPiotroski = piotroski != null && isFinite(piotroski);
-  if (!hasLynch && !hasDCF && !hasAltman && !hasPiotroski) return null;
+  if (!hasStrongBuy && !hasLynch && !hasDCF && !hasAltman && !hasPiotroski) return null;
 
   // Lynch PEG
   const lynchIcon  = (lynchRatio as number) < 1 ? "✓" : (lynchRatio as number) <= 2 ? "■" : "!";
@@ -53,8 +55,24 @@ export function ValuationContext({ lynchRatio, dcf, currentPrice, altmanZ, piotr
     ? ((piotroski as number) >= 7 ? "Strong fundamentals" : (piotroski as number) >= 4 ? "Neutral" : "Weak fundamentals")
     : "";
 
+  // Strong Buy target
+  const sbDelta   = hasStrongBuy ? ((strongBuyPrice as number) - currentPrice) / currentPrice * 100 : 0;
+  const sbBelow   = hasStrongBuy && currentPrice > (strongBuyPrice as number);
+  const sbColor   = sbBelow ? "#10d97e" : "#f5a020";
+  const sbSub     = sbBelow
+    ? `${Math.abs(sbDelta).toFixed(0)}% below — currently a Strong Buy`
+    : `${Math.abs(sbDelta).toFixed(0)}% above current price`;
+
   // Build panel list (only include panels with data)
   const panels: PanelData[] = [
+    hasStrongBuy && {
+      key: "strongbuy",
+      title: "Strong Buy Below",
+      value: `$${(strongBuyPrice as number).toFixed(2)}`,
+      icon: sbBelow ? "▲▲" : null,
+      color: sbColor,
+      sub: sbSub,
+    },
     hasLynch && {
       key: "lynch",
       title: "Lynch Score",
