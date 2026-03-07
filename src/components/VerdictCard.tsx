@@ -41,11 +41,11 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep }: Verdict
   const holdUp   = useHoldRepeat(() => onGrowthStep(1));
 
   const labelStyle = {
-    fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em",
+    fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em",
     textTransform: "uppercase" as const, color: "#888888", marginBottom: "4px",
   };
   const valueStyle = {
-    fontFamily: "'JetBrains Mono', monospace", fontSize: "13px",
+    fontFamily: "'JetBrains Mono', monospace", fontSize: "15px",
     fontWeight: 600, color: "#00BFA5",
   };
   const arrowBtnStyle: React.CSSProperties = {
@@ -92,7 +92,7 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep }: Verdict
           <div style={{ fontSize: "22px", fontWeight: 700, color: v.color, letterSpacing: "-0.01em", fontFamily: "'Barlow Condensed', sans-serif" }}>
             {v.icon} {v.label}
           </div>
-          <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888888", marginTop: "4px" }}>
+          <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888888", marginTop: "4px" }}>
             {mode === "standard" ? "Standard TUP" : "Pre-Profit TUP-P"} · Years to Payback
           </div>
         </div>
@@ -120,7 +120,7 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep }: Verdict
           <div style={labelStyle}>Growth</div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <button {...holdDown} onClick={e => e.preventDefault()} style={arrowBtnStyle}>▼</button>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", fontWeight: 600, color: "#10d97e" }}>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#10d97e" }}>
               {f(result.gr * 100)}%
             </span>
             <button {...holdUp} onClick={e => e.preventDefault()} style={arrowBtnStyle}>▲</button>
@@ -160,7 +160,7 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep }: Verdict
       )}
 
       {/* Threshold note */}
-      <div style={{ marginTop: "12px", fontSize: "10px", color: "#505050", fontFamily: "'JetBrains Mono', monospace" }}>
+      <div style={{ marginTop: "12px", fontSize: "12px", color: "#505050", fontFamily: "'JetBrains Mono', monospace" }}>
         Threshold: {thr}y
       </div>
     </div>

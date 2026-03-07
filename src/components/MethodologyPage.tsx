@@ -15,20 +15,20 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
   };
 
   const SubHead = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: M.text3, marginBottom: "12px" }}>{children}</div>
+    <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: M.text3, marginBottom: "12px" }}>{children}</div>
   );
 
   const FormulaBlock = ({ label, children }: { label?: string; children: React.ReactNode }) => (
     <div style={{ padding: "16px 20px", borderLeft: "2px solid rgba(196,160,110,0.4)", marginBottom: "20px" }}>
       {label && <SubHead>{label}</SubHead>}
-      <div style={{ fontFamily: M.mono, fontSize: "13px", color: M.text1, lineHeight: 2.2 }}>{children}</div>
+      <div style={{ fontFamily: M.mono, fontSize: "14px", color: M.text1, lineHeight: 2.2 }}>{children}</div>
     </div>
   );
 
   const CalloutBlock = ({ label, children }: { label?: string; children: React.ReactNode }) => (
     <div style={{ padding: "16px 20px", background: "rgba(255,255,255,0.02)", borderLeft: "2px solid rgba(255,255,255,0.06)", marginBottom: "20px" }}>
       {label && <SubHead>{label}</SubHead>}
-      <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: 0 }}>{children}</p>
+      <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: 0 }}>{children}</p>
     </div>
   );
 
@@ -37,7 +37,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
       <span style={{ fontFamily: M.serif, fontWeight: 400, fontSize: "clamp(3rem, 8vw, 5rem)", lineHeight: 1, color: "#C4A06E", letterSpacing: "-0.03em", flexShrink: 0 }}>{n}</span>
       <div>
         <h2 style={{ fontFamily: M.display, fontWeight: 700, fontSize: "clamp(1.3rem, 3vw, 2rem)", color: M.text1, margin: 0, letterSpacing: "0.02em", textTransform: "uppercase" }}>{title}</h2>
-        {sub && <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: M.text3, marginTop: "4px" }}>{sub}</div>}
+        {sub && <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: M.text3, marginTop: "4px" }}>{sub}</div>}
       </div>
     </div>
   );
@@ -52,7 +52,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         <header style={{ paddingTop: "28px", paddingBottom: "24px", borderBottom: `2px solid #C4A06E`, display: "flex", alignItems: "center", gap: "24px" }}>
           <button onClick={onBack} style={{
             background: "none", border: "none", color: "#C4A06E", cursor: "pointer",
-            fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase",
+            fontSize: "10px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase",
             fontFamily: M.body, padding: 0,
           }}>← Back</button>
           <div style={{ width: "1px", height: "20px", background: M.borderWeak, flexShrink: 0 }} />
@@ -60,7 +60,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
             <h1 style={{ fontFamily: M.serif, fontWeight: 400, fontSize: "clamp(1.8rem, 4vw, 2.8rem)", lineHeight: 1, letterSpacing: "-0.02em", color: M.text1, margin: 0 }}>
               Standard TUP
             </h1>
-            <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: M.text3, marginTop: "4px" }}>
+            <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: M.text3, marginTop: "4px" }}>
               Growth Analysis Methodology
             </div>
           </div>
@@ -68,7 +68,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
 
         {/* Overview */}
         <div style={{ padding: "32px 0 40px", borderBottom: `1px solid ${M.borderWeak}` }}>
-          <p style={{ fontSize: "13px", color: M.text2, lineHeight: 1.9, margin: 0 }}>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.9, margin: 0 }}>
             TUP works most effectively for profitable growth stocks. It uses the average of trailing and forward EPS, compounded at the blended historical + analyst
             growth rate. Annual EPS is summed until cumulative earnings equal the adjusted price. A payback
             period under <strong style={{ color: M.text1 }}>10 years</strong> indicates a buy.
@@ -78,7 +78,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         {/* 01 Adjusted Share Price */}
         <section style={{ padding: "40px 0", borderBottom: `1px solid ${M.borderWeak}` }}>
           <SectionNum n="01" title="Adjusted Share Price" sub="Enterprise Value Per Share" />
-          <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             Before comparing earnings against the stock price, TUP adjusts for the company's balance sheet.
             Debt is added because it represents obligations that must be serviced before shareholders see returns,
             while cash is subtracted because it's already owned by shareholders. The result is the enterprise
@@ -94,7 +94,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
               ["Cash", "Cash and cash equivalents (liquid assets immediately available)"],
               ["Shares", "Diluted shares outstanding"],
             ].map(([term, def]) => (
-              <div key={term} style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "16px", fontSize: "12px", lineHeight: 1.7 }}>
+              <div key={term} style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "16px", fontSize: "14px", lineHeight: 1.7 }}>
                 <span style={{ fontFamily: M.mono, color: "#00BFA5" }}>{term}</span>
                 <span style={{ color: M.text2 }}>{def}</span>
               </div>
@@ -110,12 +110,12 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         {/* 02 Historical EPS Growth */}
         <section style={{ padding: "40px 0", borderBottom: `1px solid ${M.borderWeak}` }}>
           <SectionNum n="02" title="Historical EPS Growth" sub="%" />
-          <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             Calculated as the Compound Annual Growth Rate (CAGR) from the company's inception
             (or first year of positive earnings) to the present.
           </p>
           <FormulaBlock label="Formula">
-            Historical Growth = [(Current EPS / Initial EPS)<sup style={{ fontSize: "10px" }}>1/n</sup> − 1] × 100
+            Historical Growth = [(Current EPS / Initial EPS)<sup style={{ fontSize: "11px" }}>1/n</sup> − 1] × 100
           </FormulaBlock>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "24px" }}>
             {[
@@ -123,7 +123,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
               ["Initial EPS",  "EPS from the company's first full year of public data (or first profitable year)"],
               ["n",           "Number of years between those two points"],
             ].map(([term, def]) => (
-              <div key={term} style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "16px", fontSize: "12px", lineHeight: 1.7 }}>
+              <div key={term} style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "16px", fontSize: "14px", lineHeight: 1.7 }}>
                 <span style={{ fontFamily: M.mono, color: "#00BFA5" }}>{term}</span>
                 <span style={{ color: M.text2 }}>{def}</span>
               </div>
@@ -139,7 +139,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         {/* 03 Analyst Forward Growth */}
         <section style={{ padding: "40px 0", borderBottom: `1px solid ${M.borderWeak}` }}>
           <SectionNum n="03" title="Analyst Forward Growth (2yr)" sub="Consensus Estimate" />
-          <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             The consensus view of professional researchers covering the stock — typically the estimated EPS
             growth for the next fiscal year or a 5-year annualized projection.
           </p>
@@ -154,7 +154,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
                 ["Seeking Alpha", "Earnings estimates section"],
                 ["Morningstar",   "Consensus estimates"],
               ].map(([src, loc]) => (
-                <div key={src} style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "16px", fontSize: "12px", lineHeight: 1.7 }}>
+                <div key={src} style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "16px", fontSize: "14px", lineHeight: 1.7 }}>
                   <span style={{ fontFamily: M.mono, color: "#00BFA5" }}>{src}</span>
                   <span style={{ color: M.text2 }}>{loc}</span>
                 </div>
@@ -171,7 +171,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         {/* 04 Dividend Yield */}
         <section style={{ padding: "40px 0", borderBottom: `1px solid ${M.borderWeak}` }}>
           <SectionNum n="04" title="Dividend Yield" sub="Total Return Component" />
-          <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             For income-generating companies, the dividend yield represents a guaranteed annual return
             to shareholders independent of share price appreciation. TUP adds it to the compounding
             rate because it effectively accelerates EPS recovery from the investor's perspective.
@@ -196,7 +196,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         {/* 05 TUP Combined Growth Rate */}
         <section style={{ padding: "40px 0" }}>
           <SectionNum n="05" title="TUP Combined Growth Rate" sub="Blended Assumption" />
-          <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             Average the two inputs to produce a blended growth rate. If the company pays a dividend,
             its yield is added on top — because shareholders receive that return regardless of EPS growth.
           </p>
@@ -223,12 +223,12 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
                 background: highlight ? "rgba(196,160,110,0.06)" : "transparent",
                 borderLeft: highlight ? "2px solid #C4A06E" : "2px solid transparent",
               }}>
-                <span style={{ fontSize: "12px", color: highlight ? M.text1 : M.text2, fontWeight: highlight ? 600 : 400 }}>{label}</span>
-                <span style={{ fontFamily: M.mono, fontSize: "14px", color: highlight ? "#C4A06E" : M.text1, fontWeight: highlight ? 700 : 400 }}>{val}</span>
+                <span style={{ fontSize: "14px", color: highlight ? M.text1 : M.text2, fontWeight: highlight ? 600 : 400 }}>{label}</span>
+                <span style={{ fontFamily: M.mono, fontSize: "15px", color: highlight ? "#C4A06E" : M.text1, fontWeight: highlight ? 700 : 400 }}>{val}</span>
               </div>
             ))}
             <div style={{ padding: "16px 20px" }}>
-              <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: 0 }}>
+              <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: 0 }}>
                 The 22.4% Total Compounding Rate is applied year-over-year to project EPS until the
                 cumulative sum equals the Adjusted Price. The dividend yield is added <em>after</em> the
                 average — not inside it — so it doesn't distort the EPS growth signal.
@@ -243,14 +243,14 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
             ["Consistency Check", "If historical growth is 50% but analysts expect 5%, the business model may be broken or the industry is maturing rapidly. In these cases, lean more heavily on the lower number."],
           ].map(([title, bodyText]) => (
             <div key={title as string} style={{ padding: "20px 0", borderTop: `1px solid ${M.borderWeak}` }}>
-              <div style={{ fontSize: "12px", fontWeight: 700, color: M.text1, marginBottom: "8px" }}>{title}</div>
-              <p style={{ fontSize: "12px", color: M.text2, lineHeight: 1.85, margin: 0 }}>{bodyText}</p>
+              <div style={{ fontSize: "14px", fontWeight: 700, color: M.text1, marginBottom: "8px" }}>{title}</div>
+              <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: 0 }}>{bodyText}</p>
             </div>
           ))}
         </section>
 
         <footer style={{ paddingTop: "24px", paddingBottom: "40px", borderTop: `1px solid ${M.borderWeak}` }}>
-          <p style={{ fontSize: "10px", color: M.text3, margin: 0 }}>TUP Calculator — For educational purposes only. Not financial advice.</p>
+          <p style={{ fontSize: "11px", color: M.text3, margin: 0 }}>TUP Calculator — For educational purposes only. Not financial advice.</p>
         </footer>
       </div>
     </div>

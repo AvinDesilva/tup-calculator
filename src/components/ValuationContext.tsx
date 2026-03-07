@@ -96,13 +96,13 @@ export function ValuationContext({ strongBuyPrice, lynchRatio, dcf, currentPrice
 
   return (
     <div style={{ marginTop: "16px", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "14px" }}>
-      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888", marginBottom: "10px" }}>
+      <div style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888", marginBottom: "10px" }}>
         Valuation Context
       </div>
       <div className="rsp-valuation-grid" style={{ display: "grid", gridTemplateColumns: cols.join(" "), gap: "0" }}>
         {panels.map((p, i) => [
           <div key={p.key} className="rsp-val-panel" style={{ paddingRight: i < panels.length - 1 ? "14px" : "0", paddingLeft: i > 0 ? "14px" : "0" }}>
-            <div className="rsp-val-title" style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#888", marginBottom: "6px" }}>
+            <div className="rsp-val-title" style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#888", marginBottom: "6px" }}>
               {p.title}
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
@@ -113,7 +113,7 @@ export function ValuationContext({ strongBuyPrice, lynchRatio, dcf, currentPrice
                 <span style={{ fontFamily: mono, fontSize: "14px", fontWeight: 700, color: p.color }}>{p.icon}</span>
               )}
             </div>
-            <div style={{ fontSize: "9px", color: "#888", marginTop: "4px", letterSpacing: "0.06em" }}>
+            <div style={{ fontSize: "11px", color: "#888", marginTop: "4px", letterSpacing: "0.06em" }}>
               {p.sub}
             </div>
           </div>,

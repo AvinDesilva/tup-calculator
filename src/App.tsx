@@ -89,12 +89,12 @@ function StepperRow({ label, value, onStep, badge, stepSize = 1, suffix = "%" }:
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888" }}>{label}</span>
+        <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888" }}>{label}</span>
         {badge}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
         <HoldButton onStep={() => onStep(-stepSize)} style={btnStyle}>▼</HoldButton>
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", fontWeight: 600, color: "#00BFA5", minWidth: "52px", textAlign: "center" }}>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#00BFA5", minWidth: "52px", textAlign: "center" }}>
           {value.toFixed(1)}{suffix}
         </span>
         <HoldButton onStep={() => onStep(stepSize)} style={btnStyle}>▲</HoldButton>
@@ -320,7 +320,10 @@ export default function App() {
 
           {/* Mode toggles top-right */}
           <div className="rsp-header-toggles" style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, paddingTop: "6px" }}>
-            <button onClick={() => setNoiseFilter(!noiseFilter)} style={toggleBtn(noiseFilter)}>
+            <button className="rsp-methodology-btn" onClick={() => { setShowMethodology(true); window.scrollTo(0, 0); }} style={toggleBtn(false)}>
+              Read Methodology →
+            </button>
+            <button className="rsp-noise-btn" onClick={() => setNoiseFilter(!noiseFilter)} style={toggleBtn(noiseFilter)}>
               {noiseFilter ? "◉" : "○"} Noise Filter
             </button>
           </div>
@@ -528,14 +531,14 @@ export default function App() {
                     />
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888" }}>Dividend Yield</span>
+                        <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888" }}>Dividend Yield</span>
                         {divIsAccelerator && (
                           <span style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#10d97e", border: "1px solid rgba(16,217,126,0.3)", padding: "1px 5px" }}>
                             ★ Accelerator
                           </span>
                         )}
                       </div>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", fontWeight: 600, color: "#00BFA5" }}>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#00BFA5" }}>
                         {divYield.toFixed(1)}%
                       </span>
                     </div>
@@ -678,8 +681,8 @@ export default function App() {
 
             {result && !noiseFilter && (
               <div style={{ marginTop: "20px", padding: "12px 0", borderBottom: `1px solid ${C.borderWeak}` }}>
-                <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text2, marginBottom: "6px" }}>Formula</div>
-                <p style={{ fontSize: "11px", color: C.text2, fontFamily: C.mono, lineHeight: 1.7, margin: 0 }}>
+                <div style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text2, marginBottom: "6px" }}>Formula</div>
+                <p style={{ fontSize: "13px", color: C.text2, fontFamily: C.mono, lineHeight: 1.7, margin: 0 }}>
                   {mode === "standard"
                     ? `(${fB(inp.marketCap)} + ${fB(inp.debt)} − ${fB(inp.cash)}) / ${(inp.shares / 1e9).toFixed(2)}B = $${f(result.adjPrice)} adj. price`
                     : `EPS = $${f(inp.revenuePerShare)} × ${inp.targetMargin}% = $${f(result.epsBase)} | Start Yr ${inp.breakEvenYear} | Adj $${f(result.adjPrice)}`}
@@ -754,20 +757,6 @@ export default function App() {
               </div>
             )}
 
-            <div style={{ marginTop: "20px", paddingTop: "16px", borderTop: `1px solid ${C.borderWeak}` }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-                <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3 }}>
-                  Standard TUP — How It Works
-                </div>
-                <button onClick={() => { setShowMethodology(true); window.scrollTo(0, 0); }} style={{
-                  background: "none", border: "none", padding: 0, cursor: "pointer",
-                  fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase",
-                  color: C.accent, fontFamily: C.body, flexShrink: 0,
-                }}>
-                  Read Methodology →
-                </button>
-              </div>
-            </div>
 
           </div>
         </div>
@@ -798,6 +787,10 @@ export default function App() {
         .rsp-right-top    { grid-column: 3; grid-row: 1; }
         .rsp-right-bottom { grid-column: 3; grid-row: 2; }
 
+        /* Desktop: noise filter first, methodology second */
+        .rsp-noise-btn       { order: 1; }
+        .rsp-methodology-btn { order: 2; }
+
         /* ── Mobile (< 768px) ─────────────────────────────────────────────── */
         @media (max-width: 767px) {
           .rsp-container {
@@ -821,6 +814,8 @@ export default function App() {
             padding-top: 0;
             flex-wrap: wrap;
           }
+          .rsp-methodology-btn { order: 0 !important; }
+          .rsp-noise-btn { order: 0 !important; }
           .rsp-api-bar {
             grid-template-columns: 1fr !important;
             gap: 14px !important;
