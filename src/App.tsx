@@ -52,7 +52,12 @@ function HoldButton({ onStep, children, style }: {
     <button
       {...hold}
       onClick={e => e.preventDefault()}
-      style={style}
+      style={{
+        userSelect: "none",
+        WebkitTouchCallout: "none",
+        WebkitTapHighlightColor: "transparent",
+        ...style,
+      }}
     >
       {children}
     </button>
@@ -77,6 +82,9 @@ function StepperRow({ label, value, onStep, badge, stepSize = 1, suffix = "%" }:
     background: "transparent", border: "1px solid rgba(255,255,255,0.12)",
     color: "#e8e4dc", cursor: "pointer", fontSize: "10px",
     fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, lineHeight: 1,
+    userSelect: "none",
+    WebkitTouchCallout: "none",
+    WebkitTapHighlightColor: "transparent",
   };
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
@@ -518,17 +526,19 @@ export default function App() {
                       value={inp.analystGrowth}
                       onStep={d => set("analystGrowth", Math.max(0, inp.analystGrowth + d))}
                     />
-                    <StepperRow
-                      label="Dividend Yield"
-                      value={divYield}
-                      onStep={d => set("dividendYield", Math.max(0, divYield + d))}
-                      stepSize={0.1}
-                      badge={divIsAccelerator ? (
-                        <span style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#10d97e", border: "1px solid rgba(16,217,126,0.3)", padding: "1px 5px" }}>
-                          ★ Accelerator
-                        </span>
-                      ) : undefined}
-                    />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888" }}>Dividend Yield</span>
+                        {divIsAccelerator && (
+                          <span style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#10d97e", border: "1px solid rgba(16,217,126,0.3)", padding: "1px 5px" }}>
+                            ★ Accelerator
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", fontWeight: 600, color: "#00BFA5" }}>
+                        {divYield.toFixed(1)}%
+                      </span>
+                    </div>
                     {isOverCap && !growthUncapped ? (
                       <>
                         <DerivedStat label="Blended Growth Rate" value={`${f(GROWTH_CAP)}% (capped from ${f(blended)}%)`} accent="#f5a020" />

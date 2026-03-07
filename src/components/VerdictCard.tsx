@@ -49,12 +49,14 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep }: Verdict
     fontWeight: 600, color: "#00BFA5",
   };
   const arrowBtnStyle: React.CSSProperties = {
-    width: "20px", height: "20px",
+    width: "24px", height: "24px",
     display: "inline-flex", alignItems: "center", justifyContent: "center",
     background: "transparent", border: "1px solid rgba(255,255,255,0.15)",
-    color: "#888888", cursor: "pointer", fontSize: "9px",
+    color: "#888888", cursor: "pointer", fontSize: "10px",
     fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, lineHeight: 1,
     padding: 0, userSelect: "none",
+    WebkitTouchCallout: "none",
+    WebkitTapHighlightColor: "transparent",
   };
 
   if (noiseFilter) {
