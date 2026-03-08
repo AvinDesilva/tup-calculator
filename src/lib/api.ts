@@ -3,10 +3,29 @@ import { f, fB } from "./utils.ts";
 import type {
   TickerData,
   FMPProfile, FMPQuote, FMPBalanceSheet, FMPIncomeStatement,
-  FMPFinancialGrowth, FMPEstimate, FMPKeyMetrics,
+  FMPEstimate,
   FMPDividend, FMPDividendHistory, FMPDCF,
   FMPEarningSurprise, FMPCashFlow,
 } from "./types.ts";
+
+// ─── Ticker Search ────────────────────────────────────────────────────────────
+
+export interface SearchResult {
+  symbol: string;
+  name: string;
+  exchange: string;
+  currency?: string;
+}
+
+export async function searchTickers(query: string): Promise<SearchResult[]> {
+  try {
+    const res = await fetch(`/api/search?query=${encodeURIComponent(query)}&limit=10`);
+    if (!res.ok) return [];
+    return (await res.json()) as SearchResult[];
+  } catch {
+    return [];
+  }
+}
 
 // ─── Low-level HTTP wrapper ───────────────────────────────────────────────────
 
@@ -37,7 +56,7 @@ export async function lookupTicker(
 
   log(`Fetching data for ${t} from FMP endpoints...`);
 
-  const [profile, quote, balanceSheet, income, growth, estimates, keyMetrics, divHistory, dcfData, earningsSurprises, cashFlows] = await Promise.all([
+  const [profile, quote, balanceSheet, income, estimates, divHistory, dcfData, earningsSurprises, cashFlows] = await Promise.all([
     // 1) Company Profile
     fetchFMP<FMPProfile[]>(`profile?symbol=${t}`).then(d => { log("  ✓ /profile — company info, market cap"); return d; }),
 
@@ -50,35 +69,27 @@ export async function lookupTicker(
     // 4) Income Statement (10 years)
     fetchFMP<FMPIncomeStatement[]>(`income-statement?symbol=${t}&limit=10`).then(d => { log("  ✓ /income-statement — revenue, net income (10 yrs)"); return d; }),
 
-    // 5) Financial Growth (10 years)
-    fetchFMP<FMPFinancialGrowth[]>(`financial-growth?symbol=${t}&limit=10`).then(d => { log("  ✓ /financial-growth — EPS growth history (10 yrs)"); return d; }),
-
-    // 6) Analyst Estimates
+    // 5) Analyst Estimates
     fetchFMP<FMPEstimate[]>(`analyst-estimates?symbol=${t}&period=annual&limit=5`)
       .then(d => { log("  ✓ /analyst-estimates — forward EPS & revenue est."); return d; })
       .catch(() => { log("  ⚠ /analyst-estimates — not available (free plan)"); return [] as FMPEstimate[]; }),
 
-    // 7) Key Metrics TTM
-    fetchFMP<FMPKeyMetrics[]>(`key-metrics-ttm?symbol=${t}`)
-      .then(d => { log("  ✓ /key-metrics-ttm — dividend yield TTM fallback"); return d; })
-      .catch(() => { log("  ⚠ /key-metrics-ttm — not available"); return [] as FMPKeyMetrics[]; }),
-
-    // 8) Dividend history
+    // 6) Dividend history
     fetchFMP<FMPDividend[] | FMPDividendHistory>(`dividends?symbol=${t}&limit=8`)
       .then(d => { log("  ✓ /dividends — dividend history for forward yield"); return d; })
       .catch(() => { log("  ⚠ /dividends — not available"); return [] as FMPDividend[]; }),
 
-    // 9) Discounted Cash Flow
+    // 7) Discounted Cash Flow
     fetchFMP<FMPDCF[]>(`discounted-cash-flow?symbol=${t}`)
       .then(d => { log("  ✓ /discounted-cash-flow — DCF intrinsic value"); return d; })
       .catch(() => { log("  ⚠ /discounted-cash-flow — not available"); return [] as FMPDCF[]; }),
 
-    // 10) Earnings Surprises
+    // 8) Earnings Surprises
     fetchFMP<FMPEarningSurprise[]>(`earnings-surprises?symbol=${t}`)
       .then(d => { log("  ✓ /earnings-surprises — analyst beat/miss history"); return d; })
       .catch(() => { log("  ⚠ /earnings-surprises — not available"); return [] as FMPEarningSurprise[]; }),
 
-    // 11) Cash Flow Statement (10 years)
+    // 9) Cash Flow Statement (10 years)
     fetchFMP<FMPCashFlow[]>(`cash-flow-statement?symbol=${t}&limit=10`)
       .then(d => { log("  ✓ /cash-flow-statement — operating/investing/financing flows"); return d; })
       .catch(() => { log("  ⚠ /cash-flow-statement — not available"); return [] as FMPCashFlow[]; }),
@@ -90,7 +101,6 @@ export async function lookupTicker(
   const q   = quote[0];
   const bs  = balanceSheet?.[0] ?? ({} as FMPBalanceSheet);
   const inc = income ?? [];
-  const gr  = growth ?? [];
 
   // ── Currency normalisation ────────────────────────────────────────────────
   const exchange        = (p.exchangeShortName || p.exchange || "").toUpperCase();
@@ -196,18 +206,21 @@ export async function lookupTicker(
   const latestRevenue = (inc[0]?.revenue || 0) * fxRate;
   const revenuePerShare = sharesOut > 0 ? latestRevenue / sharesOut : 0;
 
-  // ── Historical EPS growth — median over profitable years ──────────────────
-  const profitableYearSet = new Set(
-    inc.filter(y => (y.netIncome || 0) > 0)
-       .map(y => String(y.calendarYear || (y.date || "").slice(0, 4))));
-  const validGr = gr.filter(g => {
-    const yr = String(g.calendarYear || (g.date || "").slice(0, 4));
-    return g.epsgrowth != null
-      && isFinite(g.epsgrowth)
-      && Math.abs(g.epsgrowth) < 10
-      && (profitableYearSet.size === 0 || profitableYearSet.has(yr));
+  // ── Historical EPS growth — derived from income statement ────────────────
+  const epsHistory = inc.map(y => {
+    const ni = y.netIncome || 0;
+    const sh = y.weightedAverageShsOut || y.weightedAverageShsOutDil || sharesOut;
+    return sh > 0 ? ni / sh : 0;
   });
-  const sortedGrVals = validGr.map(g => g.epsgrowth as number).sort((a, b) => a - b);
+  const epsGrowthRates: number[] = [];
+  for (let i = 0; i < epsHistory.length - 1; i++) {
+    const cur = epsHistory[i], prev = epsHistory[i + 1];
+    if (prev > 0 && cur > 0) {
+      const gr = (cur - prev) / prev;
+      if (isFinite(gr) && Math.abs(gr) < 10) epsGrowthRates.push(gr);
+    }
+  }
+  const sortedGrVals = [...epsGrowthRates].sort((a, b) => a - b);
   const grMid    = Math.floor(sortedGrVals.length / 2);
   const grMedian = sortedGrVals.length === 0 ? null
     : sortedGrVals.length % 2 !== 0
@@ -307,18 +320,7 @@ export async function lookupTicker(
     }
   }
 
-  // Tier 3: key-metrics-ttm.dividendYieldTTM
-  if (dividendYield === 0) {
-    const km = keyMetrics?.[0];
-    const y3 = normYield(km?.dividendYieldTTM ?? km?.dividendYield);
-    if (y3 > 0) {
-      dividendYield = y3;
-      divNote       = `key-metrics-ttm.dividendYieldTTM = ${km?.dividendYieldTTM ?? km?.dividendYield}`;
-      log(`  ✓ Fwd div yield (key-metrics-ttm): ${dividendYield.toFixed(2)}%`);
-    }
-  }
-
-  // Tier 4: manual from profile.lastDiv
+  // Tier 3: manual from profile.lastDiv
   if (dividendYield === 0 && p.lastDiv && p.lastDiv > 0 && livePrice > 0) {
     const freq             = adrRatio > 1 ? 2 : 4;
     const lastDivConverted = (p.lastDiv / adrRatio) * fxRate;
@@ -330,8 +332,10 @@ export async function lookupTicker(
   if (dividendYield === 0) log(`  … No dividend data — yield defaulting to 0.00%`);
 
   // ── Valuation indicators ──────────────────────────────────────────────────
-  const km              = keyMetrics?.[0];
-  const peterLynchRatio = km?.priceToEarningsToGrowthRatio ?? km?.pegRatio ?? null;
+  const blendedGrowth   = fallbackHistGrowth;
+  const peterLynchRatio = ttmEPS > 0 && blendedGrowth > 0
+    ? ((q.price || p.price || 0) / ttmEPS) / blendedGrowth
+    : null;
   const dcfValue        = dcfData?.[0]?.dcf ?? null;
 
   // Altman Z-Score
@@ -448,5 +452,6 @@ export async function lookupTicker(
     earningsSurprises: Array.isArray(earningsSurprises) ? earningsSurprises : [],
     cashFlowHistory: Array.isArray(cashFlows) ? cashFlows : [],
     incomeHistory: Array.isArray(income) ? income : [],
+    description: p.description || "",
   };
 }

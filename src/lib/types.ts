@@ -56,6 +56,7 @@ export interface FMPProfile {
   exchange?: string;
   currency?: string;
   companyName?: string;
+  description?: string;
   sector?: string;
   industry?: string;
   mktCap?: number;
@@ -96,23 +97,10 @@ export interface FMPIncomeStatement {
   grossProfit?: number;
 }
 
-export interface FMPFinancialGrowth {
-  epsgrowth?: number;
-  calendarYear?: string | number;
-  date?: string;
-}
-
 export interface FMPEstimate {
   date?: string;
   epsAvg?: number;
   revenueAvg?: number;
-}
-
-export interface FMPKeyMetrics {
-  priceToEarningsToGrowthRatio?: number;
-  pegRatio?: number;
-  dividendYieldTTM?: number;
-  dividendYield?: number;
 }
 
 export interface FMPDividend {
@@ -176,4 +164,5 @@ export interface TickerData {
   earningsSurprises: FMPEarningSurprise[];
   cashFlowHistory: FMPCashFlow[];
   incomeHistory: FMPIncomeStatement[];
+  description: string;
 }
