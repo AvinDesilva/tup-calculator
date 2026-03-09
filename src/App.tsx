@@ -4,7 +4,7 @@ import type React from "react";
 import { calcTUP } from "./lib/calcTUP.ts";
 import { lookupTicker } from "./lib/api.ts";
 import { f, fB } from "./lib/utils.ts";
-import type { InputState, Mode, TUPResult, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement } from "./lib/types.ts";
+import type { InputState, Mode, TUPResult, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement, FMPGradesConsensus } from "./lib/types.ts";
 
 import { SectionLabel, DataRow, DerivedStat } from "./components/ui.tsx";
 import { VerdictCard } from "./components/VerdictCard.tsx";
@@ -12,6 +12,7 @@ import { ValuationContext } from "./components/ValuationContext.tsx";
 import { CompanyScorecard } from "./components/CompanyScorecard.tsx";
 import { Table } from "./components/Table.tsx";
 import { MethodologyPage } from "./components/MethodologyPage.tsx";
+import { TickerSearch } from "./components/TickerSearch.tsx";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HOLD-TO-REPEAT HOOK
@@ -108,7 +109,6 @@ function StepperRow({ label, value, onStep, badge, stepSize = 1, suffix = "%" }:
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface ValuationState {
-  lynchRatio: number | null;
   dcf: number | null;
   altmanZ: number | null;
 }
@@ -117,6 +117,12 @@ interface ScorecardState {
   earnings: FMPEarningSurprise[];
   cashFlows: FMPCashFlow[];
   incomeHistory: FMPIncomeStatement[];
+  description: string;
+}
+
+interface AnalystState {
+  grades: FMPGradesConsensus | null;
+  estimateSpread: { epsLow: number; epsAvg: number; epsHigh: number; numAnalysts: number } | null;
 }
 
 export default function App() {
@@ -127,62 +133,33 @@ export default function App() {
   const mode: Mode = "standard";
   const [noiseFilter, setNoiseFilter] = useState(false);
   const [showMethodology, setShowMethodology] = useState(false);
-  const [growthUncapped, setGrowthUncapped] = useState(false);
   const [company, setCompany] = useState("");
   const [meta, setMeta] = useState<{ sector: string; industry: string }>({ sector: "", industry: "" });
   const [isConverted, setIsConverted] = useState(false);
   const [currencyNote, setCurrencyNote] = useState("");
   const [currencyMismatchWarning, setCurrencyMismatchWarning] = useState("");
-  const [divNote, setDivNote] = useState("");
-  const [valuation, setValuation] = useState<ValuationState>({ lynchRatio: null, dcf: null, altmanZ: null });
-  const [scorecard, setScorecard] = useState<ScorecardState>({ earnings: [], cashFlows: [], incomeHistory: [] });
-  const [showScorecard, setShowScorecard] = useState(true);
+  const [valuation, setValuation] = useState<ValuationState>({ dcf: null, altmanZ: null });
+  const [scorecard, setScorecard] = useState<ScorecardState>({ earnings: [], cashFlows: [], incomeHistory: [], description: "" });
+  const [analystData, setAnalystData] = useState<AnalystState>({ grades: null, estimateSpread: null });
   const [hasSearched, setHasSearched] = useState(false);
 
   const [inp, setInp] = useState<InputState>({
     marketCap: 0, debt: 0, cash: 0, shares: 1,
     ttmEPS: 0, forwardEPS: 0, historicalGrowth: 10, analystGrowth: 10,
     revenuePerShare: 0, targetMargin: 15, inceptionGrowth: 30, breakEvenYear: 2,
-    currentPrice: 0, sma200: 0, dividendYield: 0,
+    currentPrice: 0, sma200: 0, dividendYield: 0, lifecycleStage: null, growthOverrides: {},
   });
 
-  const set = useCallback(<K extends keyof InputState>(k: K, v: InputState[K]) => setInp(p => ({ ...p, [k]: v })), []);
+  const result: TUPResult | null = useMemo(() => calcTUP(inp, mode), [inp, mode]);
 
-  const GROWTH_CAP = 30;
-  const rawBlended = mode === "standard"
-    ? (inp.historicalGrowth + inp.analystGrowth) / 2
-    : (inp.inceptionGrowth + inp.analystGrowth) / 2;
-  const isOverCap = rawBlended > GROWTH_CAP;
-  const growthScale = isOverCap && !growthUncapped ? GROWTH_CAP / rawBlended : 1;
-
-  const effectiveInp = useMemo(() => {
-    if (growthScale === 1) return inp;
-    return {
-      ...inp,
-      historicalGrowth: inp.historicalGrowth * growthScale,
-      analystGrowth: inp.analystGrowth * growthScale,
-      inceptionGrowth: inp.inceptionGrowth * growthScale,
-    };
-  }, [inp, growthScale]);
-
-  const result: TUPResult | null = useMemo(() => calcTUP(effectiveInp, mode), [effectiveInp, mode]);
-
-  // Reverse-engineer the stock price at which TUP ≤ 7 years (strong buy)
-  const strongBuyPrice = useMemo(() => {
-    if (!result || result.epsBase <= 0 || result.gr <= 0) return null;
-    // Reuse epsBase and gr already computed by calcTUP — no extra API calls
-    let cum = 0, eps = result.epsBase;
-    for (let y = 1; y <= 7; y++) {
-      if (y > 1) eps *= (1 + result.gr);
-      cum += eps;
-    }
-    const price = cum - (inp.debt - inp.cash) / inp.shares;
-    return price > 0 ? price : null;
-  }, [result, inp.debt, inp.cash, inp.shares]);
+  const [strongBuyPrice, setStrongBuyPrice] = useState<number | null>(null);
+  const [buyPrice, setBuyPrice] = useState<number | null>(null);
+  const [growthPeriod, setGrowthPeriod] = useState<"5yr" | "10yr">("5yr");
+  const [growthValues, setGrowthValues] = useState<{ g5: number; g10: number }>({ g5: 10, g10: 10 });
 
   const doFetch = async () => {
     if (!ticker.trim()) { setError("Enter a ticker symbol."); return; }
-    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setDivNote(""); setValuation({ lynchRatio: null, dcf: null, altmanZ: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [] }); setShowScorecard(false); setHasSearched(true); setGrowthUncapped(false);
+    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, altmanZ: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [], description: "" }); setAnalystData({ grades: null, estimateSpread: null }); setStrongBuyPrice(null); setBuyPrice(null); setHasSearched(true);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
     try {
@@ -193,18 +170,40 @@ export default function App() {
       setIsConverted(data.isConverted || false);
       setCurrencyNote(data.currencyNote || "");
       setCurrencyMismatchWarning(data.currencyMismatchWarning || "");
-      setDivNote(data.divNote || "");
-      setValuation({ lynchRatio: data.peterLynchRatio, dcf: data.dcfValue, altmanZ: data.altmanZ });
-      setScorecard({ earnings: data.earningsSurprises, cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory });
-      setInp({
+      setValuation({ dcf: data.dcfValue, altmanZ: data.altmanZ });
+      setScorecard({ earnings: data.earningsSurprises, cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory, description: data.description });
+      setAnalystData({ grades: data.gradesConsensus, estimateSpread: data.estimateSpread });
+      setGrowthValues({ g5: data.historicalGrowth5yr, g10: data.historicalGrowth });
+      setGrowthPeriod("5yr");
+      const origInp = {
         marketCap: data.marketCap, debt: data.debt, cash: data.cash, shares: data.shares,
         ttmEPS: data.ttmEPS, forwardEPS: data.forwardEPS,
-        historicalGrowth: data.historicalGrowth, analystGrowth: data.analystGrowth,
+        historicalGrowth: data.historicalGrowth5yr, analystGrowth: data.analystGrowth,
         revenuePerShare: data.revenuePerShare, targetMargin: data.targetMargin,
         inceptionGrowth: data.inceptionGrowth, breakEvenYear: data.breakEvenYear,
         currentPrice: data.currentPrice, sma200: data.sma200,
-        dividendYield: data.dividendYield || 0,
-      });
+        dividendYield: data.dividendYield || 0, lifecycleStage: data.lifecycleStage, growthOverrides: {},
+      };
+      setInp(origInp);
+
+      // Compute fixed target prices using conservative 30%-capped growth
+      const origResult = calcTUP(origInp, "standard");
+      if (origResult && origResult.epsBase > 0 && origResult.gr > 0) {
+        const netDebt = (data.debt - data.cash) / data.shares;
+        const cappedGr = Math.min(origResult.gr, 0.30);
+        const cumAt = (years: number) => {
+          let cum = 0, eps = origResult.epsBase;
+          for (let y = 1; y <= years; y++) {
+            if (y > 1) eps *= (1 + cappedGr);
+            cum += eps;
+          }
+          return cum - netDebt;
+        };
+        const sb = cumAt(7);
+        const bp = cumAt(10);
+        setStrongBuyPrice(sb > 0 ? sb : null);
+        setBuyPrice(bp > 0 ? bp : null);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
       log(`✕ Error: ${msg}`);
@@ -331,33 +330,32 @@ export default function App() {
 
         {!hasSearched && (
         /* ── HERO SEARCH ─────────────────────────────────────────────────── */
-        <section style={{ padding: "64px 0 72px", display: "flex", flexDirection: "column", alignItems: "center", animation: "fadeInUp 0.5s 0.1s ease both" }}>
-          <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: C.text3, marginBottom: "20px" }}>
+        <section className="rsp-hero-section" style={{ padding: "0 0 96px", display: "flex", flexDirection: "column", alignItems: "center", animation: "fadeInUp 0.5s 0.1s ease both" }}>
+          <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: C.text3, marginBottom: "24px", marginTop: "24px" }}>
             Stock Valuation Engine
           </div>
           <h2 style={{
             fontFamily: C.serif,
             fontWeight: 400,
-            fontSize: "clamp(1.6rem, 4vw, 2.8rem)",
+            fontSize: "clamp(2.6rem, 6vw, 4.2rem)",
             lineHeight: 1.15,
             letterSpacing: "-0.02em",
             color: C.text1,
             textAlign: "center",
-            margin: "0 0 40px",
-            maxWidth: "520px",
+            margin: "0 0 48px",
+            maxWidth: "900px",
           }}>
-            Enter a Ticker to Calculate<br /><em style={{ color: C.accent }}>Time Until Payback</em>
+            Search Any Company<br />to Calculate<br /><em style={{ color: C.accent }}>Time Until Payback</em>
           </h2>
 
-          <div className="rsp-hero-row" style={{ width: "100%", maxWidth: "600px", display: "flex", gap: "0", border: `2px solid ${C.accent}`, animation: "heroGlow 2.4s ease-in-out infinite" }}>
-            <input
-              type="text"
+          <div className="rsp-hero-row" style={{ position: "relative", width: "100%", maxWidth: "600px", display: "flex", gap: "0", border: `2px solid ${C.accent}`, animation: "heroGlow 2.4s ease-in-out infinite" }}>
+            <TickerSearch
               value={ticker}
-              onChange={e => setTicker(e.target.value.toUpperCase())}
-              onKeyDown={e => e.key === "Enter" && doFetch()}
-              placeholder="Search Ticker (e.g., NVO, AAPL)..."
-              autoFocus
-              style={{
+              onChange={setTicker}
+              onSelect={setTicker}
+              onSubmit={doFetch}
+              placeholder="Search..."
+              inputStyle={{
                 flex: 1,
                 background: "transparent",
                 border: "none",
@@ -401,8 +399,8 @@ export default function App() {
 
           {error && <div style={{ marginTop: "12px", fontSize: "11px", color: "#ff4136" }}>{error}</div>}
 
-          <div style={{ marginTop: "16px", fontSize: "10px", color: C.text3, letterSpacing: "0.08em" }}>
-            Powered by Financial Modeling Prep · Enter any US or international ticker
+          <div style={{ marginTop: "20px", fontSize: "10px", color: C.text3, letterSpacing: "0.08em" }}>
+            Search by company name or ticker · US, UK & Canadian markets
           </div>
         </section>
         )}
@@ -411,15 +409,15 @@ export default function App() {
         {/* ── COMPACT TICKER BAR (post-search) ─────────────────────────────── */}
         <section style={{ paddingTop: "20px", paddingBottom: "20px", marginBottom: "20px", borderBottom: `1px solid ${C.borderWeak}`, animation: "fadeInUp 0.4s ease both" }}>
           <div className="rsp-api-bar" style={{ display: "grid", gridTemplateColumns: "1fr 140px auto", gap: "20px", alignItems: "end" }}>
-            <div>
-              <label style={{ display: "block", fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: C.text2, marginBottom: "6px" }}>Ticker</label>
-              <input
-                type="text"
+            <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "10px" }}>
+              <label style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: C.text2, flexShrink: 0 }}>Ticker</label>
+              <TickerSearch
                 value={ticker}
-                onChange={e => setTicker(e.target.value.toUpperCase())}
-                onKeyDown={e => e.key === "Enter" && doFetch()}
+                onChange={setTicker}
+                onSelect={setTicker}
+                onSubmit={doFetch}
                 placeholder="AAPL"
-                style={{ ...inputShared, letterSpacing: "0.12em", textTransform: "uppercase" }}
+                inputStyle={{ ...inputShared, letterSpacing: "0.12em", textTransform: "uppercase" }}
                 onFocus={e => (e.target.style.borderBottomColor = C.accent)}
                 onBlur={e => (e.target.style.borderBottomColor = C.borderWeak)}
               />
@@ -466,10 +464,11 @@ export default function App() {
         </section>
         </>)}
 
+        {hasSearched && (<>
         {/* ── MAIN GRID: asymmetric 5:7 ────────────────────────────────────── */}
         <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "5fr 2px 7fr", gap: "0", minHeight: "600px" }}>
 
-          {/* ── LEFT COLUMN: Data / Manual Inputs ─────────────────────────── */}
+          {/* ── LEFT COLUMN: Verdict + Data ─────────────────────────── */}
           <div className="rsp-left-col" style={{ paddingRight: "40px", paddingBottom: "40px", paddingTop: "28px", animation: "fadeInUp 0.5s 0.15s ease both" }}>
 
             {hasSearched && !company && (
@@ -480,6 +479,15 @@ export default function App() {
                 </p>
               </div>
             )}
+
+            <VerdictCard result={result} mode={mode} noiseFilter={noiseFilter} currentPrice={inp.currentPrice} onGrowthStep={(d: number) => {
+              setInp(p => ({
+                ...p,
+                historicalGrowth: Math.max(0, p.historicalGrowth + d),
+                analystGrowth: Math.max(0, p.analystGrowth + d),
+                growthOverrides: {},
+              }));
+            }} />
 
             {/* 01 Enterprise Value */}
             <div style={{ marginBottom: "32px" }}>
@@ -520,14 +528,33 @@ export default function App() {
                 return (
                   <>
                     <StepperRow
-                      label="Historical EPS Growth (avg 10yr)"
+                      label="Historical EPS Growth"
                       value={inp.historicalGrowth}
-                      onStep={d => set("historicalGrowth", Math.max(0, inp.historicalGrowth + d))}
+                      onStep={d => setInp(prev => ({ ...prev, historicalGrowth: Math.max(0, prev.historicalGrowth + d), growthOverrides: {} }))}
+                      badge={
+                        <div style={{ display: "flex", gap: "0px" }}>
+                          {(["5yr", "10yr"] as const).map(p => (
+                            <button key={p} onClick={() => {
+                              setGrowthPeriod(p);
+                              setInp(prev => ({ ...prev, historicalGrowth: p === "5yr" ? growthValues.g5 : growthValues.g10, growthOverrides: {} }));
+                            }} style={{
+                              fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                              letterSpacing: "0.05em", padding: "2px 6px",
+                              background: growthPeriod === p ? "rgba(196,160,110,0.2)" : "transparent",
+                              border: `1px solid ${growthPeriod === p ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+                              color: growthPeriod === p ? "#C4A06E" : "#666",
+                              cursor: "pointer",
+                              borderRadius: p === "5yr" ? "3px 0 0 3px" : "0 3px 3px 0",
+                              marginLeft: p === "10yr" ? "-1px" : 0,
+                            }}>{p}</button>
+                          ))}
+                        </div>
+                      }
                     />
                     <StepperRow
                       label="Analyst Forward Growth (2yr)"
                       value={inp.analystGrowth}
-                      onStep={d => set("analystGrowth", Math.max(0, inp.analystGrowth + d))}
+                      onStep={d => setInp(prev => ({ ...prev, analystGrowth: Math.max(0, prev.analystGrowth + d), growthOverrides: {} }))}
                     />
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -542,52 +569,11 @@ export default function App() {
                         {divYield.toFixed(1)}%
                       </span>
                     </div>
-                    {isOverCap && !growthUncapped ? (
-                      <>
-                        <DerivedStat label="Blended Growth Rate" value={`${f(GROWTH_CAP)}% (capped from ${f(blended)}%)`} accent="#f5a020" />
-                        <div style={{ marginTop: "8px", padding: "8px 12px", borderLeft: "2px solid #f5a020", background: "rgba(245,160,32,0.04)", display: "flex", gap: "8px", alignItems: "flex-start" }}>
-                          <span style={{ color: "#f5a020", flexShrink: 0, fontSize: "11px" }}>⚠</span>
-                          <div>
-                            <span style={{ fontSize: "10px", color: "#f5a020", lineHeight: 1.6 }}>
-                              Capped at {GROWTH_CAP}% — sustaining {f(blended)}% growth for 10+ years is unrealistic for most companies.
-                            </span>
-                            <button
-                              onClick={() => setGrowthUncapped(true)}
-                              style={{
-                                display: "block", marginTop: "6px", background: "none", border: "1px solid rgba(245,160,32,0.4)",
-                                color: "#f5a020", fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase",
-                                padding: "3px 8px", cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif",
-                              }}
-                            >
-                              Use Original: {f(blended)}%
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <DerivedStat label="Blended Growth Rate" value={`${f(blended)}%`} accent="#10d97e" />
-                        {isOverCap && growthUncapped && (
-                          <div style={{ marginTop: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span style={{ fontSize: "9px", color: "#f5a020", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>Uncapped</span>
-                            <button
-                              onClick={() => setGrowthUncapped(false)}
-                              style={{
-                                background: "none", border: "1px solid rgba(255,255,255,0.12)",
-                                color: "#888888", fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase",
-                                padding: "2px 7px", cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif",
-                              }}
-                            >
-                              Re-apply Cap
-                            </button>
-                          </div>
-                        )}
-                      </>
-                    )}
+                    <DerivedStat label="Blended Growth Rate" value={`${f(blended)}%`} accent="#10d97e" />
                     {divYield > 0 && (
                       <DerivedStat
                         label="Total TUP Growth Rate"
-                        value={`(${f(isOverCap && !growthUncapped ? GROWTH_CAP : blended)}% + ${f(divYield)}%) = ${f((isOverCap && !growthUncapped ? GROWTH_CAP : blended) + divYield)}%`}
+                        value={`(${f(blended)}% + ${f(divYield)}%) = ${f(blended + divYield)}%`}
                         accent="#C4A06E"
                       />
                     )}
@@ -597,7 +583,7 @@ export default function App() {
             </div>
 
             {/* 04 Technical */}
-            <div style={{ marginBottom: "32px" }}>
+            <div>
               <SectionLabel num="04" title="Technical Validation" />
               <DataRow label="Current Price" value={company ? `$${f(inp.currentPrice)}` : "—"} />
               <DataRow label="200-Day SMA"   value={company ? `$${f(inp.sma200)}` : "—"} />
@@ -631,64 +617,29 @@ export default function App() {
           <div className="rsp-hairline-v" style={{ background: C.border, width: "2px" }} />
 
           {/* ── RIGHT COLUMN TOP: Verdict + Valuation + Scorecard ─────────── */}
-          <div className="rsp-right-top" style={{ paddingLeft: "40px", paddingTop: "28px", animation: "fadeInUp 0.5s 0.2s ease both" }}>
-
-            <VerdictCard result={result} mode={mode} noiseFilter={noiseFilter} onGrowthStep={(d: number) => {
-              set("historicalGrowth", Math.max(0, inp.historicalGrowth + d));
-              set("analystGrowth", Math.max(0, inp.analystGrowth + d));
-            }} />
+          <div className="rsp-right-top" style={{ paddingLeft: "40px", paddingTop: "12px", animation: "fadeInUp 0.5s 0.2s ease both" }}>
 
             <ValuationContext
               strongBuyPrice={strongBuyPrice}
-              lynchRatio={valuation.lynchRatio}
+              buyPrice={buyPrice}
               dcf={valuation.dcf}
               currentPrice={inp.currentPrice}
               altmanZ={valuation.altmanZ}
             />
 
-            {company && (scorecard.earnings.length > 0 || scorecard.cashFlows.length > 0) && (
-              <div style={{ marginTop: "12px" }}>
-                <button
-                  onClick={() => setShowScorecard(s => !s)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 16px",
-                    background: C.accent,
-                    color: "#080808",
-                    border: "none",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    cursor: "pointer",
-                    fontFamily: C.body,
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-                    transition: "opacity 0.15s",
-                    marginTop: "4px",
-                  }}
-                >
-                  {showScorecard ? "▾" : "▸"} Company Health Scorecard
-                </button>
-                {showScorecard && (
-                  <CompanyScorecard
-                    earnings={scorecard.earnings}
-                    cashFlows={scorecard.cashFlows}
-                    incomeHistory={scorecard.incomeHistory}
-                  />
-                )}
-              </div>
+            {company && (
+              <CompanyScorecard
+                earnings={scorecard.earnings}
+                cashFlows={scorecard.cashFlows}
+                incomeHistory={scorecard.incomeHistory}
+                description={scorecard.description}
+                grades={analystData.grades}
+                estimateSpread={analystData.estimateSpread}
+                forwardEPS={inp.forwardEPS}
+                lifecycleOnly
+              />
             )}
 
-            {result && !noiseFilter && (
-              <div style={{ marginTop: "20px", padding: "12px 0", borderBottom: `1px solid ${C.borderWeak}` }}>
-                <div style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text2, marginBottom: "6px" }}>Formula</div>
-                <p style={{ fontSize: "13px", color: C.text2, fontFamily: C.mono, lineHeight: 1.7, margin: 0 }}>
-                  {mode === "standard"
-                    ? `(${fB(inp.marketCap)} + ${fB(inp.debt)} − ${fB(inp.cash)}) / ${(inp.shares / 1e9).toFixed(2)}B = $${f(result.adjPrice)} adj. price`
-                    : `EPS = $${f(inp.revenuePerShare)} × ${inp.targetMargin}% = $${f(result.epsBase)} | Start Yr ${inp.breakEvenYear} | Adj $${f(result.adjPrice)}`}
-                </p>
-              </div>
-            )}
 
           </div>
 
@@ -697,65 +648,15 @@ export default function App() {
 
             <div style={{ marginTop: "24px" }}>
               <SectionLabel num="05" title="Year-by-Year Breakdown" />
-              <Table result={result} />
+              <Table result={result} growthOverrides={inp.growthOverrides} onGrowthChange={(year, val) => {
+                setInp(p => {
+                  const overrides = { ...p.growthOverrides };
+                  for (let y = year; y <= 30; y++) overrides[y] = val;
+                  return { ...p, growthOverrides: overrides };
+                });
+              }} />
             </div>
 
-            {company && result && !noiseFilter && (
-              <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: `1px solid ${C.borderWeak}` }}>
-                <SectionLabel num="06" title="Perspective" />
-                {(() => {
-                  const divYield = inp.dividendYield || 0;
-                  const isAccelerator = divYield > 3;
-                  const isPayer = divYield > 0;
-                  return (
-                    <div style={{ display: "flex", gap: "0" }}>
-                      <div style={{ flex: "0 0 auto", paddingRight: "20px", borderRight: `1px solid ${C.borderWeak}`, marginRight: "20px" }}>
-                        <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: "6px" }}>
-                          Fwd Dividend Yield
-                        </div>
-                        <div style={{
-                          fontFamily: C.serif,
-                          fontSize: "clamp(2rem, 5vw, 3rem)",
-                          lineHeight: 1,
-                          fontWeight: 400,
-                          color: isAccelerator ? "#10d97e" : isPayer ? C.accentAlt : C.text3,
-                          letterSpacing: "-0.02em",
-                        }}>
-                          {f(divYield)}%
-                        </div>
-                        {isAccelerator && (
-                          <div style={{ marginTop: "6px", fontSize: "8px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#10d97e" }}>
-                            ★ Acceleration Factor
-                          </div>
-                        )}
-                      </div>
-
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: "11px", color: C.text2, lineHeight: 1.8, margin: "0 0 10px" }}>
-                          {isPayer
-                            ? <>This <strong style={{ color: C.text1 }}>{f(divYield)}%</strong> annual cash return is earned regardless of share price movement — it functions as a safety margin that reduces your effective cost basis every year you hold.</>
-                            : "No dividend paid. Total return depends entirely on price appreciation and EPS compounding."}
-                        </p>
-                        {isPayer && (
-                          <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-                            <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.text3 }}>Calc</span>
-                            <span style={{ fontFamily: C.mono, fontSize: "10px", color: C.text3 }}>{divNote || `adjDiv × freq ÷ price`}</span>
-                          </div>
-                        )}
-                        {isPayer && (
-                          <div style={{ marginTop: "8px", display: "flex", alignItems: "baseline", gap: "8px" }}>
-                            <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.text3 }}>TUP Impact</span>
-                            <span style={{ fontFamily: C.mono, fontSize: "10px", color: isAccelerator ? "#10d97e" : C.accentAlt }}>
-                              +{f(divYield)}% added to compounding rate
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
 
 
           </div>
@@ -767,6 +668,7 @@ export default function App() {
             TUP Calculator — For educational purposes only. Not financial advice. Data via Financial Modeling Prep API.
           </p>
         </footer>
+        </>)}
 
       </div>
 
@@ -787,6 +689,13 @@ export default function App() {
         .rsp-right-top    { grid-column: 3; grid-row: 1; }
         .rsp-right-bottom { grid-column: 3; grid-row: 2; }
 
+        /* Desktop: verdict text scaled */
+        @media (min-width: 768px) {
+          .rsp-verdict-num   { font-size: clamp(7.5rem, 21vw, 13.5rem) !important; }
+          .rsp-verdict-label { font-size: 25px !important; }
+          .rsp-verdict-sub   { font-size: 12px !important; }
+        }
+
         /* Desktop: noise filter first, methodology second */
         .rsp-noise-btn       { order: 1; }
         .rsp-methodology-btn { order: 2; }
@@ -796,6 +705,9 @@ export default function App() {
           .rsp-container {
             padding-left: 16px !important;
             padding-right: 16px !important;
+          }
+          .rsp-hero-section {
+            padding-bottom: 120px !important;
           }
           .rsp-hero-row {
             flex-direction: column !important;

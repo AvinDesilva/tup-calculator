@@ -1,6 +1,6 @@
 interface ValuationContextProps {
   strongBuyPrice: number | null;
-  lynchRatio: number | null;
+  buyPrice: number | null;
   dcf: number | null;
   currentPrice: number;
   altmanZ: number | null;
@@ -15,18 +15,45 @@ interface PanelData {
   sub: string;
 }
 
-export function ValuationContext({ strongBuyPrice, lynchRatio, dcf, currentPrice, altmanZ }: ValuationContextProps) {
+function Panel({ p, mono }: { p: PanelData; mono: string }) {
+  return (
+    <div className="rsp-val-panel" style={{ padding: "0" }}>
+      <div className="rsp-val-title" style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#888", marginBottom: "6px" }}>
+        {p.title}
+      </div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+        <span style={{ fontFamily: mono, fontSize: "20px", fontWeight: 600, color: p.color, letterSpacing: "-0.02em" }}>
+          {p.value}
+        </span>
+        {p.icon && (
+          <span style={{ fontFamily: mono, fontSize: "14px", fontWeight: 700, color: p.color }}>{p.icon}</span>
+        )}
+      </div>
+      <div style={{ fontSize: "11px", color: "#888", marginTop: "4px", letterSpacing: "0.06em" }}>
+        {p.sub}
+      </div>
+    </div>
+  );
+}
+
+export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, altmanZ }: ValuationContextProps) {
   const mono = "'JetBrains Mono', monospace";
 
   const hasStrongBuy = strongBuyPrice != null && strongBuyPrice > 0 && currentPrice > 0;
-  const hasLynch     = lynchRatio != null && isFinite(lynchRatio);
+  const hasBuy       = buyPrice != null && buyPrice > 0 && currentPrice > 0;
   const hasDCF       = dcf != null && dcf > 0 && currentPrice > 0;
   const hasAltman    = altmanZ != null && isFinite(altmanZ);
-  if (!hasStrongBuy && !hasLynch && !hasDCF && !hasAltman) return null;
+  if (!hasStrongBuy && !hasBuy && !hasDCF && !hasAltman) return null;
 
-  // Lynch PEG
-  const lynchIcon  = (lynchRatio as number) < 1 ? "✓" : (lynchRatio as number) <= 2 ? "■" : "!";
-  const lynchColor = (lynchRatio as number) < 1 ? "#10d97e" : (lynchRatio as number) <= 2 ? "#f5a020" : "#FF4D00";
+  // Buy price (10y threshold)
+  const buyDelta = hasBuy ? ((buyPrice as number) - currentPrice) / currentPrice * 100 : 0;
+  const buyBelow = hasBuy && currentPrice <= (buyPrice as number);
+  const buyColor = buyBelow ? "#10d97e" : "#f5a020";
+  const buySub   = Math.abs(buyDelta) < 0.5
+    ? "Equal to current price"
+    : buyDelta > 0
+      ? `${Math.abs(buyDelta).toFixed(0)}% below`
+      : `${Math.abs(buyDelta).toFixed(0)}% above`;
 
   // DCF delta vs current price
   const dcfDelta    = hasDCF ? (((dcf as number) - currentPrice) / currentPrice) * 100 : 0;
@@ -49,79 +76,79 @@ export function ValuationContext({ strongBuyPrice, lynchRatio, dcf, currentPrice
   const sbDelta   = hasStrongBuy ? ((strongBuyPrice as number) - currentPrice) / currentPrice * 100 : 0;
   const sbBelow   = hasStrongBuy && currentPrice > (strongBuyPrice as number);
   const sbColor   = sbBelow ? "#10d97e" : "#f5a020";
-  const sbSub     = sbBelow
-    ? `${Math.abs(sbDelta).toFixed(0)}% below — currently a Strong Buy`
-    : `${Math.abs(sbDelta).toFixed(0)}% above current price`;
+  const sbSub     = Math.abs(sbDelta) < 0.5
+    ? "Equal to current price"
+    : sbDelta < 0
+      ? `${Math.abs(sbDelta).toFixed(0)}% above`
+      : `${Math.abs(sbDelta).toFixed(0)}% below`;
 
-  // Build panel list (only include panels with data)
-  const panels: PanelData[] = [
-    hasStrongBuy && {
-      key: "strongbuy",
-      title: "Strong Buy Below",
-      value: `$${(strongBuyPrice as number).toFixed(2)}`,
-      icon: sbBelow ? "▲▲" : null,
-      color: sbColor,
-      sub: sbSub,
-    },
-    hasLynch && {
-      key: "lynch",
-      title: "Lynch Score",
-      value: Number(lynchRatio).toFixed(2),
-      icon: lynchIcon,
-      color: lynchColor,
-      sub: (lynchRatio as number) < 1 ? "PEG < 1 — below growth" : (lynchRatio as number) <= 2 ? "PEG 1–2 — fairly valued" : "PEG > 2 — expensive",
-    },
-    hasDCF && {
-      key: "dcf",
-      title: "DCF Fair Value",
-      value: `$${Number(dcf).toFixed(2)}`,
-      icon: null,
-      color: dcfColor,
-      sub: dcfLabel,
-    },
-    hasAltman && {
-      key: "altman",
-      title: "Altman Z-Score",
-      value: Number(altmanZ).toFixed(2),
-      icon: null,
-      color: altmanColor,
-      sub: altmanLabel,
-    },
-  ].filter((p): p is PanelData => Boolean(p));
+  // Build panel data
+  const sbPanel: PanelData | null = hasStrongBuy ? {
+    key: "strongbuy", title: "Strong Buy Below",
+    value: `$${(strongBuyPrice as number).toFixed(2)}`,
+    icon: sbBelow ? "▲▲" : null, color: sbColor, sub: sbSub,
+  } : null;
 
-  if (panels.length === 0) return null;
+  const buyPanel: PanelData | null = hasBuy ? {
+    key: "buy", title: "Patient Buy Below",
+    value: `$${(buyPrice as number).toFixed(2)}`,
+    icon: buyBelow ? "▲" : null, color: buyColor, sub: buySub,
+  } : null;
 
-  // Alternating content + 1px divider columns
-  const cols = panels.map((_, i) => (i < panels.length - 1 ? ["1fr", "1px"] : ["1fr"])).flat();
+  const dcfPanel: PanelData | null = hasDCF ? {
+    key: "dcf", title: "DCF Fair Value",
+    value: `$${Number(dcf).toFixed(2)}`,
+    icon: null, color: dcfColor, sub: dcfLabel,
+  } : null;
+
+  const altmanPanel: PanelData | null = hasAltman ? {
+    key: "altman", title: "Altman Z-Score",
+    value: Number(altmanZ).toFixed(2),
+    icon: null, color: altmanColor, sub: altmanLabel,
+  } : null;
+
+  const topRow = [sbPanel, buyPanel].filter((p): p is PanelData => p != null);
+  const bottomRow = [dcfPanel, altmanPanel].filter((p): p is PanelData => p != null);
+
+  if (topRow.length === 0 && bottomRow.length === 0) return null;
+
+  const divider = <div style={{ background: "rgba(255,255,255,0.06)", width: "1px" }} />;
+  const hDivider = <div style={{ background: "rgba(255,255,255,0.06)", height: "1px", gridColumn: "1 / -1" }} />;
 
   return (
-    <div style={{ marginTop: "16px", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "14px" }}>
+    <div style={{ paddingTop: "8px" }}>
       <div style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888", marginBottom: "10px" }}>
         Valuation Context
       </div>
-      <div className="rsp-valuation-grid" style={{ display: "grid", gridTemplateColumns: cols.join(" "), gap: "0" }}>
-        {panels.map((p, i) => [
-          <div key={p.key} className="rsp-val-panel" style={{ paddingRight: i < panels.length - 1 ? "14px" : "0", paddingLeft: i > 0 ? "14px" : "0" }}>
-            <div className="rsp-val-title" style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#888", marginBottom: "6px" }}>
-              {p.title}
+
+      {/* Top row: Strong Buy + Patient Buy */}
+      {topRow.length > 0 && (
+        <div className="rsp-valuation-grid" style={{ display: "grid", gridTemplateColumns: topRow.length === 2 ? "1fr 1px 1fr" : "1fr", gap: "0", paddingBottom: "14px" }}>
+          <Panel p={topRow[0]} mono={mono} />
+          {topRow.length === 2 && divider}
+          {topRow.length === 2 && (
+            <div style={{ paddingLeft: "14px" }}>
+              <Panel p={topRow[1]} mono={mono} />
             </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
-              <span style={{ fontFamily: mono, fontSize: "20px", fontWeight: 600, color: p.color, letterSpacing: "-0.02em" }}>
-                {p.value}
-              </span>
-              {p.icon && (
-                <span style={{ fontFamily: mono, fontSize: "14px", fontWeight: 700, color: p.color }}>{p.icon}</span>
-              )}
+          )}
+        </div>
+      )}
+
+      {/* Horizontal divider between rows */}
+      {topRow.length > 0 && bottomRow.length > 0 && hDivider}
+
+      {/* Bottom row: DCF + Altman Z */}
+      {bottomRow.length > 0 && (
+        <div className="rsp-valuation-grid" style={{ display: "grid", gridTemplateColumns: bottomRow.length === 2 ? "1fr 1px 1fr" : "1fr", gap: "0", paddingTop: "14px" }}>
+          <Panel p={bottomRow[0]} mono={mono} />
+          {bottomRow.length === 2 && divider}
+          {bottomRow.length === 2 && (
+            <div style={{ paddingLeft: "14px" }}>
+              <Panel p={bottomRow[1]} mono={mono} />
             </div>
-            <div style={{ fontSize: "11px", color: "#888", marginTop: "4px", letterSpacing: "0.06em" }}>
-              {p.sub}
-            </div>
-          </div>,
-          i < panels.length - 1 && (
-            <div key={`div-${i}`} className="rsp-val-div" style={{ background: "rgba(255,255,255,0.06)", width: "1px" }} />
-          ),
-        ])}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

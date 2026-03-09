@@ -29,9 +29,10 @@ interface VerdictCardProps {
   mode: Mode;
   noiseFilter: boolean;
   onGrowthStep: (delta: number) => void;
+  currentPrice: number;
 }
 
-export function VerdictCard({ result, mode, noiseFilter, onGrowthStep }: VerdictCardProps) {
+export function VerdictCard({ result, mode, noiseFilter, onGrowthStep, currentPrice }: VerdictCardProps) {
   if (!result) return null;
   const v   = VERDICT[result.verdict];
   const thr = mode === "standard" ? STD_THRESHOLD : PP_THRESHOLD;
@@ -78,10 +79,10 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep }: Verdict
   }
 
   return (
-    <div style={{ paddingBottom: "24px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+    <div style={{ paddingBottom: "4px" }}>
       {/* Giant number + verdict label */}
-      <div style={{ display: "flex", alignItems: "flex-end", gap: "20px", marginBottom: "20px" }}>
-        <div style={{
+      <div className="rsp-verdict-hero" style={{ display: "flex", alignItems: "flex-end", gap: "20px", marginBottom: "12px" }}>
+        <div className="rsp-verdict-num" style={{
           fontFamily: "'DM Serif Display', serif", fontWeight: 400,
           fontSize: "clamp(5rem, 14vw, 9rem)", lineHeight: 1,
           color: v.color, letterSpacing: "-0.03em",
@@ -89,34 +90,42 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep }: Verdict
           {result.payback || "30+"}
         </div>
         <div style={{ paddingBottom: "8px" }}>
-          <div style={{ fontSize: "22px", fontWeight: 700, color: v.color, letterSpacing: "-0.01em", fontFamily: "'Barlow Condensed', sans-serif" }}>
+          <div className="rsp-verdict-label" style={{ fontSize: "22px", fontWeight: 700, color: v.color, letterSpacing: "-0.01em", fontFamily: "'Barlow Condensed', sans-serif" }}>
             {v.icon} {v.label}
           </div>
-          <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888888", marginTop: "4px" }}>
+          <div className="rsp-verdict-sub" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888888", marginTop: "4px" }}>
             {mode === "standard" ? "Standard TUP" : "Pre-Profit TUP-P"} · Years to Payback
           </div>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div style={{ height: "2px", background: "rgba(255,255,255,0.04)", marginBottom: "20px", overflow: "hidden" }}>
+      <div style={{ height: "3px", background: "rgba(255,255,255,0.04)", marginBottom: "12px", overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${paybackPct}%`, background: v.color, opacity: 0.5, transition: "width 0.7s ease" }} />
       </div>
 
-      {/* Stats row */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0" }}>
+      {/* Stats — stacked vertically */}
+      <div className="rsp-verdict-stats" style={{ display: "flex", flexDirection: "column", gap: "0" }}>
         {/* Adj. Price */}
-        <div style={{ padding: "12px 16px" }}>
+        <div style={{ padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={labelStyle}>Adj. Price</div>
-          <div style={valueStyle}>${f(result.adjPrice)}</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+            {currentPrice > 0 && (
+              <>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", fontWeight: 400, color: "#666" }}>${f(currentPrice)}</span>
+                <span style={{ fontSize: "10px", color: "#555" }}>→</span>
+              </>
+            )}
+            <span style={valueStyle}>${f(result.adjPrice)}</span>
+          </div>
         </div>
         {/* EPS Base */}
-        <div style={{ padding: "12px 16px", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={labelStyle}>EPS Base</div>
           <div style={valueStyle}>${f(result.epsBase)}</div>
         </div>
         {/* Growth + Change Rate button */}
-        <div style={{ padding: "12px 16px", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ padding: "10px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={labelStyle}>Growth</div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <button {...holdDown} onClick={e => e.preventDefault()} style={arrowBtnStyle}>▼</button>
@@ -158,11 +167,6 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep }: Verdict
           <span style={{ fontSize: "11px", color: "#f5a020" }}>TAM Warning — Implied Y10 revenue exceeds $5T. Growth may be unrealistic.</span>
         </div>
       )}
-
-      {/* Threshold note */}
-      <div style={{ marginTop: "12px", fontSize: "12px", color: "#505050", fontFamily: "'JetBrains Mono', monospace" }}>
-        Threshold: {thr}y
-      </div>
     </div>
   );
 }
