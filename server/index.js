@@ -32,8 +32,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Rate limiting — 30 requests / minute per IP ───────────────────────────────
-const RATE_LIMIT  = 30;
+// ── Rate limiting — 150 requests / minute per IP ──────────────────────────────
+// Each ticker lookup fires ~10 parallel FMP calls, so 30/min only allowed ~3
+// lookups before triggering a false 429. Bumped to 150 to allow ~15 lookups/min
+// while still protecting against abuse (FMP plan allows 750/min).
+const RATE_LIMIT  = 150;
 const RATE_WINDOW = 60 * 1000;
 const rateMap = new Map();
 
@@ -61,6 +64,55 @@ setInterval(() => {
     if (now > entry.reset) rateMap.delete(ip);
   }
 }, 5 * 60 * 1000);
+
+// ── Search — parallel symbol + name search, merged & ranked ─────────────────
+const US_EXCHANGES = new Set(["NASDAQ", "NYSE", "AMEX", "NYSEAMERICAN", "NYSEARCA", "BATS", "CBOE"]);
+
+app.get("/search", async (req, res) => {
+  const query = (req.query.query || "").toString().trim();
+  if (query.length < 2) {
+    return res.status(400).json({ error: "Query must be at least 2 characters." });
+  }
+
+  const limit = Math.min(parseInt(req.query.limit, 10) || 10, 20);
+  const fetchLimit = String(limit + 10); // over-fetch to have room after dedup
+
+  const symbolParams = new URLSearchParams({ query, limit: fetchLimit, apikey: API_KEY });
+  const nameParams   = new URLSearchParams({ query, limit: fetchLimit, apikey: API_KEY });
+
+  try {
+    const [symbolRes, nameRes] = await Promise.all([
+      fetch(`${FMP_BASE}/search-symbol?${symbolParams}`).then(r => r.ok ? r.json() : []).catch(() => []),
+      fetch(`${FMP_BASE}/search-name?${nameParams}`).then(r => r.ok ? r.json() : []).catch(() => []),
+    ]);
+
+    // Merge: symbol results first (more relevant for ticker queries), then name results
+    const seen = new Set();
+    const merged = [];
+    for (const item of [...symbolRes, ...nameRes]) {
+      if (!item.symbol || seen.has(item.symbol)) continue;
+      seen.add(item.symbol);
+      merged.push(item);
+    }
+
+    // Sort: US exchanges first, then exact symbol match, then alphabetical
+    const uq = query.toUpperCase();
+    merged.sort((a, b) => {
+      const aUS = US_EXCHANGES.has((a.exchange || "").toUpperCase()) ? 0 : 1;
+      const bUS = US_EXCHANGES.has((b.exchange || "").toUpperCase()) ? 0 : 1;
+      if (aUS !== bUS) return aUS - bUS;
+      const aExact = a.symbol.toUpperCase() === uq ? 0 : 1;
+      const bExact = b.symbol.toUpperCase() === uq ? 0 : 1;
+      if (aExact !== bExact) return aExact - bExact;
+      return a.symbol.localeCompare(b.symbol);
+    });
+
+    res.json(merged.slice(0, limit));
+  } catch (err) {
+    console.error("[tup-proxy] search error:", err.message);
+    res.status(502).json({ error: "Unable to reach data provider." });
+  }
+});
 
 // ── Proxy — /fmp/:endpoint → FMP stable API ───────────────────────────────────
 app.get("/fmp/:endpoint(*)", async (req, res) => {

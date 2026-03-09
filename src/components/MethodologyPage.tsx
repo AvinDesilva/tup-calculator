@@ -1,5 +1,4 @@
 import type React from "react";
-
 interface MethodologyPageProps {
   onBack: () => void;
 }
@@ -69,9 +68,13 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         {/* Overview */}
         <div style={{ padding: "32px 0 40px", borderBottom: `1px solid ${M.borderWeak}` }}>
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.9, margin: 0 }}>
-            TUP works most effectively for profitable growth stocks. It uses the average of trailing and forward EPS, compounded at the blended historical + analyst
-            growth rate. Annual EPS is summed until cumulative earnings equal the adjusted price. A payback
-            period under <strong style={{ color: M.text1 }}>10 years</strong> indicates a buy.
+            TUP (Time Until Payback) measures how many years of a company's earnings it takes to
+            recover what you paid for the stock. It starts with the <strong style={{ color: M.text1 }}>blended
+            EPS</strong> (average of trailing and forward estimates) as the base, compounds it year over year
+            using a growth rate that <strong style={{ color: M.text1 }}>decays dynamically</strong> based on the
+            company's lifecycle stage, and counts until the cumulative total equals the adjusted price — if
+            payback arrives in under{" "}
+            <strong style={{ color: M.text1 }}>10 years</strong>, the stock is a buy.
           </p>
         </div>
 
@@ -109,19 +112,35 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
 
         {/* 02 Historical EPS Growth */}
         <section style={{ padding: "40px 0", borderBottom: `1px solid ${M.borderWeak}` }}>
-          <SectionNum n="02" title="Historical EPS Growth" sub="%" />
+          <SectionNum n="02" title="Historical EPS Growth" sub="CAGR + Absolute Delta" />
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
-            Calculated as the Compound Annual Growth Rate (CAGR) from the company's inception
-            (or first year of positive earnings) to the present.
+            Derived from diluted EPS on the income statement (net income ÷ shares). TUP uses a{" "}
+            <strong style={{ color: M.text1 }}>two-path approach</strong> depending on whether the
+            starting EPS was positive or negative.
           </p>
-          <FormulaBlock label="Formula">
-            Historical Growth = [(Current EPS / Initial EPS)<sup style={{ fontSize: "11px" }}>1/n</sup> − 1] × 100
+
+          <SubHead>Path A — Standard CAGR (Base EPS &gt; 0)</SubHead>
+          <FormulaBlock>
+            Growth = [(EPS<sub>end</sub> / EPS<sub>begin</sub>)<sup style={{ fontSize: "11px" }}>1/n</sup> − 1] × 100
           </FormulaBlock>
+
+          <SubHead>Path B — Absolute Delta (Base EPS ≤ 0)</SubHead>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 16px" }}>
+            The standard CAGR breaks when the starting EPS is zero or negative. For turnaround companies
+            that transitioned from losses to profitability, TUP uses the Absolute Delta method instead:
+          </p>
+          <FormulaBlock>
+            Growth<sub>mod</sub> = (EPS<sub>end</sub> − EPS<sub>begin</sub>) / (|EPS<sub>begin</sub>| × n) × 100
+          </FormulaBlock>
+          <p style={{ fontSize: "14px", color: M.text3, lineHeight: 1.7, margin: "0 0 24px", fontStyle: "italic" }}>
+            If |EPS<sub>begin</sub>| is exactly 0, a floor of $0.01 is used to prevent division by zero.
+          </p>
+
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "24px" }}>
             {[
-              ["Current EPS", "Most recent Trailing Twelve Months (TTM) Diluted EPS"],
-              ["Initial EPS",  "EPS from the company's first full year of public data (or first profitable year)"],
-              ["n",           "Number of years between those two points"],
+              ["EPS_end",   "Most recent fiscal year diluted EPS"],
+              ["EPS_begin", "Farthest available year (up to 5 or 10 years back)"],
+              ["n",         "Number of years between those two points"],
             ].map(([term, def]) => (
               <div key={term} style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "16px", fontSize: "14px", lineHeight: 1.7 }}>
                 <span style={{ fontFamily: M.mono, color: "#00BFA5" }}>{term}</span>
@@ -129,10 +148,18 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
               </div>
             ))}
           </div>
-          <CalloutBlock label="Why CAGR over a Simple Average?">
-            A simple average of yearly percentages is misleading. If a company grows 100% one year and −50%
-            the next, a simple average says 25% growth — but actual EPS is unchanged. CAGR gives the true
-            annual rate required to move from Point A to Point B.
+
+          <CalloutBlock label="Why Two Paths?">
+            A company like HIMS with EPS going from −$0.50 to +$1.50 over 3 years has genuine
+            compounding momentum, but the standard CAGR formula returns NaN for a negative base.
+            The Absolute Delta method normalizes the total swing against the starting magnitude, giving
+            a meaningful growth rate that feeds correctly into the lifecycle fade model.
+          </CalloutBlock>
+
+          <CalloutBlock label="No Hard Cap">
+            Historical growth is <em>not</em> capped at a fixed ceiling. Instead, the{" "}
+            <strong style={{ color: M.text1 }}>Variable Decay Rate</strong> in Step 05 ensures that
+            hyper-growth rates are reduced more aggressively over time — making a hard cap redundant.
           </CalloutBlock>
         </section>
 
@@ -141,30 +168,24 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
           <SectionNum n="03" title="Analyst Forward Growth (2yr)" sub="Consensus Estimate" />
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             The consensus view of professional researchers covering the stock — typically the estimated EPS
-            growth for the next fiscal year or a 5-year annualized projection.
+            growth for the next fiscal year or a 2-year annualized projection. This is blended with the
+            historical CAGR to produce the final growth rate used in the payback calculation.
           </p>
-          <FormulaBlock label="Manual Calculation">
-            Forward Growth = (Next Year EPS − Current Year EPS) / Current Year EPS × 100
+          <FormulaBlock label="2-Year CAGR (Preferred)">
+            Analyst Growth = √(FwdEPS<sub>yr2</sub> / EPS<sub>TTM</sub>) − 1
           </FormulaBlock>
-          <div style={{ padding: "16px 20px", borderLeft: "2px solid rgba(196,160,110,0.4)", marginBottom: "20px" }}>
-            <SubHead>Where to Find It</SubHead>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {[
-                ["Yahoo Finance", "Analysis tab → EPS Trend"],
-                ["Seeking Alpha", "Earnings estimates section"],
-                ["Morningstar",   "Consensus estimates"],
-              ].map(([src, loc]) => (
-                <div key={src} style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: "16px", fontSize: "14px", lineHeight: 1.7 }}>
-                  <span style={{ fontFamily: M.mono, color: "#00BFA5" }}>{src}</span>
-                  <span style={{ color: M.text2 }}>{loc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <CalloutBlock label="Note on Transition Companies">
-            For companies in a business-model transition (e.g. a social platform shifting to e-commerce), the
-            5-year estimate is often more useful than the next-year figure — it better captures re-acceleration
-            or the steady-state of the new model.
+          <FormulaBlock label="1-Year Fallback">
+            Analyst Growth = (FwdEPS<sub>yr1</sub> − EPS<sub>TTM</sub>) / EPS<sub>TTM</sub>
+          </FormulaBlock>
+          <CalloutBlock label="Revenue Fallback">
+            If analyst EPS estimates are unavailable (common on free-tier API plans), TUP falls back to
+            analyst <em>revenue</em> estimates using the same CAGR formula. If no estimates are available
+            at all, the analyst growth defaults to 80% of the historical CAGR.
+          </CalloutBlock>
+          <CalloutBlock label="Why Blend Historical + Analyst?">
+            Historical growth shows what the company has actually achieved; analyst estimates show what the
+            market expects going forward. Averaging the two tempers over-optimistic projections while still
+            capturing forward momentum — especially useful for companies entering a new growth phase.
           </CalloutBlock>
         </section>
 
@@ -236,10 +257,110 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
             </div>
           </div>
 
+          <SubHead>Lifecycle Fade with Variable Decay Rate</SubHead>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 20px" }}>
+            Rather than applying a flat growth cap, TUP uses a <strong style={{ color: M.text1 }}>Lifecycle Fade</strong> model
+            with a <strong style={{ color: M.text1 }}>Variable Decay Rate (VDR)</strong> that scales
+            with the initial growth rate. Hyper-growth companies face more aggressive annual reduction,
+            while moderate growers decay gracefully — eliminating the need for a hard cap.
+          </p>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 20px" }}>
+            First, the company is classified into a lifecycle stage using its most recent revenue growth and profitability:
+          </p>
+          <div style={{ border: `1px solid ${M.borderWeak}`, marginBottom: "24px" }}>
+            {[
+              ["Introduction", "Revenue growth > 15%, not yet profitable", "5 years"],
+              ["Growth",       "Revenue growth > 15%, profitable",        "3 years"],
+              ["Maturity",     "Revenue growth 0–15%",                    "0 years"],
+              ["Decline",      "Revenue growth < 0%",                     "0 years"],
+            ].map(([stage, criteria, hold]) => (
+              <div key={stage as string} style={{
+                display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "12px", alignItems: "baseline",
+                padding: "12px 20px", borderBottom: `1px solid ${M.borderWeak}`,
+              }}>
+                <span style={{ fontSize: "14px", fontWeight: 600, color: M.text1 }}>{stage}</span>
+                <span style={{ fontSize: "14px", color: M.text2 }}>{criteria}</span>
+                <span style={{ fontFamily: M.mono, fontSize: "14px", color: "#C4A06E", textAlign: "right" }}>{hold}</span>
+              </div>
+            ))}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "12px", padding: "8px 20px", background: "rgba(255,255,255,0.02)" }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: M.text3 }}>Stage</span>
+              <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: M.text3 }}>Criteria</span>
+              <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: M.text3, textAlign: "right" }}>Hold Period</span>
+            </div>
+          </div>
+
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 16px" }}>
+            During the <strong style={{ color: M.text1 }}>Hold Period</strong>, the initial blended growth rate is
+            maintained at full strength. After the hold period expires, the rate decays annually using a
+            Variable Decay Rate that scales with the initial growth:
+          </p>
+
+          <FormulaBlock label="Variable Decay Rate">
+            VDR = max( 5%, G<sub>initial</sub> × 20% )
+          </FormulaBlock>
+
+          <FormulaBlock label="Lifecycle Fade Formula">
+            G(n) = max( G<sub>initial</sub> − (n − HoldPeriod) × VDR, &nbsp;30% )
+          </FormulaBlock>
+
+          <div style={{ border: `1px solid ${M.borderWeak}`, marginBottom: "32px" }}>
+            <div style={{ padding: "12px 20px", borderBottom: `1px solid ${M.borderWeak}` }}>
+              <SubHead>Example A — Hyper-Growth Turnaround (70% initial, Intro stage)</SubHead>
+            </div>
+            {[
+              ["VDR",                       "max(5%, 70% × 20%) = 14%", false],
+              ["Years 1–5 (hold)",          "70%",                      false],
+              ["Year 6",                    "70% − 14% = 56%",         false],
+              ["Year 7",                    "56% − 14% = 42%",         false],
+              ["Year 8+",                   "30% floor",               true],
+            ].map(([label, val, highlight]) => (
+              <div key={label as string} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                padding: "12px 20px",
+                borderBottom: `1px solid ${M.borderWeak}`,
+                background: highlight ? "rgba(196,160,110,0.06)" : "transparent",
+                borderLeft: highlight ? "2px solid #C4A06E" : "2px solid transparent",
+              }}>
+                <span style={{ fontSize: "14px", color: highlight ? M.text1 : M.text2, fontWeight: highlight ? 600 : 400 }}>{label}</span>
+                <span style={{ fontFamily: M.mono, fontSize: "15px", color: highlight ? "#C4A06E" : M.text1, fontWeight: highlight ? 700 : 400 }}>{val}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ border: `1px solid ${M.borderWeak}`, marginBottom: "32px" }}>
+            <div style={{ padding: "12px 20px", borderBottom: `1px solid ${M.borderWeak}` }}>
+              <SubHead>Example B — Moderate Grower (35% initial, Growth stage)</SubHead>
+            </div>
+            {[
+              ["VDR",                       "max(5%, 35% × 20%) = 7%", false],
+              ["Years 1–3 (hold)",          "35%",                     false],
+              ["Year 4",                    "35% − 7% = 28% → 30% floor", false],
+              ["Year 5+",                   "30% floor",               true],
+            ].map(([label, val, highlight]) => (
+              <div key={label as string} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                padding: "12px 20px",
+                borderBottom: `1px solid ${M.borderWeak}`,
+                background: highlight ? "rgba(196,160,110,0.06)" : "transparent",
+                borderLeft: highlight ? "2px solid #C4A06E" : "2px solid transparent",
+              }}>
+                <span style={{ fontSize: "14px", color: highlight ? M.text1 : M.text2, fontWeight: highlight ? 600 : 400 }}>{label}</span>
+                <span style={{ fontFamily: M.mono, fontSize: "15px", color: highlight ? "#C4A06E" : M.text1, fontWeight: highlight ? 700 : 400 }}>{val}</span>
+              </div>
+            ))}
+          </div>
+
+          <CalloutBlock>
+            The VDR ensures that extreme growth rates (from turnaround stocks or high-growth disruptors)
+            are pulled toward reality faster, while companies with steady 30–40% growth hold their rate
+            longer. No hard ceiling is needed — the math self-corrects.
+          </CalloutBlock>
+
           <SubHead>Key Guardrails</SubHead>
           {[
             ["Dividend Yield Adder", "The yield is added post-blend, not averaged in. This correctly preserves the growth signal: a 4.9% yield on a 17.5% grower produces 22.4% total compounding, not a misleadingly inflated 18% average."],
-            ["30% Cap", "Even if the calculation is higher, many analysts cap growth at 30% to account for the law of large numbers — it becomes mathematically impossible to sustain 50%+ growth as a company approaches its Market Cap Ceiling."],
+            ["30% Floor", "The VDR decay never pushes the growth rate below 30%. This floor reflects a reasonable long-term compounding assumption — aggressive enough to reward quality businesses, conservative enough to avoid fantasy projections."],
             ["Consistency Check", "If historical growth is 50% but analysts expect 5%, the business model may be broken or the industry is maturing rapidly. In these cases, lean more heavily on the lower number."],
           ].map(([title, bodyText]) => (
             <div key={title as string} style={{ padding: "20px 0", borderTop: `1px solid ${M.borderWeak}` }}>

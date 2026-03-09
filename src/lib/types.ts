@@ -24,12 +24,15 @@ export interface InputState {
   currentPrice: number;
   sma200: number;
   dividendYield: number;
+  lifecycleStage: LifecycleStage | null;
+  growthOverrides: Record<number, number>;
 }
 
 // ─── calcTUP result ───────────────────────────────────────────────────────────
 
 export interface TUPRow {
   year: number;
+  growthRate: number;
   annual: number;
   cum: number;
   remaining: number;
@@ -100,7 +103,10 @@ export interface FMPIncomeStatement {
 export interface FMPEstimate {
   date?: string;
   epsAvg?: number;
+  epsHigh?: number;
+  epsLow?: number;
   revenueAvg?: number;
+  numAnalystsEps?: number;
 }
 
 export interface FMPDividend {
@@ -145,6 +151,7 @@ export interface TickerData {
   ttmEPS: number;
   forwardEPS: number;
   historicalGrowth: number;
+  historicalGrowth5yr: number;
   analystGrowth: number;
   revenuePerShare: number;
   targetMargin: number;
@@ -153,6 +160,7 @@ export interface TickerData {
   currentPrice: number;
   sma200: number;
   dividendYield: number;
+  lifecycleStage: LifecycleStage | null;
   divNote: string;
   peterLynchRatio: number | null;
   dcfValue: number | null;

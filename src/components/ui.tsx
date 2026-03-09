@@ -1,4 +1,89 @@
+import { useRef, useCallback } from "react";
 import type React from "react";
+
+// ─── Hold-to-repeat hook ─────────────────────────────────────────────────────
+
+export function useHoldRepeat(callback: () => void, delay = 400, interval = 80) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const iv    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cbRef = useRef(callback);
+  cbRef.current = callback;
+
+  const stop = useCallback(() => {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+    if (iv.current)    { clearInterval(iv.current);   iv.current = null; }
+  }, []);
+
+  const start = useCallback(() => {
+    cbRef.current();
+    timer.current = setTimeout(() => {
+      iv.current = setInterval(() => cbRef.current(), interval);
+    }, delay);
+  }, [delay, interval]);
+
+  return { onPointerDown: start, onPointerUp: stop, onPointerLeave: stop };
+}
+
+// ─── Hold Button — single arrow with hold-to-repeat ─────────────────────────
+
+export function HoldButton({ onStep, children, style }: {
+  onStep: () => void;
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+}) {
+  const hold = useHoldRepeat(onStep);
+  return (
+    <button
+      {...hold}
+      onClick={e => e.preventDefault()}
+      style={{
+        userSelect: "none",
+        WebkitTouchCallout: "none",
+        WebkitTapHighlightColor: "transparent",
+        ...style,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Stepper Row — ▼ value ▲ for editable numeric fields ────────────────────
+
+export function StepperRow({ label, value, onStep, badge, stepSize = 1, suffix = "%" }: {
+  label: string;
+  value: number;
+  onStep: (delta: number) => void;
+  badge?: React.ReactNode;
+  stepSize?: number;
+  suffix?: string;
+}) {
+  const btnStyle: React.CSSProperties = {
+    width: "22px", height: "22px",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    background: "transparent", border: "1px solid rgba(255,255,255,0.12)",
+    color: "#e8e4dc", cursor: "pointer", fontSize: "10px",
+    fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, lineHeight: 1,
+    userSelect: "none",
+    WebkitTouchCallout: "none",
+    WebkitTapHighlightColor: "transparent",
+  };
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888" }}>{label}</span>
+        {badge}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <HoldButton onStep={() => onStep(-stepSize)} style={btnStyle}>▼</HoldButton>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#00BFA5", minWidth: "52px", textAlign: "center" }}>
+          {value.toFixed(1)}{suffix}
+        </span>
+        <HoldButton onStep={() => onStep(stepSize)} style={btnStyle}>▲</HoldButton>
+      </div>
+    </div>
+  );
+}
 
 // ─── Shared UI primitives ─────────────────────────────────────────────────────
 

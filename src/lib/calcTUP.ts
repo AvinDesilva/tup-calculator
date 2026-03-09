@@ -1,5 +1,34 @@
 import { SAFETY_CAP, STD_THRESHOLD, PP_THRESHOLD } from "./constants.ts";
-import type { InputState, Mode, TUPResult, TUPRow, VerdictKey } from "./types.ts";
+import type { InputState, Mode, TUPResult, TUPRow, VerdictKey, LifecycleStage } from "./types.ts";
+
+/**
+ * Lifecycle Fade with Variable Decay Rate (VDR).
+ *
+ * Hold periods by stage:
+ *   Introduction: 5yr, Growth: 3yr, Maturity: 0yr, Decline: 0yr
+ *
+ * After the hold period, growth decays annually:
+ *   VDR = max(0.05, G_initial × 0.20)
+ *   G(n) = max(G_initial − (n − HoldPeriod) × VDR, 0.30)
+ *
+ * Hyper-growth companies (e.g. 70% → VDR ≈ 14%) decay aggressively,
+ * while moderate growers (e.g. 30% → VDR = 6%) fade more gracefully.
+ */
+const HOLD_PERIOD: Record<LifecycleStage, number> = {
+  intro: 5, growth: 3, maturity: 0, decline: 0,
+};
+const MIN_VDR    = 0.05;   // minimum 5pp/yr decay (as decimal)
+const VDR_FACTOR = 0.20;   // VDR = 20% of initial growth rate
+const FADE_FLOOR = 0.30;   // 30% growth floor (as decimal)
+
+function fadedGrowth(initial: number, year: number, stage: LifecycleStage | null): number {
+  if (initial <= FADE_FLOOR) return initial;          // already at or below floor
+  const hold = stage ? HOLD_PERIOD[stage] : 0;
+  if (year <= hold) return initial;                   // hold period — full rate
+  const vdr   = Math.max(MIN_VDR, initial * VDR_FACTOR);
+  const decay = (year - hold) * vdr;
+  return Math.max(initial - decay, FADE_FLOOR);
+}
 
 /**
  * Core TUP (Time Until Payback) calculation engine.
@@ -12,6 +41,7 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
     marketCap, debt, cash, shares, ttmEPS, forwardEPS,
     historicalGrowth, analystGrowth, revenuePerShare, targetMargin,
     inceptionGrowth, breakEvenYear, currentPrice, sma200, dividendYield,
+    lifecycleStage, growthOverrides,
   } = inp;
 
   if (!shares || shares <= 0) return null;
@@ -35,14 +65,23 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
   const impliedRev10 = revenuePerShare * shares * Math.pow(1 + gr, 10);
   const tamWarning   = impliedRev10 > 5e12;
 
-  // Year-by-year accumulation loop
+  // Year-by-year accumulation with lifecycle fade + per-year overrides
   const rows: TUPRow[] = [];
   let cum = 0, eps = epsBase, payback: number | null = null;
   for (let y = 1; y <= SAFETY_CAP; y++) {
-    if (y > 1) eps *= (1 + gr);
+    let yearGr: number;
+    if (y === 1) {
+      yearGr = growthOverrides && growthOverrides[y] !== undefined ? growthOverrides[y] / 100 : gr;
+    } else if (growthOverrides && growthOverrides[y] !== undefined) {
+      yearGr = growthOverrides[y] / 100;
+      eps *= (1 + yearGr);
+    } else {
+      yearGr = fadedGrowth(gr, y, lifecycleStage);
+      eps *= (1 + yearGr);
+    }
     const annual = y >= startYr ? eps : 0;
     cum += annual;
-    rows.push({ year: y, annual, cum, remaining: Math.max(0, adjPrice - cum) });
+    rows.push({ year: y, growthRate: yearGr * 100, annual, cum, remaining: Math.max(0, adjPrice - cum) });
     if (cum >= adjPrice && !payback) payback = y;
   }
 

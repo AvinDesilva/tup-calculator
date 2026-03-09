@@ -1,28 +1,7 @@
-import { useRef, useCallback } from "react";
 import { VERDICT, STD_THRESHOLD, PP_THRESHOLD } from "../lib/constants.ts";
 import { f } from "../lib/utils.ts";
+import { useHoldRepeat } from "./ui.tsx";
 import type { TUPResult, Mode } from "../lib/types.ts";
-
-function useHoldRepeat(callback: () => void, delay = 400, interval = 80) {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const iv    = useRef<ReturnType<typeof setInterval> | null>(null);
-  const cbRef = useRef(callback);
-  cbRef.current = callback;
-
-  const stop = useCallback(() => {
-    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
-    if (iv.current)    { clearInterval(iv.current);   iv.current = null; }
-  }, []);
-
-  const start = useCallback(() => {
-    cbRef.current();
-    timer.current = setTimeout(() => {
-      iv.current = setInterval(() => cbRef.current(), interval);
-    }, delay);
-  }, [delay, interval]);
-
-  return { onPointerDown: start, onPointerUp: stop, onPointerLeave: stop };
-}
 
 interface VerdictCardProps {
   result: TUPResult | null;
@@ -73,7 +52,7 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep, currentPr
         }}>
           {result.payback || "30+"}
         </div>
-        <div style={{ fontSize: "13px", color: "#888888", marginTop: "12px", letterSpacing: "0.05em" }}>Years Until Payback</div>
+        <div style={{ fontSize: "13px", color: "#888888", marginTop: "12px", letterSpacing: "0.05em" }}>Years Until Principal Returned</div>
       </div>
     );
   }
@@ -94,7 +73,7 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep, currentPr
             {v.icon} {v.label}
           </div>
           <div className="rsp-verdict-sub" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888888", marginTop: "4px" }}>
-            {mode === "standard" ? "Standard TUP" : "Pre-Profit TUP-P"} · Years to Payback
+            Years Until Principal Returned
           </div>
         </div>
       </div>
@@ -139,7 +118,7 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep, currentPr
 
       {/* Warnings */}
       {result.fallingKnife && result.verdict === "spec_buy" && (
-        <div style={{ marginTop: "16px", padding: "14px 16px", borderLeft: "2px solid #f5a020", borderTop: "1px solid rgba(245,160,32,0.2)", borderRight: "1px solid rgba(245,160,32,0.2)", borderBottom: "1px solid rgba(245,160,32,0.2)", background: "rgba(245,160,32,0.05)" }}>
+        <div style={{ marginTop: "16px", marginBottom: "30px", padding: "14px 16px", borderLeft: "2px solid #f5a020", borderTop: "1px solid rgba(245,160,32,0.2)", borderRight: "1px solid rgba(245,160,32,0.2)", borderBottom: "1px solid rgba(245,160,32,0.2)", background: "rgba(245,160,32,0.05)" }}>
           <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
             <span style={{ color: "#f5a020", fontSize: "14px", fontWeight: 700, flexShrink: 0, lineHeight: 1.2, fontFamily: "'JetBrains Mono', monospace" }}>!</span>
             <div>

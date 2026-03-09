@@ -1,7 +1,7 @@
 import { ADR_RATIO_TABLE, EXCHANGE_CCY, FALLBACK_FX } from "./constants.ts";
 import { f, fB } from "./utils.ts";
 import type {
-  TickerData,
+  TickerData, LifecycleStage,
   FMPProfile, FMPQuote, FMPBalanceSheet, FMPIncomeStatement,
   FMPEstimate,
   FMPDividend, FMPDividendHistory, FMPDCF,
@@ -79,20 +79,21 @@ export async function lookupTicker(
       .then(d => { log("  ✓ /dividends — dividend history for forward yield"); return d; })
       .catch(() => { log("  ⚠ /dividends — not available"); return [] as FMPDividend[]; }),
 
-    // 7) Discounted Cash Flow
+    // 6) Discounted Cash Flow
     fetchFMP<FMPDCF[]>(`discounted-cash-flow?symbol=${t}`)
       .then(d => { log("  ✓ /discounted-cash-flow — DCF intrinsic value"); return d; })
       .catch(() => { log("  ⚠ /discounted-cash-flow — not available"); return [] as FMPDCF[]; }),
 
-    // 8) Earnings Surprises
+    // 7) Earnings Surprises
     fetchFMP<FMPEarningSurprise[]>(`earnings-surprises?symbol=${t}`)
       .then(d => { log("  ✓ /earnings-surprises — analyst beat/miss history"); return d; })
       .catch(() => { log("  ⚠ /earnings-surprises — not available"); return [] as FMPEarningSurprise[]; }),
 
-    // 9) Cash Flow Statement (10 years)
+    // 8) Cash Flow Statement (10 years)
     fetchFMP<FMPCashFlow[]>(`cash-flow-statement?symbol=${t}&limit=10`)
       .then(d => { log("  ✓ /cash-flow-statement — operating/investing/financing flows"); return d; })
       .catch(() => { log("  ⚠ /cash-flow-statement — not available"); return [] as FMPCashFlow[]; }),
+
   ]);
 
   if (!profile?.[0] || !quote?.[0]) throw new Error("Ticker not found or API limit reached.");
@@ -176,18 +177,18 @@ export async function lookupTicker(
     }
   }
 
-  // ── ADR adjustment + EPS ──────────────────────────────────────────────────
+  // ── ADR adjustment + Basic Earnings EPS ──────────────────────────────────
+  // Derive TTM EPS from netIncome / shares (Basic Earnings), not quote.eps.
+  // This reflects the company's actual profitability per share.
   const adrRatio     = ADR_RATIO_TABLE[t] || 1;
-  const rawQuoteEPS  = q.eps || 0;
-  const rawIncomeEPS = sharesOut > 0 && (inc[0]?.netIncome || 0) !== 0
-    ? ((inc[0].netIncome ?? 0) / sharesOut) : 0;
-  const rawTTMEPS    = rawQuoteEPS || rawIncomeEPS;
+  const rawNetIncome = (inc[0]?.netIncome || 0);
+  const rawTTMEPS    = sharesOut > 0 ? rawNetIncome / sharesOut : 0;
   const ttmEPS       = (rawTTMEPS / adrRatio) * fxRate;
 
   if (import.meta.env.DEV) console.log(
-    `[TUP EPS] ${t} | rawEPS=${rawTTMEPS.toFixed(4)} ${financialsCurrency}` +
-    ` | ÷${adrRatio} → adrAdj=${(rawTTMEPS / adrRatio).toFixed(4)}` +
-    ` | ×${fxRate.toFixed(6)} → finalEPS=${ttmEPS.toFixed(4)} ${priceCurrency}`
+    `[TUP EPS] ${t} | netIncome=${rawNetIncome} shares=${sharesOut}` +
+    ` | rawEPS=${rawTTMEPS.toFixed(4)} ${financialsCurrency}` +
+    ` | ÷${adrRatio} ×${fxRate.toFixed(6)} → finalEPS=${ttmEPS.toFixed(4)} ${priceCurrency}`
   );
 
   // ── Analyst estimates ─────────────────────────────────────────────────────
@@ -198,29 +199,30 @@ export async function lookupTicker(
   const estTTM    = pastEst[pastEst.length - 1] ?? null;
   const estFwd    = futureEst[0]    ?? null;
   const estFwd2   = futureEst[1]    ?? null;
-  const estOldest = pastEst[0]      ?? null;
 
+  // Normalize analyst EPS estimates to the current share count so dilution
+  // doesn't skew the blended yield.  epsOf returns per-share in price currency.
   const epsOf = (e: FMPEstimate | null): number => ((e?.epsAvg || 0) / adrRatio) * fxRate;
 
+  // Forward EPS: analyst consensus, normalized to current shares.
   const forwardEPS    = (estFwd ? epsOf(estFwd) : 0) || (ttmEPS > 0 ? ttmEPS * 1.1 : 0);
   const latestRevenue = (inc[0]?.revenue || 0) * fxRate;
   const revenuePerShare = sharesOut > 0 ? latestRevenue / sharesOut : 0;
 
-  // ── Historical EPS growth — derived from income statement ────────────────
-  const epsHistory = inc.map(y => {
-    const ni = y.netIncome || 0;
-    const sh = y.weightedAverageShsOut || y.weightedAverageShsOutDil || sharesOut;
-    return sh > 0 ? ni / sh : 0;
-  });
-  const epsGrowthRates: number[] = [];
-  for (let i = 0; i < epsHistory.length - 1; i++) {
-    const cur = epsHistory[i], prev = epsHistory[i + 1];
+  // ── Historical net income growth — independent of share buybacks ─────────
+  // Uses raw net income (Basic Earnings) instead of per-share EPS so that
+  // growth reflects actual profitability, not financial engineering.
+  const niHistory = inc.map(y => (y.netIncome || 0) * fxRate);
+
+  const niGrowthRates: number[] = [];
+  for (let i = 0; i < niHistory.length - 1; i++) {
+    const cur = niHistory[i], prev = niHistory[i + 1];
     if (prev > 0 && cur > 0) {
       const gr = (cur - prev) / prev;
-      if (isFinite(gr) && Math.abs(gr) < 10) epsGrowthRates.push(gr);
+      if (isFinite(gr) && Math.abs(gr) < 10) niGrowthRates.push(gr);
     }
   }
-  const sortedGrVals = [...epsGrowthRates].sort((a, b) => a - b);
+  const sortedGrVals = [...niGrowthRates].sort((a, b) => a - b);
   const grMid    = Math.floor(sortedGrVals.length / 2);
   const grMedian = sortedGrVals.length === 0 ? null
     : sortedGrVals.length % 2 !== 0
@@ -228,14 +230,33 @@ export async function lookupTicker(
       : (sortedGrVals[grMid - 1] + sortedGrVals[grMid]) / 2;
   const fallbackHistGrowth = grMedian != null ? grMedian * 100 : 10;
 
-  let avgHistGrowth = fallbackHistGrowth;
-  if (estTTM && estOldest && estTTM !== estOldest) {
-    const n         = pastEst.length - 1;
-    const ttmEstEps = epsOf(estTTM);
-    const oldEstEps = epsOf(estOldest);
-    if (n > 0 && oldEstEps > 0 && ttmEstEps > 0) {
-      avgHistGrowth = (Math.pow(ttmEstEps / oldEstEps, 1 / n) - 1) * 100;
+  // ── CAGR helper — standard CAGR or Absolute Delta fallback ────────────
+  // Standard: (end / begin)^(1/n) − 1
+  // Fallback: (end − begin) / (|begin| × n)  when begin ≤ 0
+  // No hard cap — the lifecycle fade in calcTUP handles decay dynamically.
+  const growthCAGR = (end: number, begin: number, n: number): number | null => {
+    if (n <= 0 || end <= 0) return null;
+    if (begin > 0) {
+      return (Math.pow(end / begin, 1 / n) - 1) * 100;
     }
+    const absBegin = Math.abs(begin) || 0.01;   // prevent division by zero
+    return ((end - begin) / (absBegin * n)) * 100;
+  };
+
+  // ── 10-year net income CAGR ─────────────────────────────────────────────
+  let avgHistGrowth = fallbackHistGrowth;
+  if (niHistory.length >= 2 && niHistory[0] > 0) {
+    const maxIdx = niHistory.length - 1;
+    const rate = growthCAGR(niHistory[0], niHistory[maxIdx], maxIdx);
+    if (rate !== null) avgHistGrowth = rate;
+  }
+
+  // ── 5-year net income CAGR ──────────────────────────────────────────────
+  let avgHistGrowth5yr = avgHistGrowth;  // fallback to 10yr
+  if (niHistory.length >= 2 && niHistory[0] > 0) {
+    const maxIdx = Math.min(niHistory.length - 1, 4);
+    const rate = growthCAGR(niHistory[0], niHistory[maxIdx], maxIdx);
+    if (rate !== null) avgHistGrowth5yr = rate;
   }
 
   // ── Analyst forward growth — 2-year CAGR where available ─────────────────
@@ -421,6 +442,19 @@ export async function lookupTicker(
   log(`  Hist Growth: ${avgHistGrowth.toFixed(1)}%  |  Analyst Growth: ${analystGrowth.toFixed(1)}%  |  Fwd Div Yield: ${dividendYield.toFixed(2)}%`);
   log(`  Price: $${q.price}  |  200-SMA: $${q.priceAvg200 || "N/A"}`);
 
+  // ── Lifecycle stage ─────────────────────────────────────────────────────
+  const lcRev0 = inc[0]?.revenue || 0;
+  const lcRev1 = inc[1]?.revenue || 0;
+  const lcRevGrowth = lcRev1 > 0 ? ((lcRev0 - lcRev1) / lcRev1) * 100 : null;
+  const lcIsProfit = (inc[0]?.netIncome || 0) > 0;
+  let lifecycleStage: LifecycleStage | null = null;
+  if (lcRevGrowth !== null) {
+    if (!lcIsProfit && lcRevGrowth > 15) lifecycleStage = "intro";
+    else if (lcRevGrowth > 15)  lifecycleStage = "growth";
+    else if (lcRevGrowth >= 0)  lifecycleStage = "maturity";
+    else                        lifecycleStage = "decline";
+  }
+
   return {
     companyName: p.companyName || t,
     ticker: t,
@@ -433,6 +467,7 @@ export async function lookupTicker(
     ttmEPS,
     forwardEPS: parseFloat(forwardEPS.toFixed(2)),
     historicalGrowth: parseFloat(avgHistGrowth.toFixed(2)),
+    historicalGrowth5yr: parseFloat(avgHistGrowth5yr.toFixed(2)),
     analystGrowth: parseFloat(analystGrowth.toFixed(2)),
     revenuePerShare: parseFloat(revenuePerShare.toFixed(2)),
     targetMargin: parseFloat(targetMargin.toFixed(1)),
@@ -441,6 +476,7 @@ export async function lookupTicker(
     currentPrice: q.price || p.price || 0,
     sma200: q.priceAvg200 || 0,
     dividendYield: parseFloat(dividendYield.toFixed(2)),
+    lifecycleStage,
     divNote,
     peterLynchRatio: peterLynchRatio != null ? parseFloat(Number(peterLynchRatio).toFixed(2)) : null,
     dcfValue: dcfValue != null ? parseFloat(Number(dcfValue).toFixed(2)) : null,

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { LC_CURVE, LC_ZONES, STAGE_META } from "../lib/constants.ts";
-import type { FMPEarningSurprise, FMPIncomeStatement, FMPCashFlow, FMPGradesConsensus, LifecycleStage } from "../lib/types.ts";
-import { AnalystScorecard } from "./AnalystScorecard.tsx";
+import type { FMPEarningSurprise, FMPIncomeStatement, FMPCashFlow, LifecycleStage } from "../lib/types.ts";
+
 
 // ─── Catmull-Rom spline helpers ───────────────────────────────────────────────
 
@@ -67,9 +67,6 @@ interface CompanyScorecardProps {
   cashFlows?: FMPCashFlow[];
   incomeHistory: FMPIncomeStatement[];
   description?: string;
-  grades?: FMPGradesConsensus | null;
-  estimateSpread?: { epsLow: number; epsAvg: number; epsHigh: number; numAnalysts: number } | null;
-  forwardEPS?: number;
   lifecycleOnly?: boolean;
 }
 
@@ -79,7 +76,7 @@ interface ProcessedQuarter {
   date: string | undefined;
 }
 
-export function CompanyScorecard({ earnings, incomeHistory, description, grades, estimateSpread, forwardEPS, lifecycleOnly }: CompanyScorecardProps) {
+export function CompanyScorecard({ earnings, incomeHistory, description, lifecycleOnly }: CompanyScorecardProps) {
   const [descExpanded, setDescExpanded] = useState(false);
   const body  = "'Space Grotesk', sans-serif";
   const mono  = "'JetBrains Mono', monospace";
@@ -141,7 +138,7 @@ export function CompanyScorecard({ earnings, incomeHistory, description, grades,
   return (
     <div style={{ marginTop: lifecycleOnly ? "12px" : "16px", borderTop: lifecycleOnly ? "none" : "1px solid rgba(255,255,255,0.06)", paddingTop: lifecycleOnly ? "0" : "14px" }}>
       {description && (
-        <div style={{ marginBottom: "16px" }}>
+        <div style={{ marginBottom: "16px", paddingTop: "20px" }}>
           <div style={label9}>Company Description</div>
           <p style={{
             fontSize: "12px", color: "#aaa", lineHeight: 1.7, margin: "8px 0 0", fontFamily: body,
@@ -288,12 +285,6 @@ export function CompanyScorecard({ earnings, incomeHistory, description, grades,
         )}
       </div>
 
-      <AnalystScorecard
-        grades={grades ?? null}
-        earnings={earnings}
-        estimateSpread={estimateSpread ?? null}
-        forwardEPS={forwardEPS ?? 0}
-      />
       </>)}
 
       {/* Lifecycle-only mode: just the S-curve */}
