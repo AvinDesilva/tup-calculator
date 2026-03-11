@@ -15,6 +15,7 @@ import { Masthead } from "./components/Masthead.tsx";
 import { HeroSearch } from "./components/HeroSearch.tsx";
 import { CompactTickerBar } from "./components/CompactTickerBar.tsx";
 import { DataSections } from "./components/DataSections.tsx";
+import * as dev from "./lib/devData.ts";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN APP
@@ -148,6 +149,27 @@ export default function App() {
       };
       setTicker(t.toUpperCase());
       doFetch(t.toUpperCase());
+    } else if (import.meta.env.DEV) {
+      setTicker(dev.DEV_TICKER);
+      setCompany(dev.DEV_COMPANY);
+      setMeta(dev.DEV_META);
+      setInp(dev.DEV_INP);
+      setValuation(dev.DEV_VALUATION);
+      setScorecard({ earnings: dev.DEV_EARNINGS, cashFlows: dev.DEV_CASH_FLOWS, incomeHistory: dev.DEV_INCOME_HISTORY, description: dev.DEV_DESCRIPTION });
+      setGrowthValues(dev.DEV_GROWTH_VALUES);
+      setHasSearched(true);
+      const origResult = calcTUP(dev.DEV_INP, "standard");
+      if (origResult && origResult.epsBase > 0 && origResult.gr > 0) {
+        const netDebt = (dev.DEV_INP.debt - dev.DEV_INP.cash) / dev.DEV_INP.shares;
+        const cappedGr = Math.min(origResult.gr, 0.30);
+        const cumAt = (years: number) => {
+          let cum = 0, eps = origResult.epsBase;
+          for (let y = 1; y <= years; y++) { if (y > 1) eps *= (1 + cappedGr); cum += eps; }
+          return cum - netDebt;
+        };
+        setStrongBuyPrice(cumAt(7) > 0 ? cumAt(7) : null);
+        setBuyPrice(cumAt(10) > 0 ? cumAt(10) : null);
+      }
     }
   }, []);
 
@@ -211,10 +233,10 @@ export default function App() {
         </>)}
 
         {hasSearched && (<>
-        <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "5fr 2px 7fr", gap: "0", minHeight: "600px" }}>
+        <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "3fr 2px 2fr", gridTemplateRows: "auto 2px auto", gap: "0", minHeight: "600px", alignItems: "start" }}>
 
-          {/* Left column: Verdict + Data */}
-          <div className="rsp-left-col" style={{ paddingRight: "40px", paddingBottom: "40px", paddingTop: "28px", animation: "fadeInUp 0.5s 0.15s ease both" }}>
+          {/* Left column top: Verdict */}
+          <div className="rsp-left-verdict" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px", animation: "fadeInUp 0.5s 0.15s ease both" }}>
 
             {hasSearched && !company && (
               <div style={{ paddingTop: "48px" }}>
@@ -225,7 +247,7 @@ export default function App() {
               </div>
             )}
 
-            <VerdictCard result={result} mode={mode} noiseFilter={noiseFilter} currentPrice={inp.currentPrice} onGrowthStep={(d: number) => {
+            <VerdictCard result={result} noiseFilter={noiseFilter} currentPrice={inp.currentPrice} onGrowthStep={(d: number) => {
               setInp(p => ({
                 ...p,
                 historicalGrowth: Math.max(0, p.historicalGrowth + d),
@@ -233,6 +255,11 @@ export default function App() {
                 growthOverrides: {},
               }));
             }} />
+
+          </div>
+
+          {/* Left column bottom: Data sections */}
+          <div className="rsp-left-data" style={{ paddingRight: "40px", paddingTop: "28px", paddingBottom: "40px", animation: "fadeInUp 0.5s 0.15s ease both" }}>
 
             <DataSections
               inp={inp}
@@ -253,8 +280,11 @@ export default function App() {
           {/* Hairline vertical rule */}
           <div className="rsp-hairline-v" style={{ background: C.border, width: "2px" }} />
 
+          {/* Hairline horizontal rule */}
+          <div className="rsp-hairline-h" style={{ background: C.border, height: "2px" }} />
+
           {/* Right column top: Valuation + Scorecard */}
-          <div className="rsp-right-top" style={{ paddingLeft: "40px", paddingTop: "12px", animation: "fadeInUp 0.5s 0.2s ease both" }}>
+          <div className="rsp-right-top" style={{ paddingLeft: "40px", paddingTop: "12px", paddingBottom: "28px", animation: "fadeInUp 0.5s 0.2s ease both" }}>
             <ValuationContext
               strongBuyPrice={strongBuyPrice}
               buyPrice={buyPrice}
@@ -274,8 +304,8 @@ export default function App() {
           </div>
 
           {/* Right column bottom: Table */}
-          <div className="rsp-right-bottom" style={{ paddingLeft: "40px", paddingBottom: "40px" }}>
-            <div style={{ marginTop: "24px" }}>
+          <div className="rsp-right-bottom" style={{ paddingLeft: "40px", paddingTop: "28px", paddingBottom: "40px" }}>
+            <div>
               <SectionLabel num="04" title="Year-by-Year Breakdown" />
               <Table result={result} growthOverrides={inp.growthOverrides} onGrowthChange={(year, val) => {
                 setInp(p => {
@@ -309,11 +339,13 @@ export default function App() {
           50%       { box-shadow: 0 0 18px rgba(196,160,110,0.35), 0 0 40px rgba(196,160,110,0.12); border-color: #d4b882; }
         }
 
-        /* ── Desktop grid placement for split right column ───────────────── */
-        .rsp-left-col     { grid-column: 1; grid-row: 1 / span 2; }
-        .rsp-hairline-v   { grid-column: 2; grid-row: 1 / span 2; }
+        /* ── Desktop grid placement for 2×2 layout ──────────────────── */
+        .rsp-left-verdict { grid-column: 1; grid-row: 1; }
+        .rsp-left-data    { grid-column: 1; grid-row: 3; }
+        .rsp-hairline-v   { grid-column: 2; grid-row: 1 / span 3; }
+        .rsp-hairline-h   { grid-column: 1 / span 3; grid-row: 2; }
         .rsp-right-top    { grid-column: 3; grid-row: 1; }
-        .rsp-right-bottom { grid-column: 3; grid-row: 2; }
+        .rsp-right-bottom { grid-column: 3; grid-row: 3; }
 
         /* Desktop: verdict text scaled */
         @media (min-width: 768px) {
@@ -332,6 +364,7 @@ export default function App() {
             padding-left: 16px !important;
             padding-right: 16px !important;
           }
+          .rsp-verdict-num   { font-size: clamp(5.5rem, 22vw, 8rem) !important; }
           .rsp-hero-section {
             padding-bottom: 120px !important;
           }
@@ -362,14 +395,16 @@ export default function App() {
             display: flex !important;
             flex-direction: column !important;
             min-height: unset !important;
+            align-items: stretch !important;
           }
-          .rsp-hairline-v {
+          .rsp-hairline-v, .rsp-hairline-h {
             display: none !important;
           }
-          .rsp-left-col {
+          .rsp-left-verdict {
             order: 1;
+            padding-left: 0 !important;
             padding-right: 0 !important;
-            padding-top: 28px;
+            padding-top: 12px !important;
           }
           .rsp-right-top {
             order: 2;
@@ -377,8 +412,14 @@ export default function App() {
             padding-bottom: 24px;
             border-top: 1px solid rgba(255,255,255,0.06);
           }
-          .rsp-right-bottom {
+          .rsp-left-data {
             order: 3;
+            padding-right: 0 !important;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding-top: 28px;
+          }
+          .rsp-right-bottom {
+            order: 4;
             padding-left: 0 !important;
             border-top: 1px solid rgba(255,255,255,0.06);
             padding-top: 28px;
@@ -393,7 +434,8 @@ export default function App() {
 
         /* ── Tablet (768px – 1023px) ──────────────────────────────────────── */
         @media (min-width: 768px) and (max-width: 1023px) {
-          .rsp-left-col      { padding-right: 24px !important; }
+          .rsp-left-verdict  { padding-right: 24px !important; }
+          .rsp-left-data     { padding-right: 24px !important; }
           .rsp-right-top     { padding-left: 24px !important; }
           .rsp-right-bottom  { padding-left: 24px !important; }
           .rsp-api-bar {
