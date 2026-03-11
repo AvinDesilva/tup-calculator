@@ -5,12 +5,10 @@ interface MastheadProps {
   meta: { sector: string; industry: string };
   isConverted: boolean;
   currencyNote: string;
-  noiseFilter: boolean;
-  onToggleNoiseFilter: () => void;
   onShowMethodology: () => void;
 }
 
-export function Masthead({ company, meta, isConverted, currencyNote, noiseFilter, onToggleNoiseFilter, onShowMethodology }: MastheadProps) {
+export function Masthead({ company, meta, isConverted, currencyNote, onShowMethodology }: MastheadProps) {
   return (
     <header className="rsp-header" style={{
       paddingTop: "28px",
@@ -67,9 +65,6 @@ export function Masthead({ company, meta, isConverted, currencyNote, noiseFilter
       <div className="rsp-header-toggles" style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, paddingTop: "6px" }}>
         <button className="rsp-methodology-btn" onClick={onShowMethodology} style={toggleBtn(false)}>
           Read Methodology →
-        </button>
-        <button className="rsp-noise-btn" onClick={onToggleNoiseFilter} style={toggleBtn(noiseFilter)}>
-          {noiseFilter ? "◉" : "○"} Noise Filter
         </button>
       </div>
     </header>

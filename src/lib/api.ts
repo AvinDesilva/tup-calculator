@@ -27,6 +27,30 @@ export async function searchTickers(query: string): Promise<SearchResult[]> {
   }
 }
 
+// ─── Random stock picker ──────────────────────────────────────────────────────
+
+export async function fetchRandomTicker(): Promise<string> {
+  const list = await fetchFMP<Array<{ symbol: string; name: string; type?: string; exchange?: string }>>(
+    "actively-trading-list"
+  );
+  // Filter to companies only (exclude ETFs, funds, etc.) and US exchanges
+  const companies = list.filter(item => {
+    if (!item.symbol || !item.name) return false;
+    if (item.type && item.type.toLowerCase() !== "stock") return false;
+    // Exclude tickers with dots (preferred shares, foreign listings)
+    if (item.symbol.includes(".")) return false;
+    // Exclude common ETF/fund name patterns
+    const lower = item.name.toLowerCase();
+    if (lower.includes(" etf") || lower.includes("ishares") || lower.includes("vanguard") ||
+        lower.includes("spdr") || lower.includes(" fund") || lower.includes("proshares") ||
+        lower.includes("direxion") || lower.includes("wisdomtree") || lower.includes("trust")) return false;
+    return true;
+  });
+  if (companies.length === 0) throw new Error("No actively traded stocks found.");
+  const pick = companies[Math.floor(Math.random() * companies.length)];
+  return pick.symbol;
+}
+
 // ─── Low-level HTTP wrapper ───────────────────────────────────────────────────
 
 export async function fetchFMP<T = unknown>(endpoint: string): Promise<T> {
@@ -449,10 +473,12 @@ export async function lookupTicker(
   const lcIsProfit = (inc[0]?.netIncome || 0) > 0;
   let lifecycleStage: LifecycleStage | null = null;
   if (lcRevGrowth !== null) {
-    if (!lcIsProfit && lcRevGrowth > 15) lifecycleStage = "intro";
-    else if (lcRevGrowth > 15)  lifecycleStage = "growth";
-    else if (lcRevGrowth >= 0)  lifecycleStage = "maturity";
-    else                        lifecycleStage = "decline";
+    if (!lcIsProfit)                    lifecycleStage = "startup";
+    else if (lcRevGrowth > 30)          lifecycleStage = "young_growth";
+    else if (lcRevGrowth > 15)          lifecycleStage = "high_growth";
+    else if (lcRevGrowth > 5)           lifecycleStage = "mature_growth";
+    else if (lcRevGrowth >= 0)          lifecycleStage = "mature_stable";
+    else                                lifecycleStage = "decline";
   }
 
   return {

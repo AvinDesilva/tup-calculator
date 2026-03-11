@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 
 import { calcTUP } from "./lib/calcTUP.ts";
-import { lookupTicker } from "./lib/api.ts";
+import { lookupTicker, fetchRandomTicker } from "./lib/api.ts";
 import { C } from "./lib/theme.ts";
 import type { InputState, Mode, TUPResult, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement } from "./lib/types.ts";
 
@@ -39,7 +39,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [fetchLog, setFetchLog] = useState<string[]>([]);
   const mode: Mode = "standard";
-  const [noiseFilter, setNoiseFilter] = useState(false);
+  const [rollingDice, setRollingDice] = useState(false);
   const [showMethodology, setShowMethodology] = useState(false);
   const [company, setCompany] = useState("");
   const [meta, setMeta] = useState<{ sector: string; industry: string }>({ sector: "", industry: "" });
@@ -66,6 +66,18 @@ export default function App() {
   const [growthValues, setGrowthValues] = useState<{ g5: number; g10: number }>({ g5: 10, g10: 10 });
   const fetchedAnalystGrowthRef = useRef(10);
   const urlOverridesRef = useRef<{ hg: number | null; ag: number | null; gp: "10yr" | null } | null>(null);
+
+  const rollDice = async () => {
+    setRollingDice(true);
+    try {
+      const t = await fetchRandomTicker();
+      setTicker(t);
+      await doFetch(t);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to roll dice.");
+    }
+    setRollingDice(false);
+  };
 
   const doFetch = async (tickerOverride?: string) => {
     const t = (tickerOverride || ticker).trim().toUpperCase();
@@ -204,8 +216,6 @@ export default function App() {
           meta={meta}
           isConverted={isConverted}
           currencyNote={currencyNote}
-          noiseFilter={noiseFilter}
-          onToggleNoiseFilter={() => setNoiseFilter(!noiseFilter)}
           onShowMethodology={() => { setShowMethodology(true); window.scrollTo(0, 0); }}
         />
 
@@ -217,6 +227,8 @@ export default function App() {
             onFetch={doFetch}
             loading={loading}
             error={error}
+            onRollDice={rollDice}
+            rollingDice={rollingDice}
           />
         )}
 
@@ -229,6 +241,8 @@ export default function App() {
             loading={loading}
             error={error}
             fetchLog={fetchLog}
+            onRollDice={rollDice}
+            rollingDice={rollingDice}
           />
         </>)}
 
@@ -247,7 +261,7 @@ export default function App() {
               </div>
             )}
 
-            <VerdictCard result={result} noiseFilter={noiseFilter} currentPrice={inp.currentPrice} onGrowthStep={(d: number) => {
+            <VerdictCard result={result} noiseFilter={false} currentPrice={inp.currentPrice} onGrowthStep={(d: number) => {
               setInp(p => ({
                 ...p,
                 historicalGrowth: Math.max(0, p.historicalGrowth + d),
@@ -355,8 +369,7 @@ export default function App() {
         }
 
         /* Desktop: noise filter first, methodology second */
-        .rsp-noise-btn       { order: 1; }
-        .rsp-methodology-btn { order: 2; }
+        .rsp-methodology-btn { order: 1; }
 
         /* ── Mobile (< 768px) ─────────────────────────────────────────────── */
         @media (max-width: 767px) {
@@ -386,7 +399,6 @@ export default function App() {
             flex-wrap: wrap;
           }
           .rsp-methodology-btn { order: 0 !important; }
-          .rsp-noise-btn { order: 0 !important; }
           .rsp-api-bar {
             grid-template-columns: 1fr !important;
             gap: 14px !important;

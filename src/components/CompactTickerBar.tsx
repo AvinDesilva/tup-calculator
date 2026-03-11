@@ -9,12 +9,14 @@ interface CompactTickerBarProps {
   loading: boolean;
   error: string;
   fetchLog: string[];
+  onRollDice: () => void;
+  rollingDice: boolean;
 }
 
-export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, fetchLog }: CompactTickerBarProps) {
+export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, fetchLog, onRollDice, rollingDice }: CompactTickerBarProps) {
   return (
     <section style={{ paddingTop: "20px", paddingBottom: "20px", marginBottom: "20px", borderBottom: `1px solid ${C.borderWeak}`, animation: "fadeInUp 0.4s ease both" }}>
-      <div className="rsp-api-bar" style={{ display: "grid", gridTemplateColumns: "1fr 140px auto", gap: "20px", alignItems: "end" }}>
+      <div className="rsp-api-bar" style={{ display: "grid", gridTemplateColumns: "1fr 140px auto auto", gap: "20px", alignItems: "end" }}>
         <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "10px" }}>
           <label style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: C.text2, flexShrink: 0 }}>Ticker</label>
           <TickerSearch
@@ -29,7 +31,7 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
           />
         </div>
         <div className="rsp-api-bar-btn">
-          <button onClick={onFetch} disabled={loading} style={{
+          <button onClick={() => onFetch()} disabled={loading} style={{
             width: "100%",
             padding: "8px 16px",
             background: loading ? C.text3 : C.accent,
@@ -58,6 +60,23 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
         <div className="rsp-api-bar-status" style={{ fontSize: "11px", paddingBottom: "2px" }}>
           {error && <span style={{ color: "#ff4136" }}>{error}</span>}
         </div>
+        <button className="rsp-dice-btn" onClick={onRollDice} disabled={rollingDice || loading} style={{
+          padding: "8px 16px",
+          background: "transparent",
+          color: C.accent,
+          border: `1px solid ${C.accent}`,
+          fontSize: "11px",
+          fontWeight: 700,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          cursor: (rollingDice || loading) ? "not-allowed" : "pointer",
+          fontFamily: C.body,
+          whiteSpace: "nowrap",
+          transition: "opacity 0.15s",
+          opacity: (rollingDice || loading) ? 0.5 : 1,
+        }}>
+          🎲 {rollingDice ? "Rolling..." : "Roll Dice"}
+        </button>
       </div>
 
       {fetchLog.some(m => m.startsWith("✕")) && (

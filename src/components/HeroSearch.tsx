@@ -8,9 +8,11 @@ interface HeroSearchProps {
   onFetch: () => void;
   loading: boolean;
   error: string;
+  onRollDice: () => void;
+  rollingDice: boolean;
 }
 
-export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error }: HeroSearchProps) {
+export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, onRollDice, rollingDice }: HeroSearchProps) {
   return (
     <section className="rsp-hero-section" style={{ padding: "0 0 96px", display: "flex", flexDirection: "column", alignItems: "center", animation: "fadeInUp 0.5s 0.1s ease both" }}>
       <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: C.text3, marginBottom: "24px", marginTop: "24px" }}>
@@ -51,7 +53,7 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
             minWidth: 0,
           }}
         />
-        <button className="rsp-hero-btn" onClick={onFetch} disabled={loading} style={{
+        <button className="rsp-hero-btn" onClick={() => onFetch()} disabled={loading} style={{
           padding: "16px 24px",
           background: C.accent,
           color: "#080808",
@@ -81,7 +83,25 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
 
       {error && <div style={{ marginTop: "12px", fontSize: "11px", color: "#ff4136" }}>{error}</div>}
 
-      <div style={{ marginTop: "20px", fontSize: "10px", color: C.text3, letterSpacing: "0.08em" }}>
+      <button onClick={onRollDice} disabled={rollingDice || loading} style={{
+        marginTop: "20px",
+        padding: "10px 24px",
+        background: "transparent",
+        color: C.accent,
+        border: `1px solid ${C.accent}`,
+        fontSize: "11px",
+        fontWeight: 700,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+        cursor: (rollingDice || loading) ? "not-allowed" : "pointer",
+        fontFamily: C.body,
+        opacity: (rollingDice || loading) ? 0.5 : 1,
+        transition: "opacity 0.15s",
+      }}>
+        🎲 {rollingDice ? "Rolling..." : "Roll the TUP Dice"}
+      </button>
+
+      <div style={{ marginTop: "12px", fontSize: "10px", color: C.text3, letterSpacing: "0.08em" }}>
         Search by company name or ticker · US, UK & Canadian markets
       </div>
     </section>
