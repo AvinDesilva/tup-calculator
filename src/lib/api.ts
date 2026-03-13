@@ -27,27 +27,47 @@ export async function searchTickers(query: string): Promise<SearchResult[]> {
   }
 }
 
-// ─── Random stock picker ──────────────────────────────────────────────────────
+// ─── Random stock picker (cached) ─────────────────────────────────────────────
+
+let _cachedCompanies: Array<{ symbol: string; name: string }> | null = null;
+let _vtiHoldings: Set<string> | null = null;
+
+async function getVTIHoldings(): Promise<Set<string>> {
+  if (!_vtiHoldings) {
+    try {
+      const holdings = await fetchFMP<Array<{ asset?: string; symbol?: string }>>("etf-holder?symbol=VTI");
+      _vtiHoldings = new Set(
+        (holdings || []).map(h => (h.asset || h.symbol || "").toUpperCase()).filter(Boolean)
+      );
+    } catch {
+      _vtiHoldings = new Set();
+    }
+  }
+  return _vtiHoldings;
+}
 
 export async function fetchRandomTicker(): Promise<string> {
-  const list = await fetchFMP<Array<{ symbol: string; name: string; type?: string; exchange?: string }>>(
-    "actively-trading-list"
-  );
-  // Filter to companies only (exclude ETFs, funds, etc.) and US exchanges
-  const companies = list.filter(item => {
-    if (!item.symbol || !item.name) return false;
-    if (item.type && item.type.toLowerCase() !== "stock") return false;
-    // Exclude tickers with dots (preferred shares, foreign listings)
-    if (item.symbol.includes(".")) return false;
-    // Exclude common ETF/fund name patterns
-    const lower = item.name.toLowerCase();
-    if (lower.includes(" etf") || lower.includes("ishares") || lower.includes("vanguard") ||
-        lower.includes("spdr") || lower.includes(" fund") || lower.includes("proshares") ||
-        lower.includes("direxion") || lower.includes("wisdomtree") || lower.includes("trust")) return false;
-    return true;
-  });
-  if (companies.length === 0) throw new Error("No actively traded stocks found.");
-  const pick = companies[Math.floor(Math.random() * companies.length)];
+  if (!_cachedCompanies) {
+    const [list, vti] = await Promise.all([
+      fetchFMP<Array<{ symbol: string; name: string; type?: string; exchange?: string }>>("actively-trading-list"),
+      getVTIHoldings(),
+    ]);
+    // Filter to VTI-held companies only (exclude ETFs, funds, etc.)
+    _cachedCompanies = list.filter(item => {
+      if (!item.symbol || !item.name) return false;
+      if (!/^[A-Z0-9$.]{1,10}$/.test(item.symbol)) return false;
+      if (item.type && item.type.toLowerCase() !== "stock") return false;
+      if (item.symbol.includes(".")) return false;
+      if (vti.size > 0 && !vti.has(item.symbol.toUpperCase())) return false;
+      const lower = item.name.toLowerCase();
+      if (lower.includes(" etf") || lower.includes("ishares") || lower.includes("vanguard") ||
+          lower.includes("spdr") || lower.includes(" fund") || lower.includes("proshares") ||
+          lower.includes("direxion") || lower.includes("wisdomtree") || lower.includes("trust")) return false;
+      return true;
+    });
+  }
+  if (_cachedCompanies.length === 0) throw new Error("No actively traded stocks found.");
+  const pick = _cachedCompanies[Math.floor(Math.random() * _cachedCompanies.length)];
   return pick.symbol;
 }
 
@@ -62,6 +82,158 @@ export async function fetchFMP<T = unknown>(endpoint: string): Promise<T> {
     throw new Error("Unable to fetch market data. Please try again.");
   }
   return res.json() as T;
+}
+
+// ─── Quick data fetch (4 endpoints — for dice roll validation) ────────────────
+
+export interface QuickTickerData {
+  marketCap: number;
+  debt: number;
+  cash: number;
+  shares: number;
+  ttmEPS: number;
+  forwardEPS: number;
+  historicalGrowth5yr: number;
+  analystGrowth: number;
+  fwdGrowthY1: number;
+  fwdGrowthY2: number | null;
+  fwdCAGR: number | null;
+  revenuePerShare: number;
+  targetMargin: number;
+  inceptionGrowth: number;
+  breakEvenYear: number;
+  currentPrice: number;
+  sma200: number;
+  dividendYield: number;
+  lifecycleStage: LifecycleStage | null;
+}
+
+/**
+ * Lightweight fetch — only 4 FMP endpoints (profile, quote, balance-sheet, income).
+ * Returns enough data to build an InputState and run calcTUP for screening.
+ */
+export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData> {
+  const t = ticker.trim().toUpperCase();
+
+  const [profile, quote, balanceSheet, income] = await Promise.all([
+    fetchFMP<FMPProfile[]>(`profile?symbol=${t}`),
+    fetchFMP<FMPQuote[]>(`quote?symbol=${t}`),
+    fetchFMP<FMPBalanceSheet[]>(`balance-sheet-statement?symbol=${t}&limit=2`),
+    fetchFMP<FMPIncomeStatement[]>(`income-statement?symbol=${t}&limit=5`),
+  ]);
+
+  if (!profile?.[0] || !quote?.[0]) throw new Error("Ticker not found.");
+
+  const p   = profile[0];
+  const q   = quote[0];
+  const bs  = balanceSheet?.[0] ?? ({} as FMPBalanceSheet);
+  const inc = income ?? [];
+
+  // ── Minimal FX handling ──────────────────────────────────────────────────
+  const exchange          = (p.exchangeShortName || p.exchange || "").toUpperCase();
+  const priceCurrency     = EXCHANGE_CCY[exchange] || p.currency || "USD";
+  const financialsCurrency = inc[0]?.reportingCurrency || p.currency || "USD";
+
+  let fxRate = 1;
+  if (priceCurrency !== financialsCurrency) {
+    const fxKey = `${financialsCurrency}${priceCurrency}`;
+    const fallback = FALLBACK_FX[fxKey];
+    if (fallback) fxRate = fallback;
+  }
+
+  // ── Core fields ──────────────────────────────────────────────────────────
+  const sharesOut    = q.sharesOutstanding || inc[0]?.weightedAverageShsOut || 1;
+  const totalDebt    = (bs.totalDebt || bs.longTermDebt || 0) * fxRate;
+  const totalCash    = (bs.cashAndCashEquivalents || bs.cashAndShortTermInvestments || 0) * fxRate;
+  const mktCapVal    = p.mktCap || q.marketCap || 0;
+
+  const adrRatio     = ADR_RATIO_TABLE[t] || 1;
+  const rawNetIncome = inc[0]?.netIncome || 0;
+  const ttmEPS       = (sharesOut > 0 ? rawNetIncome / sharesOut : 0) / adrRatio * fxRate;
+
+  const latestRevenue  = (inc[0]?.revenue || 0) * fxRate;
+  const revenuePerShare = sharesOut > 0 ? latestRevenue / sharesOut : 0;
+
+  // Forward EPS: simple estimate (no analyst data)
+  const forwardEPS = ttmEPS > 0 ? ttmEPS * 1.1 : 0;
+
+  // ── Historical growth — net income CAGR ──────────────────────────────────
+  const niHistory = inc.map(y => (y.netIncome || 0) * fxRate);
+  let avgHistGrowth5yr = 10;
+  if (niHistory.length >= 2 && niHistory[0] > 0) {
+    const maxIdx = Math.min(niHistory.length - 1, 4);
+    const begin  = niHistory[maxIdx];
+    const end    = niHistory[0];
+    if (begin > 0) {
+      avgHistGrowth5yr = (Math.pow(end / begin, 1 / maxIdx) - 1) * 100;
+    } else {
+      const absBegin = Math.abs(begin) || 0.01;
+      avgHistGrowth5yr = ((end - begin) / (absBegin * maxIdx)) * 100;
+    }
+  }
+
+  // Analyst growth fallback
+  const analystGrowth = avgHistGrowth5yr * 0.8;
+
+  // Inception growth — revenue CAGR
+  let inceptionGrowth = 30;
+  if (inc.length >= 3) {
+    const oldest = inc[inc.length - 1]?.revenue;
+    const newest = inc[0]?.revenue;
+    if (oldest != null && oldest > 0 && newest != null && newest > 0) {
+      inceptionGrowth = (Math.pow(newest / oldest, 1 / (inc.length - 1)) - 1) * 100;
+    }
+  }
+
+  // Target margin & breakeven
+  const netIncome    = rawNetIncome * fxRate;
+  const netMargin    = latestRevenue > 0 ? (netIncome / latestRevenue) * 100 : 0;
+  const targetMargin = netMargin > 0 ? Math.min(netMargin * 1.2, 40) : 15;
+  const breakEvenYear = netIncome > 0 ? 0 : 2;
+
+  // Dividend yield — simple from quote
+  const normYield = (raw: number | null | undefined): number => {
+    if (!raw || raw <= 0 || raw > 25) return 0;
+    return raw < 1 ? raw * 100 : raw;
+  };
+  const dividendYield = normYield(q.dividendYield);
+
+  // Lifecycle stage
+  const lcRev0 = inc[0]?.revenue || 0;
+  const lcRev1 = inc[1]?.revenue || 0;
+  const lcRevGrowth = lcRev1 > 0 ? ((lcRev0 - lcRev1) / lcRev1) * 100 : null;
+  const lcIsProfit  = rawNetIncome > 0;
+  let lifecycleStage: LifecycleStage | null = null;
+  if (lcRevGrowth !== null) {
+    if (!lcIsProfit)           lifecycleStage = "startup";
+    else if (lcRevGrowth > 30) lifecycleStage = "young_growth";
+    else if (lcRevGrowth > 15) lifecycleStage = "high_growth";
+    else if (lcRevGrowth > 5)  lifecycleStage = "mature_growth";
+    else if (lcRevGrowth >= 0) lifecycleStage = "mature_stable";
+    else                       lifecycleStage = "decline";
+  }
+
+  return {
+    marketCap: mktCapVal,
+    debt: totalDebt,
+    cash: totalCash,
+    shares: sharesOut,
+    ttmEPS,
+    forwardEPS: parseFloat(forwardEPS.toFixed(2)),
+    historicalGrowth5yr: parseFloat(avgHistGrowth5yr.toFixed(2)),
+    analystGrowth: parseFloat(analystGrowth.toFixed(2)),
+    fwdGrowthY1: parseFloat(analystGrowth.toFixed(2)),
+    fwdGrowthY2: null,
+    fwdCAGR: null,
+    revenuePerShare: parseFloat(revenuePerShare.toFixed(2)),
+    targetMargin: parseFloat(targetMargin.toFixed(1)),
+    inceptionGrowth: parseFloat(inceptionGrowth.toFixed(2)),
+    breakEvenYear,
+    currentPrice: q.price || p.price || 0,
+    sma200: q.priceAvg200 || 0,
+    dividendYield: parseFloat(dividendYield.toFixed(2)),
+    lifecycleStage,
+  };
 }
 
 // ─── Main data fetch ──────────────────────────────────────────────────────────
@@ -227,6 +399,8 @@ export async function lookupTicker(
   // Normalize analyst EPS estimates to the current share count so dilution
   // doesn't skew the blended yield.  epsOf returns per-share in price currency.
   const epsOf = (e: FMPEstimate | null): number => ((e?.epsAvg || 0) / adrRatio) * fxRate;
+  const epsOfBear = (e: FMPEstimate | null): number => ((e?.epsLow || 0) / adrRatio) * fxRate;
+  const epsOfBull = (e: FMPEstimate | null): number => ((e?.epsHigh || 0) / adrRatio) * fxRate;
 
   // Forward EPS: analyst consensus, normalized to current shares.
   const forwardEPS    = (estFwd ? epsOf(estFwd) : 0) || (ttmEPS > 0 ? ttmEPS * 1.1 : 0);
@@ -302,6 +476,47 @@ export async function lookupTicker(
     }
   }
 
+  // ── Forward growth components for variable rate sequence ─────────────────
+  let fwdGrowthY1 = analystGrowth; // default to blended CAGR
+  let fwdGrowthY2: number | null = null;
+  let fwdCAGRValue: number | null = null;
+
+  const baselineEPS = ttmEstEps || ttmEPS;
+  if (baselineEPS > 0) {
+    if (fwdEstEps > 0) {
+      fwdGrowthY1 = ((fwdEstEps / baselineEPS) - 1) * 100;
+    }
+    if (fwdEstEps > 0 && fwd2EstEps > 0) {
+      fwdGrowthY2 = ((fwd2EstEps / fwdEstEps) - 1) * 100;
+    }
+    if (fwd2EstEps > 0) {
+      fwdCAGRValue = (Math.sqrt(fwd2EstEps / baselineEPS) - 1) * 100;
+    }
+  }
+
+  // ── Bear / Bull forward growth scenarios ────────────────────────────────
+  let fwdGrowthY1Bear: number | null = null;
+  let fwdGrowthY2Bear: number | null = null;
+  let fwdCAGRBear: number | null = null;
+  let fwdGrowthY1Bull: number | null = null;
+  let fwdGrowthY2Bull: number | null = null;
+  let fwdCAGRBull: number | null = null;
+
+  const fwdEstEpsBear = epsOfBear(estFwd);
+  const fwd2EstEpsBear = epsOfBear(estFwd2);
+  const fwdEstEpsBull = epsOfBull(estFwd);
+  const fwd2EstEpsBull = epsOfBull(estFwd2);
+
+  if (baselineEPS > 0) {
+    if (fwdEstEpsBear > 0) fwdGrowthY1Bear = ((fwdEstEpsBear / baselineEPS) - 1) * 100;
+    if (fwdEstEpsBear > 0 && fwd2EstEpsBear > 0) fwdGrowthY2Bear = ((fwd2EstEpsBear / fwdEstEpsBear) - 1) * 100;
+    if (fwd2EstEpsBear > 0) fwdCAGRBear = (Math.sqrt(fwd2EstEpsBear / baselineEPS) - 1) * 100;
+
+    if (fwdEstEpsBull > 0) fwdGrowthY1Bull = ((fwdEstEpsBull / baselineEPS) - 1) * 100;
+    if (fwdEstEpsBull > 0 && fwd2EstEpsBull > 0) fwdGrowthY2Bull = ((fwd2EstEpsBull / fwdEstEpsBull) - 1) * 100;
+    if (fwd2EstEpsBull > 0) fwdCAGRBull = (Math.sqrt(fwd2EstEpsBull / baselineEPS) - 1) * 100;
+  }
+
   // ── Inception growth — revenue CAGR across all available years ───────────
   let inceptionGrowth = 30;
   if (inc.length >= 3) {
@@ -339,20 +554,30 @@ export async function lookupTicker(
   let divNote       = "";
   const livePrice   = q.price || p.price || 0;
 
-  // Tier 1: dividends endpoint
+  // Tier 1: dividends endpoint — require recurring pattern, filter special dividends
   const divRecs: FMPDividend[] = Array.isArray(divHistory)
     ? divHistory
     : ((divHistory as FMPDividendHistory)?.historical || []);
-  if (divRecs.length > 0 && livePrice > 0) {
-    const latest = divRecs[0];
-    const adjDiv = latest.adjDividend || latest.dividend || 0;
-    if (adjDiv > 0) {
-      const freqStr    = (latest.frequency || "").toLowerCase().replace(/[^a-z-]/g, "");
+  if (divRecs.length >= 2 && livePrice > 0) {
+    const amounts = divRecs.map(d => d.adjDividend || d.dividend || 0).filter(a => a > 0);
+    if (amounts.length >= 2) {
+      const latest = amounts[0];
+      // Median of all records to detect outlier special dividends
+      const sorted = [...amounts].sort((a, b) => a - b);
+      const mid    = Math.floor(sorted.length / 2);
+      const median = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      // If latest is >3× median, it's likely a special dividend — use median instead
+      const adjDiv = latest > median * 3 ? median : latest;
+      const freqStr    = (divRecs[0].frequency || "").toLowerCase().replace(/[^a-z-]/g, "");
       const multiplier = FREQ_MAP[freqStr] || inferFreq(divRecs);
       dividendYield    = (adjDiv * multiplier / livePrice) * 100;
-      divNote          = `adjDiv $${adjDiv.toFixed(4)} × ${multiplier} (${latest.frequency || `inferred×${multiplier}`}) ÷ $${livePrice.toFixed(2)}`;
-      log(`  ✓ Fwd div yield (dividends): adjDiv=${adjDiv} × ${multiplier} / $${livePrice} = ${dividendYield.toFixed(2)}%`);
+      const wasSpecial = latest > median * 3;
+      divNote          = `adjDiv $${adjDiv.toFixed(4)} × ${multiplier} (${divRecs[0].frequency || `inferred×${multiplier}`}) ÷ $${livePrice.toFixed(2)}${wasSpecial ? " [special div filtered]" : ""}`;
+      log(`  ✓ Fwd div yield (dividends): adjDiv=${adjDiv.toFixed(4)} × ${multiplier} / $${livePrice} = ${dividendYield.toFixed(2)}%${wasSpecial ? ` (special $${latest.toFixed(4)} filtered → median $${median.toFixed(4)})` : ""}`);
     }
+  } else if (divRecs.length === 1 && livePrice > 0) {
+    // Single record — insufficient history to confirm recurring, skip to Tier 2
+    log(`  … /dividends — only 1 record, skipping (may be special dividend)`);
   }
 
   // Tier 2: quote.dividendYield
@@ -495,6 +720,15 @@ export async function lookupTicker(
     historicalGrowth: parseFloat(avgHistGrowth.toFixed(2)),
     historicalGrowth5yr: parseFloat(avgHistGrowth5yr.toFixed(2)),
     analystGrowth: parseFloat(analystGrowth.toFixed(2)),
+    fwdGrowthY1: parseFloat(fwdGrowthY1.toFixed(2)),
+    fwdGrowthY2: fwdGrowthY2 != null ? parseFloat(fwdGrowthY2.toFixed(2)) : null,
+    fwdCAGR: fwdCAGRValue != null ? parseFloat(fwdCAGRValue.toFixed(2)) : null,
+    fwdGrowthY1Bear: fwdGrowthY1Bear != null ? parseFloat(fwdGrowthY1Bear.toFixed(2)) : null,
+    fwdGrowthY2Bear: fwdGrowthY2Bear != null ? parseFloat(fwdGrowthY2Bear.toFixed(2)) : null,
+    fwdCAGRBear: fwdCAGRBear != null ? parseFloat(fwdCAGRBear.toFixed(2)) : null,
+    fwdGrowthY1Bull: fwdGrowthY1Bull != null ? parseFloat(fwdGrowthY1Bull.toFixed(2)) : null,
+    fwdGrowthY2Bull: fwdGrowthY2Bull != null ? parseFloat(fwdGrowthY2Bull.toFixed(2)) : null,
+    fwdCAGRBull: fwdCAGRBull != null ? parseFloat(fwdCAGRBull.toFixed(2)) : null,
     revenuePerShare: parseFloat(revenuePerShare.toFixed(2)),
     targetMargin: parseFloat(targetMargin.toFixed(1)),
     inceptionGrowth: parseFloat(inceptionGrowth.toFixed(2)),
@@ -515,5 +749,6 @@ export async function lookupTicker(
     cashFlowHistory: Array.isArray(cashFlows) ? cashFlows : [],
     incomeHistory: Array.isArray(income) ? income : [],
     description: p.description || "",
+    exchange,
   };
 }

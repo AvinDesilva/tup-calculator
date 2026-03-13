@@ -1,20 +1,21 @@
-import { VERDICT, STD_THRESHOLD, PP_THRESHOLD } from "../lib/constants.ts";
+import { VERDICT } from "../lib/constants.ts";
 import { f } from "../lib/utils.ts";
 import { useHoldRepeat } from "./ui.tsx";
-import type { TUPResult, Mode } from "../lib/types.ts";
+import type { TUPResult, GrowthScenario } from "../lib/types.ts";
 
 interface VerdictCardProps {
   result: TUPResult | null;
-  mode: Mode;
   noiseFilter: boolean;
   onGrowthStep: (delta: number) => void;
   currentPrice: number;
+  growthScenario: GrowthScenario;
+  onScenarioChange: (s: GrowthScenario) => void;
+  hasScenarioData: boolean;
 }
 
-export function VerdictCard({ result, mode, noiseFilter, onGrowthStep, currentPrice }: VerdictCardProps) {
+export function VerdictCard({ result, noiseFilter, onGrowthStep, currentPrice, growthScenario, onScenarioChange, hasScenarioData }: VerdictCardProps) {
   if (!result) return null;
   const v   = VERDICT[result.verdict];
-  const thr = mode === "standard" ? STD_THRESHOLD : PP_THRESHOLD;
   const paybackPct = Math.min(100, ((result.payback || 30) / 30) * 100);
 
   const holdDown = useHoldRepeat(() => onGrowthStep(-1));
@@ -28,13 +29,26 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep, currentPr
     fontFamily: "'JetBrains Mono', monospace", fontSize: "15px",
     fontWeight: 600, color: "#00BFA5",
   };
-  const arrowBtnStyle: React.CSSProperties = {
-    width: "24px", height: "24px",
-    display: "inline-flex", alignItems: "center", justifyContent: "center",
-    background: "transparent", border: "1px solid rgba(255,255,255,0.15)",
-    color: "#888888", cursor: "pointer", fontSize: "10px",
-    fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, lineHeight: 1,
-    padding: 0, userSelect: "none",
+
+  const grPct = result.gr * 100;
+
+  const stepBtnBase: React.CSSProperties = {
+    flex: 1,
+    height: "30px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "4px",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "10px",
+    fontWeight: 700,
+    fontFamily: "'Space Grotesk', sans-serif",
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    userSelect: "none",
+    WebkitUserSelect: "none",
+    MozUserSelect: "none",
     WebkitTouchCallout: "none",
     WebkitTapHighlightColor: "transparent",
   };
@@ -103,22 +117,89 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep, currentPr
           <div style={labelStyle}>EPS Base</div>
           <div style={valueStyle}>${f(result.epsBase)}</div>
         </div>
-        {/* Growth + Change Rate button */}
-        <div style={{ padding: "10px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={labelStyle}>Growth</div>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <button {...holdDown} onClick={e => e.preventDefault()} style={arrowBtnStyle}>▼</button>
+        {/* Growth + step buttons */}
+        <div style={{ padding: "10px 0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+            <div style={labelStyle}>Growth</div>
             <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#10d97e" }}>
-              {f(result.gr * 100)}%
+              {f(grPct)}%
             </span>
-            <button {...holdUp} onClick={e => e.preventDefault()} style={arrowBtnStyle}>▲</button>
+          </div>
+          <div style={{ display: "flex", gap: "6px" }}>
+            {hasScenarioData && (
+              <div style={{ display: "flex", flex: 3 }}>
+                {(["bear", "base", "bull"] as const).map((s, i) => {
+                  const colors: Record<string, { active: string; activeBg: string; border: string; idleBg: string; idleBorder: string; idleColor: string; idleGlow: string; activeGlow: string }> = {
+                    bear: { active: "#FF4D00", activeBg: "rgba(255,77,0,0.2)", border: "#FF4D00", idleBg: "rgba(255,77,0,0.05)", idleBorder: "rgba(255,77,0,0.25)", idleColor: "rgba(255,77,0,0.5)", idleGlow: "0 0 6px rgba(255,77,0,0.15)", activeGlow: "0 0 12px rgba(255,77,0,0.35)" },
+                    base: { active: "#999", activeBg: "rgba(255,255,255,0.1)", border: "#666", idleBg: "transparent", idleBorder: "rgba(255,255,255,0.1)", idleColor: "#555", idleGlow: "none", activeGlow: "none" },
+                    bull: { active: "#00897B", activeBg: "rgba(0,137,123,0.2)", border: "#00897B", idleBg: "rgba(0,137,123,0.05)", idleBorder: "rgba(0,137,123,0.25)", idleColor: "rgba(0,137,123,0.5)", idleGlow: "0 0 6px rgba(0,137,123,0.15)", activeGlow: "0 0 12px rgba(0,137,123,0.35)" },
+                  };
+                  const c = colors[s];
+                  const isActive = growthScenario === s;
+                  return (
+                    <button key={s} onClick={() => onScenarioChange(s)} style={{
+                      fontSize: "11px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                      letterSpacing: "0.05em", padding: "2px 6px", height: "30px", flex: 1,
+                      background: isActive ? c.activeBg : c.idleBg,
+                      border: `1px solid ${isActive ? c.border : c.idleBorder}`,
+                      color: isActive ? c.active : c.idleColor,
+                      boxShadow: isActive ? c.activeGlow : c.idleGlow,
+                      cursor: "pointer",
+                      borderRadius: i === 0 ? "3px 0 0 3px" : i === 2 ? "0 3px 3px 0" : "0",
+                      marginLeft: i > 0 ? "-1px" : "0",
+                    }}>{s}</button>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: "6px", flex: 1 }}>
+              <button
+                {...holdDown}
+                onClick={e => e.preventDefault()}
+                style={{
+                  ...stepBtnBase,
+                  background: "rgba(255,77,0,0.10)",
+                  color: "#FF4D00",
+                  borderLeft: "2px solid rgba(255,77,0,0.3)",
+                }}
+              >
+                <span style={{ fontSize: "11px", lineHeight: 1 }}>−</span>
+              </button>
+              <button
+                {...holdUp}
+                onClick={e => e.preventDefault()}
+                style={{
+                  ...stepBtnBase,
+                  background: "rgba(16,217,126,0.10)",
+                  color: "#10d97e",
+                  borderRight: "2px solid rgba(16,217,126,0.3)",
+                }}
+              >
+                <span style={{ fontSize: "11px", lineHeight: 1 }}>+</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Warnings */}
+      {/* Technical status */}
+      {!result.fallingKnife && result.sma200 > 0 && (
+        <div style={{ marginTop: "12px", marginBottom: "16px", padding: "14px 16px", borderLeft: "2px solid #00BFA5", borderTop: "1px solid rgba(0,191,165,0.2)", borderRight: "1px solid rgba(0,191,165,0.2)", borderBottom: "1px solid rgba(0,191,165,0.2)", background: "rgba(0,191,165,0.05)" }}>
+          <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+            <span style={{ color: "#00BFA5", fontSize: "14px", fontWeight: 700, flexShrink: 0, lineHeight: 1.2, fontFamily: "'JetBrains Mono', monospace" }}>✓</span>
+            <div>
+              <div style={{ fontSize: "11px", fontWeight: 700, color: "#00BFA5", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>
+                Technically Sound
+              </div>
+              <p style={{ fontSize: "11px", color: "rgba(0,191,165,0.7)", lineHeight: 1.75, margin: 0 }}>
+                Price is trading above the 200-day SMA{result.sma200 > 0 ? ` of $${f(result.sma200)}` : ""}, confirming an uptrend.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {result.fallingKnife && result.verdict === "spec_buy" && (
-        <div style={{ marginTop: "16px", marginBottom: "30px", padding: "14px 16px", borderLeft: "2px solid #f5a020", borderTop: "1px solid rgba(245,160,32,0.2)", borderRight: "1px solid rgba(245,160,32,0.2)", borderBottom: "1px solid rgba(245,160,32,0.2)", background: "rgba(245,160,32,0.05)" }}>
+        <div style={{ marginTop: "12px", marginBottom: "16px", padding: "14px 16px", borderLeft: "2px solid #f5a020", borderTop: "1px solid rgba(245,160,32,0.2)", borderRight: "1px solid rgba(245,160,32,0.2)", borderBottom: "1px solid rgba(245,160,32,0.2)", background: "rgba(245,160,32,0.05)" }}>
           <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
             <span style={{ color: "#f5a020", fontSize: "14px", fontWeight: 700, flexShrink: 0, lineHeight: 1.2, fontFamily: "'JetBrains Mono', monospace" }}>!</span>
             <div>
@@ -135,7 +216,7 @@ export function VerdictCard({ result, mode, noiseFilter, onGrowthStep, currentPr
         </div>
       )}
       {result.fallingKnife && result.verdict === "avoid" && (
-        <div style={{ marginTop: "16px", padding: "10px 14px", borderLeft: "2px solid #ff4136", borderTop: "1px solid rgba(255,65,54,0.15)", borderRight: "1px solid rgba(255,65,54,0.15)", borderBottom: "1px solid rgba(255,65,54,0.15)", display: "flex", gap: "8px", alignItems: "center" }}>
+        <div style={{ marginTop: "12px", padding: "10px 14px", borderLeft: "2px solid #ff4136", borderTop: "1px solid rgba(255,65,54,0.15)", borderRight: "1px solid rgba(255,65,54,0.15)", borderBottom: "1px solid rgba(255,65,54,0.15)", display: "flex", gap: "8px", alignItems: "center" }}>
           <span style={{ color: "#ff4136" }}>⚠</span>
           <span style={{ fontSize: "11px", color: "#ff4136" }}>Falling Knife — Price below 200-day SMA. Technical avoid.</span>
         </div>

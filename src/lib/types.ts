@@ -2,9 +2,11 @@
 
 export type Mode = "standard" | "preprofit";
 
+export type GrowthScenario = "bear" | "base" | "bull";
+
 export type VerdictKey = "strong_buy" | "buy" | "hold" | "spec_buy" | "avoid";
 
-export type LifecycleStage = "intro" | "growth" | "maturity" | "decline";
+export type LifecycleStage = "startup" | "young_growth" | "high_growth" | "mature_growth" | "mature_stable" | "decline";
 
 // ─── Calculator inputs ────────────────────────────────────────────────────────
 
@@ -17,6 +19,9 @@ export interface InputState {
   forwardEPS: number;
   historicalGrowth: number;
   analystGrowth: number;
+  fwdGrowthY1: number;
+  fwdGrowthY2: number | null;
+  fwdCAGR: number | null;
   revenuePerShare: number;
   targetMargin: number;
   inceptionGrowth: number;
@@ -42,6 +47,9 @@ export interface TUPResult {
   adjPrice: number;
   epsBase: number;
   gr: number;
+  grY1: number;
+  grY2: number;
+  grTerminal: number;
   threshold: number;
   payback: number | null;
   rows: TUPRow[];
@@ -153,6 +161,15 @@ export interface TickerData {
   historicalGrowth: number;
   historicalGrowth5yr: number;
   analystGrowth: number;
+  fwdGrowthY1: number;
+  fwdGrowthY2: number | null;
+  fwdCAGR: number | null;
+  fwdGrowthY1Bear: number | null;
+  fwdGrowthY2Bear: number | null;
+  fwdCAGRBear: number | null;
+  fwdGrowthY1Bull: number | null;
+  fwdGrowthY2Bull: number | null;
+  fwdCAGRBull: number | null;
   revenuePerShare: number;
   targetMargin: number;
   inceptionGrowth: number;
@@ -173,4 +190,5 @@ export interface TickerData {
   cashFlowHistory: FMPCashFlow[];
   incomeHistory: FMPIncomeStatement[];
   description: string;
+  exchange: string;
 }

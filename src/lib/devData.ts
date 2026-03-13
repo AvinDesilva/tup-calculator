@@ -14,6 +14,9 @@ export const DEV_INP: InputState = {
   forwardEPS: 7.50,
   historicalGrowth: 12,
   analystGrowth: 10,
+  fwdGrowthY1: 12,
+  fwdGrowthY2: 8,
+  fwdCAGR: 10,
   revenuePerShare: 25.5,
   targetMargin: 15,
   inceptionGrowth: 30,
@@ -55,3 +58,9 @@ export const DEV_INCOME_HISTORY: FMPIncomeStatement[] = [
 export const DEV_DESCRIPTION = "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide. The company offers iPhone, Mac, iPad, and wearables, home, and accessories. It also provides AppleCare support and cloud services, and operates various platforms including the App Store.";
 
 export const DEV_GROWTH_VALUES = { g5: 12, g10: 14 };
+
+export const DEV_SCENARIO_VALUES = {
+  bear: { y1: 6, y2: 3, cagr: 4.5 },
+  base: { y1: 12, y2: 8, cagr: 10 },
+  bull: { y1: 18, y2: 14, cagr: 16 },
+};

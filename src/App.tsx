@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 
 import { calcTUP } from "./lib/calcTUP.ts";
-import { lookupTicker, fetchRandomTicker } from "./lib/api.ts";
+import { lookupTicker, lookupTickerQuick, fetchRandomTicker } from "./lib/api.ts";
 import { C } from "./lib/theme.ts";
-import type { InputState, Mode, TUPResult, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement } from "./lib/types.ts";
+import type { InputState, Mode, TUPResult, GrowthScenario, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement } from "./lib/types.ts";
 
 import { SectionLabel } from "./components/ui.tsx";
 import { VerdictCard } from "./components/VerdictCard.tsx";
@@ -31,6 +31,7 @@ interface ScorecardState {
   cashFlows: FMPCashFlow[];
   incomeHistory: FMPIncomeStatement[];
   description: string;
+  exchange: string;
 }
 
 export default function App() {
@@ -40,6 +41,15 @@ export default function App() {
   const [fetchLog, setFetchLog] = useState<string[]>([]);
   const mode: Mode = "standard";
   const [rollingDice, setRollingDice] = useState(false);
+  const DICE_PHRASES = ["Rolling...", "Shuffling...", "Mapping...", "Hoping...", "Pondering...", "Sifting...", "Summing...", "Casting...", "Manifesting..."];
+  const [dicePhrase, setDicePhrase] = useState(DICE_PHRASES[0]);
+  useEffect(() => {
+    if (!rollingDice) { setDicePhrase(DICE_PHRASES[0]); return; }
+    let idx = 0;
+    const iv = setInterval(() => { idx = (idx + 1) % DICE_PHRASES.length; setDicePhrase(DICE_PHRASES[idx]); }, 2000);
+    return () => clearInterval(iv);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rollingDice]);
   const [showMethodology, setShowMethodology] = useState(false);
   const [company, setCompany] = useState("");
   const [meta, setMeta] = useState<{ sector: string; industry: string }>({ sector: "", industry: "" });
@@ -47,13 +57,13 @@ export default function App() {
   const [currencyNote, setCurrencyNote] = useState("");
   const [currencyMismatchWarning, setCurrencyMismatchWarning] = useState("");
   const [valuation, setValuation] = useState<ValuationState>({ dcf: null, altmanZ: null });
-  const [scorecard, setScorecard] = useState<ScorecardState>({ earnings: [], cashFlows: [], incomeHistory: [], description: "" });
+  const [scorecard, setScorecard] = useState<ScorecardState>({ earnings: [], cashFlows: [], incomeHistory: [], description: "", exchange: "" });
 
   const [hasSearched, setHasSearched] = useState(false);
 
   const [inp, setInp] = useState<InputState>({
     marketCap: 0, debt: 0, cash: 0, shares: 1,
-    ttmEPS: 0, forwardEPS: 0, historicalGrowth: 10, analystGrowth: 10,
+    ttmEPS: 0, forwardEPS: 0, historicalGrowth: 10, analystGrowth: 10, fwdGrowthY1: 10, fwdGrowthY2: null, fwdCAGR: null,
     revenuePerShare: 0, targetMargin: 15, inceptionGrowth: 30, breakEvenYear: 2,
     currentPrice: 0, sma200: 0, dividendYield: 0, lifecycleStage: null, growthOverrides: {},
   });
@@ -64,15 +74,59 @@ export default function App() {
   const [buyPrice, setBuyPrice] = useState<number | null>(null);
   const [growthPeriod, setGrowthPeriod] = useState<"5yr" | "10yr">("5yr");
   const [growthValues, setGrowthValues] = useState<{ g5: number; g10: number }>({ g5: 10, g10: 10 });
-  const fetchedAnalystGrowthRef = useRef(10);
-  const urlOverridesRef = useRef<{ hg: number | null; ag: number | null; gp: "10yr" | null } | null>(null);
+  const [growthScenario, setGrowthScenario] = useState<GrowthScenario>("base");
+  const [scenarioValues, setScenarioValues] = useState<Record<GrowthScenario, { y1: number; y2: number | null; cagr: number | null }>>({
+    bear: { y1: 0, y2: null, cagr: null },
+    base: { y1: 0, y2: null, cagr: null },
+    bull: { y1: 0, y2: null, cagr: null },
+  });
+  const hasScenarioData = scenarioValues.bear.y1 !== 0 || scenarioValues.bull.y1 !== 0;
+  const urlOverridesRef = useRef<{ hg: number | null; gp: "10yr" | null } | null>(null);
+
+  const onScenarioChange = (s: GrowthScenario) => {
+    setGrowthScenario(s);
+    const v = scenarioValues[s];
+    setInp(p => ({ ...p, fwdGrowthY1: v.y1, fwdGrowthY2: v.y2, fwdCAGR: v.cagr, growthOverrides: {} }));
+  };
 
   const rollDice = async () => {
     setRollingDice(true);
+    setError("");
+    const MAX_ATTEMPTS = 20;
+    const DELAY_MS = 3000;
+    const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
     try {
-      const t = await fetchRandomTicker();
-      setTicker(t);
-      await doFetch(t);
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        if (attempt > 0) await wait(DELAY_MS);
+        const t = await fetchRandomTicker();
+        try {
+          const data = await lookupTickerQuick(t);
+          const testInp: InputState = {
+            marketCap: data.marketCap, debt: data.debt, cash: data.cash, shares: data.shares,
+            ttmEPS: data.ttmEPS, forwardEPS: data.forwardEPS,
+            historicalGrowth: data.historicalGrowth5yr, analystGrowth: data.analystGrowth,
+            fwdGrowthY1: data.fwdGrowthY1, fwdGrowthY2: data.fwdGrowthY2, fwdCAGR: data.fwdCAGR,
+            revenuePerShare: data.revenuePerShare, targetMargin: data.targetMargin,
+            inceptionGrowth: data.inceptionGrowth, breakEvenYear: data.breakEvenYear,
+            currentPrice: data.currentPrice, sma200: data.sma200,
+            dividendYield: data.dividendYield || 0, lifecycleStage: data.lifecycleStage, growthOverrides: {},
+          };
+          const testResult = calcTUP(testInp, "standard");
+          const pb = testResult?.payback;
+          if (pb && pb >= 5 && pb <= 20) {
+            setTicker(t);
+            await doFetch(t);
+            setRollingDice(false);
+            return;
+          }
+        } catch {
+          // Skip tickers that fail to fetch
+        }
+      }
+      // If no match found after MAX_ATTEMPTS, use the last one anyway
+      const fallback = await fetchRandomTicker();
+      setTicker(fallback);
+      await doFetch(fallback);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to roll dice.");
     }
@@ -82,7 +136,7 @@ export default function App() {
   const doFetch = async (tickerOverride?: string) => {
     const t = (tickerOverride || ticker).trim().toUpperCase();
     if (!t) { setError("Enter a ticker symbol."); return; }
-    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, altmanZ: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [], description: "" }); setStrongBuyPrice(null); setBuyPrice(null); setHasSearched(true);
+    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, altmanZ: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [], description: "", exchange: "" }); setStrongBuyPrice(null); setBuyPrice(null); setHasSearched(true);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
     try {
@@ -94,15 +148,21 @@ export default function App() {
       setCurrencyNote(data.currencyNote || "");
       setCurrencyMismatchWarning(data.currencyMismatchWarning || "");
       setValuation({ dcf: data.dcfValue, altmanZ: data.altmanZ });
-      setScorecard({ earnings: data.earningsSurprises, cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory, description: data.description });
+      setScorecard({ earnings: data.earningsSurprises, cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory, description: data.description, exchange: data.exchange });
 
       setGrowthValues({ g5: data.historicalGrowth5yr, g10: data.historicalGrowth });
-      fetchedAnalystGrowthRef.current = data.analystGrowth;
+      setGrowthScenario("base");
+      setScenarioValues({
+        bear: { y1: data.fwdGrowthY1Bear ?? 0, y2: data.fwdGrowthY2Bear, cagr: data.fwdCAGRBear },
+        base: { y1: data.fwdGrowthY1, y2: data.fwdGrowthY2, cagr: data.fwdCAGR },
+        bull: { y1: data.fwdGrowthY1Bull ?? 0, y2: data.fwdGrowthY2Bull, cagr: data.fwdCAGRBull },
+      });
       let finalGrowthPeriod: "5yr" | "10yr" = "5yr";
       const origInp = {
         marketCap: data.marketCap, debt: data.debt, cash: data.cash, shares: data.shares,
         ttmEPS: data.ttmEPS, forwardEPS: data.forwardEPS,
         historicalGrowth: data.historicalGrowth5yr, analystGrowth: data.analystGrowth,
+        fwdGrowthY1: data.fwdGrowthY1, fwdGrowthY2: data.fwdGrowthY2, fwdCAGR: data.fwdCAGR,
         revenuePerShare: data.revenuePerShare, targetMargin: data.targetMargin,
         inceptionGrowth: data.inceptionGrowth, breakEvenYear: data.breakEvenYear,
         currentPrice: data.currentPrice, sma200: data.sma200,
@@ -116,7 +176,6 @@ export default function App() {
           finalInp = { ...finalInp, historicalGrowth: data.historicalGrowth };
         }
         if (overrides.hg !== null) finalInp = { ...finalInp, historicalGrowth: overrides.hg };
-        if (overrides.ag !== null) finalInp = { ...finalInp, analystGrowth: overrides.ag };
         urlOverridesRef.current = null;
       }
       setGrowthPeriod(finalGrowthPeriod);
@@ -130,7 +189,7 @@ export default function App() {
         const cumAt = (years: number) => {
           let cum = 0, eps = origResult.epsBase;
           for (let y = 1; y <= years; y++) {
-            if (y > 1) eps *= (1 + cappedGr);
+            eps *= (1 + cappedGr);
             cum += eps;
           }
           return cum - netDebt;
@@ -156,7 +215,6 @@ export default function App() {
     if (t) {
       urlOverridesRef.current = {
         hg: params.has("hg") ? Number(params.get("hg")) : null,
-        ag: params.has("ag") ? Number(params.get("ag")) : null,
         gp: params.get("gp") === "10yr" ? "10yr" : null,
       };
       setTicker(t.toUpperCase());
@@ -167,8 +225,13 @@ export default function App() {
       setMeta(dev.DEV_META);
       setInp(dev.DEV_INP);
       setValuation(dev.DEV_VALUATION);
-      setScorecard({ earnings: dev.DEV_EARNINGS, cashFlows: dev.DEV_CASH_FLOWS, incomeHistory: dev.DEV_INCOME_HISTORY, description: dev.DEV_DESCRIPTION });
+      setScorecard({ earnings: dev.DEV_EARNINGS, cashFlows: dev.DEV_CASH_FLOWS, incomeHistory: dev.DEV_INCOME_HISTORY, description: dev.DEV_DESCRIPTION, exchange: "NASDAQ" });
       setGrowthValues(dev.DEV_GROWTH_VALUES);
+      setScenarioValues({
+        bear: dev.DEV_SCENARIO_VALUES.bear,
+        base: dev.DEV_SCENARIO_VALUES.base,
+        bull: dev.DEV_SCENARIO_VALUES.bull,
+      });
       setHasSearched(true);
       const origResult = calcTUP(dev.DEV_INP, "standard");
       if (origResult && origResult.epsBase > 0 && origResult.gr > 0) {
@@ -176,7 +239,7 @@ export default function App() {
         const cappedGr = Math.min(origResult.gr, 0.30);
         const cumAt = (years: number) => {
           let cum = 0, eps = origResult.epsBase;
-          for (let y = 1; y <= years; y++) { if (y > 1) eps *= (1 + cappedGr); cum += eps; }
+          for (let y = 1; y <= years; y++) { eps *= (1 + cappedGr); cum += eps; }
           return cum - netDebt;
         };
         setStrongBuyPrice(cumAt(7) > 0 ? cumAt(7) : null);
@@ -194,14 +257,11 @@ export default function App() {
     if (Math.round(inp.historicalGrowth * 10) !== Math.round(fetchedHg * 10)) {
       params.set("hg", String(Math.round(inp.historicalGrowth * 10) / 10));
     }
-    if (Math.round(inp.analystGrowth * 10) !== Math.round(fetchedAnalystGrowthRef.current * 10)) {
-      params.set("ag", String(Math.round(inp.analystGrowth * 10) / 10));
-    }
     if (growthPeriod === "10yr") {
       params.set("gp", "10yr");
     }
     history.replaceState(null, "", "?" + params.toString());
-  }, [hasSearched, company, ticker, inp.historicalGrowth, inp.analystGrowth, growthPeriod, growthValues]);
+  }, [hasSearched, company, ticker, inp.historicalGrowth, growthPeriod, growthValues]);
 
   if (showMethodology) return <MethodologyPage onBack={() => setShowMethodology(false)} />;
 
@@ -229,6 +289,7 @@ export default function App() {
             error={error}
             onRollDice={rollDice}
             rollingDice={rollingDice}
+            dicePhrase={dicePhrase}
           />
         )}
 
@@ -243,6 +304,7 @@ export default function App() {
             fetchLog={fetchLog}
             onRollDice={rollDice}
             rollingDice={rollingDice}
+            dicePhrase={dicePhrase}
           />
         </>)}
 
@@ -261,11 +323,19 @@ export default function App() {
               </div>
             )}
 
-            <VerdictCard result={result} noiseFilter={false} currentPrice={inp.currentPrice} onGrowthStep={(d: number) => {
+            <VerdictCard result={result} noiseFilter={false} currentPrice={inp.currentPrice}
+              growthScenario={growthScenario}
+              onScenarioChange={onScenarioChange}
+              hasScenarioData={hasScenarioData}
+              onGrowthStep={(d: number) => {
+              setGrowthScenario("base");
               setInp(p => ({
                 ...p,
                 historicalGrowth: Math.max(0, p.historicalGrowth + d),
                 analystGrowth: Math.max(0, p.analystGrowth + d),
+                fwdGrowthY1: Math.max(0, p.fwdGrowthY1 + d),
+                fwdGrowthY2: p.fwdGrowthY2 != null ? Math.max(0, p.fwdGrowthY2 + d) : null,
+                fwdCAGR: p.fwdCAGR != null ? Math.max(0, p.fwdCAGR + d) : null,
                 growthOverrides: {},
               }));
             }} />
@@ -281,8 +351,6 @@ export default function App() {
               currencyMismatchWarning={currencyMismatchWarning}
               growthPeriod={growthPeriod}
               growthValues={growthValues}
-              onHistoricalStep={d => setInp(prev => ({ ...prev, historicalGrowth: Math.max(0, prev.historicalGrowth + d), growthOverrides: {} }))}
-              onAnalystStep={d => setInp(prev => ({ ...prev, analystGrowth: Math.max(0, prev.analystGrowth + d), growthOverrides: {} }))}
               onGrowthPeriodChange={p => {
                 setGrowthPeriod(p);
                 setInp(prev => ({ ...prev, historicalGrowth: p === "5yr" ? growthValues.g5 : growthValues.g10, growthOverrides: {} }));
@@ -312,6 +380,7 @@ export default function App() {
                 cashFlows={scorecard.cashFlows}
                 incomeHistory={scorecard.incomeHistory}
                 description={scorecard.description}
+                exchange={scorecard.exchange}
                 lifecycleOnly
               />
             )}
@@ -403,6 +472,12 @@ export default function App() {
             grid-template-columns: 1fr !important;
             gap: 14px !important;
           }
+          .rsp-api-bar-btn {
+            width: 100%;
+          }
+          .rsp-api-bar-btn button {
+            flex: 1 !important;
+          }
           .rsp-main-grid {
             display: flex !important;
             flex-direction: column !important;
@@ -412,11 +487,15 @@ export default function App() {
           .rsp-hairline-v, .rsp-hairline-h {
             display: none !important;
           }
+          .rsp-ticker-bar {
+            padding-bottom: 12px !important;
+            margin-bottom: 4px !important;
+          }
           .rsp-left-verdict {
             order: 1;
             padding-left: 0 !important;
             padding-right: 0 !important;
-            padding-top: 12px !important;
+            padding-top: 0px !important;
           }
           .rsp-right-top {
             order: 2;
