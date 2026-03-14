@@ -28,29 +28,6 @@ Additional context shown alongside the verdict: Peter Lynch PEG score, DCF delta
 
 ---
 
-## Architecture
-
-```
-Browser (React SPA)
-    │
-    │  /api/fmp/*  (no key in bundle)
-    ▼
-Nginx (tupcalculator.org, HTTPS)
-    │
-    │  proxy_pass 127.0.0.1:3001
-    ▼
-tup-proxy (Node.js, server/index.js)
-    │  injects FMP_API_KEY server-side
-    │  rate-limits: 30 req/min/IP
-    │  validates endpoint path allowlist
-    ▼
-Financial Modeling Prep API
-```
-
-The FMP API key never appears in the JavaScript bundle or any client-side code. It lives only in `/etc/tup-proxy.env` on the server (root-owned, `chmod 600`).
-
----
-
 ## Core Algorithm: `calcTUP(inp, mode)`
 
 Defined in `src/lib/calcTUP.ts`.
