@@ -1,5 +1,6 @@
 import { C } from "../lib/theme.ts";
 import { TickerSearch } from "./TickerSearch.tsx";
+import { ErrorDisplay } from "./ui.tsx";
 
 interface HeroSearchProps {
   ticker: string;
@@ -10,9 +11,10 @@ interface HeroSearchProps {
   error: string;
   onRollDice: () => void;
   rollingDice: boolean;
+  dicePhrase: string;
 }
 
-export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, onRollDice, rollingDice }: HeroSearchProps) {
+export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, onRollDice, rollingDice, dicePhrase }: HeroSearchProps) {
   return (
     <section className="rsp-hero-section" style={{ padding: "0 0 96px", display: "flex", flexDirection: "column", alignItems: "center", animation: "fadeInUp 0.5s 0.1s ease both" }}>
       <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: C.text3, marginBottom: "24px", marginTop: "24px" }}>
@@ -81,7 +83,7 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
         </button>
       </div>
 
-      {error && <div style={{ marginTop: "12px", fontSize: "11px", color: "#ff4136" }}>{error}</div>}
+      {error && <div style={{ marginTop: "12px", fontSize: "11px", textAlign: "center" }}><ErrorDisplay error={error} /></div>}
 
       <button onClick={onRollDice} disabled={rollingDice || loading} style={{
         marginTop: "20px",
@@ -98,7 +100,7 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
         opacity: (rollingDice || loading) ? 0.5 : 1,
         transition: "opacity 0.15s",
       }}>
-        🎲 {rollingDice ? "Rolling..." : "Roll the TUP Dice"}
+        {rollingDice ? dicePhrase : "Roll the TUP Dice"} <span style={rollingDice ? { display: "inline-block", animation: "spin 0.6s linear infinite" } : undefined}>🎲</span>
       </button>
 
       <div style={{ marginTop: "12px", fontSize: "10px", color: C.text3, letterSpacing: "0.08em" }}>

@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 import type React from "react";
 
 // ─── Hold-to-repeat hook ─────────────────────────────────────────────────────
@@ -177,5 +177,50 @@ export function DerivedStat({ label, value, accent }: DerivedStatProps) {
       <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888" }}>{label}</span>
       <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: accent || "#00BFA5" }}>{value}</span>
     </div>
+  );
+}
+
+// ─── Error display with rate-limit countdown ─────────────────────────────────
+
+export function ErrorDisplay({ error, style }: { error: string; style?: React.CSSProperties }) {
+  const isRateLimit = /rate limit/i.test(error);
+  const [countdown, setCountdown] = useState(5);
+
+  useEffect(() => {
+    if (!isRateLimit) { setCountdown(5); return; }
+    setCountdown(5);
+    const iv = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) { clearInterval(iv); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [error, isRateLimit]);
+
+  if (!error) return null;
+
+  if (!isRateLimit) {
+    return <span style={{ color: "#ff4136", ...style }}>{error}</span>;
+  }
+
+  const done = countdown === 0;
+
+  return (
+    <span style={{ ...style, transition: "color 0.3s" }}>
+      {done ? (
+        <>
+          <span style={{ color: "#10d97e" }}>API limit reset</span>
+          <br />
+          <span style={{ color: "#10d97e" }}>roll again!</span>
+        </>
+      ) : (
+        <>
+          <span style={{ color: "#ff4136" }}>API rate limit reached</span>
+          <br />
+          <span style={{ color: "#ff4136" }}>Try again in {countdown}s</span>
+        </>
+      )}
+    </span>
   );
 }

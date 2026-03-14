@@ -5,7 +5,8 @@ import type { InputState, Mode, TUPResult, TUPRow, VerdictKey, LifecycleStage } 
  * Lifecycle Fade with Variable Decay Rate (VDR).
  *
  * Hold periods by stage:
- *   Introduction: 5yr, Growth: 3yr, Maturity: 0yr, Decline: 0yr
+ *   Start-Up: 7yr, Young Growth: 5yr, High Growth: 3yr,
+ *   Mature Growth: 1yr, Mature Stable: 0yr, Decline: 0yr
  *
  * After the hold period, growth decays annually:
  *   VDR = max(0.05, G_initial × 0.20)
@@ -15,7 +16,7 @@ import type { InputState, Mode, TUPResult, TUPRow, VerdictKey, LifecycleStage } 
  * while moderate growers (e.g. 30% → VDR = 6%) fade more gracefully.
  */
 const HOLD_PERIOD: Record<LifecycleStage, number> = {
-  intro: 5, growth: 3, maturity: 0, decline: 0,
+  startup: 7, young_growth: 5, high_growth: 3, mature_growth: 1, mature_stable: 0, decline: 0,
 };
 const MIN_VDR    = 0.05;   // minimum 5pp/yr decay (as decimal)
 const VDR_FACTOR = 0.20;   // VDR = 20% of initial growth rate
@@ -39,7 +40,8 @@ function fadedGrowth(initial: number, year: number, stage: LifecycleStage | null
 export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
   const {
     marketCap, debt, cash, shares, ttmEPS, forwardEPS,
-    historicalGrowth, analystGrowth, revenuePerShare, targetMargin,
+    historicalGrowth, analystGrowth, fwdGrowthY1, fwdGrowthY2, fwdCAGR,
+    revenuePerShare, targetMargin,
     inceptionGrowth, breakEvenYear, currentPrice, sma200, dividendYield,
     lifecycleStage, growthOverrides,
   } = inp;
@@ -47,38 +49,65 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
   if (!shares || shares <= 0) return null;
 
   const adjPrice = (marketCap + debt - cash) / shares;
-  let epsBase: number, gr: number, threshold: number, startYr: number;
+  let epsBase: number, threshold: number, startYr: number;
+  let grY1: number, grY2: number, grTerminal: number;
+
+  const divBonus = (dividendYield || 0) / 100;
 
   if (mode === "standard") {
-    epsBase    = (ttmEPS + forwardEPS) / 2;
-    gr         = ((historicalGrowth + analystGrowth) / 2 + (dividendYield || 0)) / 100;
-    threshold  = STD_THRESHOLD;
-    startYr    = 1;
+    epsBase   = (ttmEPS + forwardEPS) / 2;
+    threshold = STD_THRESHOLD;
+    startYr   = 1;
+
+    const histRate = historicalGrowth / 100;
+    let fwd1Rate   = fwdGrowthY1 / 100;
+    let fwd2Rate   = fwdGrowthY2 != null ? fwdGrowthY2 / 100 : fwd1Rate;
+    let fwdCagrRate: number | null = fwdCAGR != null ? fwdCAGR / 100 : null;
+
+    // Fallback: if baselineEPS <= 0, default all forward components to histCAGR
+    if (epsBase <= 0) {
+      fwd1Rate    = histRate;
+      fwd2Rate    = histRate;
+      fwdCagrRate = null;
+    }
+
+    grY1       = fwd1Rate + divBonus;
+    grY2       = fwd2Rate + divBonus;
+    grTerminal = fwdCagrRate != null
+      ? (histRate + fwdCagrRate) / 2 + divBonus
+      : histRate + divBonus;
   } else {
     epsBase    = revenuePerShare * (targetMargin / 100);
-    gr         = ((inceptionGrowth + analystGrowth) / 2 + (dividendYield || 0)) / 100;
     threshold  = PP_THRESHOLD;
     startYr    = Math.max(1, breakEvenYear || 1);
+
+    const uniformGr = ((inceptionGrowth + analystGrowth) / 2 + (dividendYield || 0)) / 100;
+    grY1       = uniformGr;
+    grY2       = uniformGr;
+    grTerminal = uniformGr;
   }
+
+  const gr = grTerminal;
 
   const fallingKnife = currentPrice > 0 && sma200 > 0 && currentPrice < sma200;
   const impliedRev10 = revenuePerShare * shares * Math.pow(1 + gr, 10);
   const tamWarning   = impliedRev10 > 5e12;
 
-  // Year-by-year accumulation with lifecycle fade + per-year overrides
+  // Year-by-year accumulation with variable growth rates + lifecycle fade
   const rows: TUPRow[] = [];
   let cum = 0, eps = epsBase, payback: number | null = null;
   for (let y = 1; y <= SAFETY_CAP; y++) {
     let yearGr: number;
-    if (y === 1) {
-      yearGr = growthOverrides && growthOverrides[y] !== undefined ? growthOverrides[y] / 100 : gr;
-    } else if (growthOverrides && growthOverrides[y] !== undefined) {
+    if (growthOverrides && growthOverrides[y] !== undefined) {
       yearGr = growthOverrides[y] / 100;
-      eps *= (1 + yearGr);
+    } else if (y === 1) {
+      yearGr = grY1;
+    } else if (y === 2) {
+      yearGr = grY2;
     } else {
-      yearGr = fadedGrowth(gr, y, lifecycleStage);
-      eps *= (1 + yearGr);
+      yearGr = fadedGrowth(grTerminal, y, lifecycleStage);
     }
+    eps *= (1 + yearGr);
     const annual = y >= startYr ? eps : 0;
     cum += annual;
     rows.push({ year: y, growthRate: yearGr * 100, annual, cum, remaining: Math.max(0, adjPrice - cum) });
@@ -103,5 +132,5 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
     verdict = fundamentalVerdict;
   }
 
-  return { adjPrice, epsBase, gr, threshold, payback, rows, verdict, fallingKnife, tamWarning, startYr, sma200 };
+  return { adjPrice, epsBase, gr, grY1, grY2, grTerminal, threshold, payback, rows, verdict, fallingKnife, tamWarning, startYr, sma200 };
 }

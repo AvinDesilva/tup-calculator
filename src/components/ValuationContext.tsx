@@ -46,7 +46,7 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
   if (!hasStrongBuy && !hasBuy && !hasDCF && !hasAltman) return null;
 
   // Buy price (10y threshold)
-  const buyDelta = hasBuy ? ((buyPrice as number) - currentPrice) / currentPrice * 100 : 0;
+  const buyDelta = hasBuy ? ((buyPrice as number) - currentPrice) / (buyPrice as number) * 100 : 0;
   const buyBelow = hasBuy && currentPrice <= (buyPrice as number);
   const buyColor = buyBelow ? "#10d97e" : "#f5a020";
   const buySub   = Math.abs(buyDelta) < 0.5
@@ -73,7 +73,7 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
     : "";
 
   // Strong Buy target
-  const sbDelta   = hasStrongBuy ? ((strongBuyPrice as number) - currentPrice) / currentPrice * 100 : 0;
+  const sbDelta   = hasStrongBuy ? ((strongBuyPrice as number) - currentPrice) / (strongBuyPrice as number) * 100 : 0;
   const sbBelow   = hasStrongBuy && currentPrice > (strongBuyPrice as number);
   const sbColor   = sbBelow ? "#10d97e" : "#f5a020";
   const sbSub     = Math.abs(sbDelta) < 0.5

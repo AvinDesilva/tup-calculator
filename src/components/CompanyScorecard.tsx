@@ -41,23 +41,28 @@ function findTForX(pts: [number, number][], targetX: number): number {
 // ─── Lifecycle classification ─────────────────────────────────────────────────
 
 function revenueStage(revenueGrowthPct: number, isProfit: boolean): LifecycleStage {
-  if (!isProfit && revenueGrowthPct > 15) return "intro";
-  if (revenueGrowthPct > 15)  return "growth";
-  if (revenueGrowthPct >= 0)  return "maturity";
+  if (!isProfit)                    return "startup";
+  if (revenueGrowthPct > 30)       return "young_growth";
+  if (revenueGrowthPct > 15)       return "high_growth";
+  if (revenueGrowthPct > 5)        return "mature_growth";
+  if (revenueGrowthPct >= 0)       return "mature_stable";
   return "decline";
 }
 
+// Each zone is ~0.167 wide (1/6). Map growth into the appropriate zone.
 function growthToDotX(revenueGrowthPct: number, isProfit: boolean): number {
-  if (!isProfit && revenueGrowthPct > 15) return 0.12;
-  if (revenueGrowthPct > 60)  return 0.30;
-  if (revenueGrowthPct > 35)  return 0.37;
-  if (revenueGrowthPct > 20)  return 0.42;
-  if (revenueGrowthPct > 12)  return 0.50;
-  if (revenueGrowthPct > 5)   return 0.60;
-  if (revenueGrowthPct >= 0)  return 0.68;
-  if (revenueGrowthPct > -10) return 0.80;
-  if (revenueGrowthPct > -20) return 0.87;
-  return 0.93;
+  if (!isProfit)                   return 0.08;   // Start-Up zone center
+  if (revenueGrowthPct > 60)      return 0.20;   // Young Growth — high end
+  if (revenueGrowthPct > 40)      return 0.24;   // Young Growth — mid
+  if (revenueGrowthPct > 30)      return 0.28;   // Young Growth — low end
+  if (revenueGrowthPct > 22)      return 0.36;   // High Growth — high end
+  if (revenueGrowthPct > 15)      return 0.42;   // High Growth — low end
+  if (revenueGrowthPct > 10)      return 0.52;   // Mature Growth — high end
+  if (revenueGrowthPct > 5)       return 0.58;   // Mature Growth — low end
+  if (revenueGrowthPct >= 0)      return 0.75;   // Mature Stable
+  if (revenueGrowthPct > -10)     return 0.87;   // Decline — mild
+  if (revenueGrowthPct > -20)     return 0.91;   // Decline — moderate
+  return 0.95;                                    // Decline — severe
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -67,6 +72,7 @@ interface CompanyScorecardProps {
   cashFlows?: FMPCashFlow[];
   incomeHistory: FMPIncomeStatement[];
   description?: string;
+  exchange?: string;
   lifecycleOnly?: boolean;
 }
 
@@ -76,7 +82,7 @@ interface ProcessedQuarter {
   date: string | undefined;
 }
 
-export function CompanyScorecard({ earnings, incomeHistory, description, lifecycleOnly }: CompanyScorecardProps) {
+export function CompanyScorecard({ earnings, incomeHistory, description, exchange, lifecycleOnly }: CompanyScorecardProps) {
   const [descExpanded, setDescExpanded] = useState(false);
   const body  = "'Space Grotesk', sans-serif";
   const mono  = "'JetBrains Mono', monospace";
@@ -123,7 +129,7 @@ export function CompanyScorecard({ earnings, incomeHistory, description, lifecyc
 
   const svgPts    = LC_CURVE.map(([tx, ty]): [number, number] => [PL + tx * plotW, PT + ty * plotH]);
   const pathD     = crPath(svgPts);
-  const dividerXs = [0.25, 0.50, 0.75].map(t => PL + t * plotW);
+  const dividerXs = [1/6, 2/6, 3/6, 4/6, 5/6].map(t => PL + t * plotW);
 
   let dotX: number | null = null, dotY: number | null = null, dotColor: string | null = null;
   if (dotTx !== null) {
@@ -139,7 +145,10 @@ export function CompanyScorecard({ earnings, incomeHistory, description, lifecyc
     <div style={{ marginTop: lifecycleOnly ? "12px" : "16px", borderTop: lifecycleOnly ? "none" : "1px solid rgba(255,255,255,0.06)", paddingTop: lifecycleOnly ? "0" : "14px" }}>
       {description && (
         <div style={{ marginBottom: "16px", paddingTop: "20px" }}>
-          <div style={label9}>Company Description</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
+            <div style={label9}>Company Description</div>
+            {exchange && <span style={{ fontSize: "9px", fontFamily: mono, color: "#C4A06E", letterSpacing: "0.06em" }}>{exchange}</span>}
+          </div>
           <p style={{
             fontSize: "12px", color: "#aaa", lineHeight: 1.7, margin: "8px 0 0", fontFamily: body,
             ...(!descExpanded ? {
@@ -247,7 +256,7 @@ export function CompanyScorecard({ earnings, incomeHistory, description, lifecyc
                 return (
                   <text key={z.key} x={zx} y={PT + plotH + 16} textAnchor="middle"
                     fill={isActive ? STAGE_META[z.key].color : "rgba(255,255,255,0.28)"}
-                    fontSize="8" fontFamily={body}
+                    fontSize="7" fontFamily={body}
                     fontWeight={isActive ? "700" : "400"}
                   >{z.label}</text>
                 );

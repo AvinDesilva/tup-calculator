@@ -114,6 +114,38 @@ app.get("/search", async (req, res) => {
   }
 });
 
+// ── In-memory TTL cache for FMP responses ────────────────────────────────────
+const CACHE_TTL   = 5 * 60 * 1000; // 5 minutes
+const CACHE_MAX   = 500;
+const fmpCache    = new Map(); // key → { data, expiry }
+
+function cacheGet(key) {
+  const entry = fmpCache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() > entry.expiry) { fmpCache.delete(key); return undefined; }
+  return entry.data;
+}
+
+function cacheSet(key, data) {
+  // Evict expired entries when approaching capacity
+  if (fmpCache.size >= CACHE_MAX) {
+    const now = Date.now();
+    for (const [k, v] of fmpCache.entries()) {
+      if (now > v.expiry) fmpCache.delete(k);
+    }
+    // If still over limit, delete oldest entries
+    if (fmpCache.size >= CACHE_MAX) {
+      const it = fmpCache.keys();
+      while (fmpCache.size >= CACHE_MAX) {
+        const oldest = it.next();
+        if (oldest.done) break;
+        fmpCache.delete(oldest.value);
+      }
+    }
+  }
+  fmpCache.set(key, { data, expiry: Date.now() + CACHE_TTL });
+}
+
 // ── Proxy — /fmp/:endpoint → FMP stable API ───────────────────────────────────
 app.get("/fmp/:endpoint(*)", async (req, res) => {
   const endpoint = req.params.endpoint;
@@ -130,6 +162,12 @@ app.get("/fmp/:endpoint(*)", async (req, res) => {
 
   const url = `${FMP_BASE}/${endpoint}?${params.toString()}`;
 
+  // Check cache first
+  const cached = cacheGet(url);
+  if (cached !== undefined) {
+    return res.json(cached);
+  }
+
   try {
     const upstream = await fetch(url);
 
@@ -140,6 +178,7 @@ app.get("/fmp/:endpoint(*)", async (req, res) => {
     }
 
     const data = await upstream.json();
+    cacheSet(url, data);
     res.json(data);
   } catch (err) {
     console.error("[tup-proxy] upstream error:", err.message);

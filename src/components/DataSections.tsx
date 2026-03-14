@@ -1,5 +1,5 @@
 import { f, fB } from "../lib/utils.ts";
-import { SectionLabel, DataRow, DerivedStat, StepperRow } from "./ui.tsx";
+import { SectionLabel, DataRow, DerivedStat } from "./ui.tsx";
 import type { InputState } from "../lib/types.ts";
 
 interface DataSectionsProps {
@@ -8,18 +8,38 @@ interface DataSectionsProps {
   currencyMismatchWarning: string;
   growthPeriod: "5yr" | "10yr";
   growthValues: { g5: number; g10: number };
-  onHistoricalStep: (delta: number) => void;
-  onAnalystStep: (delta: number) => void;
   onGrowthPeriodChange: (period: "5yr" | "10yr") => void;
 }
 
 export function DataSections({
   inp, company, currencyMismatchWarning, growthPeriod, growthValues,
-  onHistoricalStep, onAnalystStep, onGrowthPeriodChange,
+  onGrowthPeriodChange,
 }: DataSectionsProps) {
-  const blended = (inp.historicalGrowth + inp.analystGrowth) / 2;
   const divYield = inp.dividendYield || 0;
   const divIsAccelerator = divYield > 3;
+
+  // Compute blended growth rates (growth-only, no dividend)
+  const histRate = inp.historicalGrowth;
+  const fwd1 = inp.fwdGrowthY1;
+  const fwd2 = inp.fwdGrowthY2 ?? fwd1;
+  const fwdCagr = inp.fwdCAGR;
+
+  const blendedY1 = fwd1;
+  const blendedY2 = fwd2;
+  const blendedTerminal = fwdCagr != null ? (histRate + fwdCagr) / 2 : histRate;
+
+  const labelSm: React.CSSProperties = {
+    fontSize: "11px", fontWeight: 600, letterSpacing: "0.08em",
+    textTransform: "uppercase", color: "#888888",
+  };
+  const valueSm: React.CSSProperties = {
+    fontFamily: "'JetBrains Mono', monospace", fontSize: "13px",
+    fontWeight: 600, color: "#10d97e", textAlign: "right",
+  };
+  const formulaSm: React.CSSProperties = {
+    fontFamily: "'JetBrains Mono', monospace", fontSize: "10px",
+    color: "#555", textAlign: "right",
+  };
 
   return (
     <>
@@ -47,11 +67,9 @@ export function DataSections({
       {/* 02 Growth */}
       <div style={{ marginBottom: "32px" }}>
         <SectionLabel num="02" title="Growth Assumptions" />
-        <StepperRow
-          label="Historical EPS Growth"
-          value={inp.historicalGrowth}
-          onStep={onHistoricalStep}
-          badge={
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888" }}>Historical EPS Growth</span>
             <div style={{ display: "flex", gap: "0px" }}>
               {(["5yr", "10yr"] as const).map(p => (
                 <button key={p} onClick={() => onGrowthPeriodChange(p)} style={{
@@ -66,13 +84,46 @@ export function DataSections({
                 }}>{p}</button>
               ))}
             </div>
-          }
-        />
-        <StepperRow
-          label="Analyst Forward Growth (2yr)"
-          value={inp.analystGrowth}
-          onStep={onAnalystStep}
-        />
+          </div>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#00BFA5" }}>
+            {inp.historicalGrowth.toFixed(1)}%
+          </span>
+        </div>
+
+        {/* Blended Growth Rate Table */}
+        <div style={{ marginTop: "12px", marginBottom: "12px" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr auto auto",
+            gap: "0",
+            borderTop: "1px solid rgba(255,255,255,0.08)",
+          }}>
+            {/* Header */}
+            <div style={{ padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.08)", ...labelSm, fontSize: "9px", letterSpacing: "0.18em" }}>Stage</div>
+            <div style={{ padding: "8px 12px 8px 0", borderBottom: "1px solid rgba(255,255,255,0.08)", ...labelSm, fontSize: "9px", letterSpacing: "0.18em", textAlign: "right" }}>Formula</div>
+            <div style={{ padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.08)", ...labelSm, fontSize: "9px", letterSpacing: "0.18em", textAlign: "right" }}>Rate</div>
+
+            {/* Year 1 */}
+            <div style={{ padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", ...labelSm }}>Y1 Growth</div>
+            <div style={{ padding: "7px 12px 7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", ...formulaSm }}>Analyst Y1</div>
+            <div style={{ padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", ...valueSm }}>{f(blendedY1)}%</div>
+
+            {/* Year 2 */}
+            <div style={{ padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", ...labelSm }}>Y2 Growth</div>
+            <div style={{ padding: "7px 12px 7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", ...formulaSm }}>
+              {inp.fwdGrowthY2 != null ? "Analyst Y2" : "= Y1"}
+            </div>
+            <div style={{ padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", ...valueSm }}>{f(blendedY2)}%</div>
+
+            {/* Terminal */}
+            <div style={{ padding: "7px 0", ...labelSm }}>Terminal (Y3+)</div>
+            <div style={{ padding: "7px 12px 7px 0", ...formulaSm }}>
+              {fwdCagr != null ? "(Hist+CAGR)/2" : "Hist Only"}
+            </div>
+            <div style={{ padding: "7px 0", ...valueSm, color: "#C4A06E" }}>{f(blendedTerminal)}%</div>
+          </div>
+        </div>
+
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888" }}>Dividend Yield</span>
@@ -86,11 +137,10 @@ export function DataSections({
             {divYield.toFixed(1)}%
           </span>
         </div>
-        <DerivedStat label="Blended Growth Rate" value={`${f(blended)}%`} accent="#10d97e" />
         {divYield > 0 && (
           <DerivedStat
-            label="Total TUP Growth Rate"
-            value={`(${f(blended)}% + ${f(divYield)}%) = ${f(blended + divYield)}%`}
+            label="Total Terminal Rate"
+            value={`(${f(blendedTerminal)}% + ${f(divYield)}%) = ${f(blendedTerminal + divYield)}%`}
             accent="#C4A06E"
           />
         )}

@@ -171,17 +171,64 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
             growth for the next fiscal year or a 2-year annualized projection. This is blended with the
             historical CAGR to produce the final growth rate used in the payback calculation.
           </p>
-          <FormulaBlock label="2-Year CAGR (Preferred)">
-            Analyst Growth = √(FwdEPS<sub>yr2</sub> / EPS<sub>TTM</sub>) − 1
+          <FormulaBlock label="Primary (Estimate-to-Estimate)">
+            Analyst Growth = (EPS<sub>T+1</sub> − EPS<sub>T</sub>) / EPS<sub>T</sub>
           </FormulaBlock>
-          <FormulaBlock label="1-Year Fallback">
-            Analyst Growth = (FwdEPS<sub>yr1</sub> − EPS<sub>TTM</sub>) / EPS<sub>TTM</sub>
-          </FormulaBlock>
+          <p style={{ fontSize: "14px", color: M.text3, lineHeight: 1.7, margin: "-8px 0 20px", fontStyle: "italic" }}>
+            Where EPS<sub>T</sub> is the current fiscal year estimate and EPS<sub>T+1</sub> is the next fiscal year estimate.
+            Both come from the same analyst data source, ensuring a consistent accounting basis.
+          </p>
           <CalloutBlock label="Revenue Fallback">
-            If analyst EPS estimates are unavailable (common on free-tier API plans), TUP falls back to
+            If analyst EPS estimates are unavailable, TUP falls back to
             analyst <em>revenue</em> estimates using the same CAGR formula. If no estimates are available
             at all, the analyst growth defaults to 80% of the historical CAGR.
           </CalloutBlock>
+
+          <SubHead>Forward Growth Components: Y1, Y2, and Terminal Rate</SubHead>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 20px" }}>
+            When analyst estimates are available for multiple years, TUP derives three distinct forward growth
+            rates that feed into the year-by-year payback table. This produces a more realistic trajectory than
+            applying a single flat rate — growth typically decelerates as a company scales.
+          </p>
+
+          <FormulaBlock label="Y1 Growth — (EPS_T+1 / EPS_T) − 1">
+            G1 = (EPS<sub>T+1</sub> − EPS<sub>T</sub>) / EPS<sub>T</sub>
+          </FormulaBlock>
+          <p style={{ fontSize: "14px", color: M.text3, lineHeight: 1.7, margin: "-8px 0 20px", fontStyle: "italic" }}>
+            Growth from the current fiscal year estimate to the next fiscal year estimate.
+            Both values come from analyst consensus (same accounting basis), avoiding GAAP vs adjusted
+            EPS mismatches that would inflate the rate.
+          </p>
+
+          <FormulaBlock label="Y2 Growth — (EPS_T+2 / EPS_T+1) − 1">
+            G2 = (EPS<sub>T+2</sub> − EPS<sub>T+1</sub>) / EPS<sub>T+1</sub>
+          </FormulaBlock>
+          <p style={{ fontSize: "14px", color: M.text3, lineHeight: 1.7, margin: "-8px 0 20px", fontStyle: "italic" }}>
+            Growth from the next fiscal year to the year after. This often differs meaningfully from
+            G1 — a company accelerating out of a down cycle may show G2 &gt; G1, while a maturing
+            company typically shows G2 &lt; G1. Requires a third year of estimates.
+          </p>
+
+          <FormulaBlock label="Terminal Forward CAGR">
+            CAGR = (EPS<sub>T+2</sub> / EPS<sub>T</sub>)<sup style={{ fontSize: "11px" }}>1/3</sup> − 1
+          </FormulaBlock>
+          <p style={{ fontSize: "14px", color: M.text3, lineHeight: 1.7, margin: "-8px 0 20px", fontStyle: "italic" }}>
+            The annualized growth rate across all available estimate years. This smooths G1 and G2 into a single
+            rate used for Year 3 onward, blended with historical growth, until the lifecycle fade model takes over.
+            Falls back to a 2-year span when only two years of estimates exist.
+          </p>
+
+          <CalloutBlock label="Bear / Base / Bull Scenarios">
+            Analyst estimates include low, average, and high EPS projections. TUP precomputes all three
+            scenarios at fetch time — the <strong style={{ color: "#FF4D00" }}>bear</strong> case uses{" "}
+            <span style={{ fontFamily: M.mono }}>epsLow</span>,{" "}
+            <strong style={{ color: M.text1 }}>base</strong> uses{" "}
+            <span style={{ fontFamily: M.mono }}>epsAvg</span>, and{" "}
+            <strong style={{ color: "#00897B" }}>bull</strong> uses{" "}
+            <span style={{ fontFamily: M.mono }}>epsHigh</span>. Toggling between them swaps
+            the Y1, Y2, and CAGR values, which flows through the entire payback calculation automatically.
+          </CalloutBlock>
+
           <CalloutBlock label="Why Blend Historical + Analyst?">
             Historical growth shows what the company has actually achieved; analyst estimates show what the
             market expects going forward. Averaging the two tempers over-optimistic projections while still
@@ -265,30 +312,41 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
             while moderate growers decay gracefully — eliminating the need for a hard cap.
           </p>
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 20px" }}>
-            First, the company is classified into a lifecycle stage using its most recent revenue growth and profitability:
+            First, the company is classified into one of six lifecycle stages using its most recent revenue growth and profitability.
+            Earlier-stage companies get longer hold periods because their high growth rates are expected to persist — a start-up
+            reinvesting heavily has years of runway ahead, while a mature company's growth is already near its ceiling.
           </p>
           <div style={{ border: `1px solid ${M.borderWeak}`, marginBottom: "24px" }}>
-            {[
-              ["Introduction", "Revenue growth > 15%, not yet profitable", "5 years"],
-              ["Growth",       "Revenue growth > 15%, profitable",        "3 years"],
-              ["Maturity",     "Revenue growth 0–15%",                    "0 years"],
-              ["Decline",      "Revenue growth < 0%",                     "0 years"],
-            ].map(([stage, criteria, hold]) => (
-              <div key={stage as string} style={{
-                display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "12px", alignItems: "baseline",
-                padding: "12px 20px", borderBottom: `1px solid ${M.borderWeak}`,
-              }}>
-                <span style={{ fontSize: "14px", fontWeight: 600, color: M.text1 }}>{stage}</span>
-                <span style={{ fontSize: "14px", color: M.text2 }}>{criteria}</span>
-                <span style={{ fontFamily: M.mono, fontSize: "14px", color: "#C4A06E", textAlign: "right" }}>{hold}</span>
-              </div>
-            ))}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "12px", padding: "8px 20px", background: "rgba(255,255,255,0.02)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "12px", padding: "8px 20px", background: "rgba(255,255,255,0.02)", borderBottom: `1px solid ${M.borderWeak}` }}>
               <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: M.text3 }}>Stage</span>
               <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: M.text3 }}>Criteria</span>
               <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: M.text3, textAlign: "right" }}>Hold Period</span>
             </div>
+            {([
+              ["Start-Up",       "Not yet profitable (any revenue growth)",  "7 years", "#C4A06E"],
+              ["Young Growth",   "Profitable, revenue growth > 30%",        "5 years", "#a8d844"],
+              ["High Growth",    "Profitable, revenue growth > 15%",        "3 years", "#10d97e"],
+              ["Mature Growth",  "Profitable, revenue growth > 5%",         "1 year",  "#00BFA5"],
+              ["Mature Stable",  "Profitable, revenue growth 0–5%",         "0 years", "#4a90d9"],
+              ["Decline",        "Revenue growth < 0%",                     "0 years", "#FF4D00"],
+            ] as [string, string, string, string][]).map(([stage, criteria, hold, color]) => (
+              <div key={stage} style={{
+                display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "12px", alignItems: "baseline",
+                padding: "12px 20px", borderBottom: `1px solid ${M.borderWeak}`,
+              }}>
+                <span style={{ fontSize: "14px", fontWeight: 600, color }}>{stage}</span>
+                <span style={{ fontSize: "14px", color: M.text2 }}>{criteria}</span>
+                <span style={{ fontFamily: M.mono, fontSize: "14px", color: "#C4A06E", textAlign: "right" }}>{hold}</span>
+              </div>
+            ))}
           </div>
+          <CalloutBlock label="Why 6 Stages?">
+            The original 4-stage model (Introduction, Growth, Maturity, Decline) grouped too many different
+            business profiles together. A company growing revenue at 40% and one growing at 8% both landed in
+            the same bucket. The 6-stage model separates these cases — a Young Growth company (30%+ revenue growth)
+            gets 5 years of full-rate compounding, while a Mature Growth company (5–15%) only gets 1 year before
+            decay begins. This produces more realistic long-term projections.
+          </CalloutBlock>
 
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 16px" }}>
             During the <strong style={{ color: M.text1 }}>Hold Period</strong>, the initial blended growth rate is
@@ -306,14 +364,14 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
 
           <div style={{ border: `1px solid ${M.borderWeak}`, marginBottom: "32px" }}>
             <div style={{ padding: "12px 20px", borderBottom: `1px solid ${M.borderWeak}` }}>
-              <SubHead>Example A — Hyper-Growth Turnaround (70% initial, Intro stage)</SubHead>
+              <SubHead>Example A — Pre-Profit Start-Up (70% initial, Start-Up stage)</SubHead>
             </div>
             {[
               ["VDR",                       "max(5%, 70% × 20%) = 14%", false],
-              ["Years 1–5 (hold)",          "70%",                      false],
-              ["Year 6",                    "70% − 14% = 56%",         false],
-              ["Year 7",                    "56% − 14% = 42%",         false],
-              ["Year 8+",                   "30% floor",               true],
+              ["Years 1–7 (hold)",          "70%",                      false],
+              ["Year 8",                    "70% − 14% = 56%",         false],
+              ["Year 9",                    "56% − 14% = 42%",         false],
+              ["Year 10+",                  "30% floor",               true],
             ].map(([label, val, highlight]) => (
               <div key={label as string} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "baseline",
@@ -330,13 +388,36 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
 
           <div style={{ border: `1px solid ${M.borderWeak}`, marginBottom: "32px" }}>
             <div style={{ padding: "12px 20px", borderBottom: `1px solid ${M.borderWeak}` }}>
-              <SubHead>Example B — Moderate Grower (35% initial, Growth stage)</SubHead>
+              <SubHead>Example B — Young Growth Company (35% initial, Young Growth stage)</SubHead>
             </div>
             {[
               ["VDR",                       "max(5%, 35% × 20%) = 7%", false],
-              ["Years 1–3 (hold)",          "35%",                     false],
-              ["Year 4",                    "35% − 7% = 28% → 30% floor", false],
-              ["Year 5+",                   "30% floor",               true],
+              ["Years 1–5 (hold)",          "35%",                     false],
+              ["Year 6",                    "35% − 7% = 28% → 30% floor", false],
+              ["Year 7+",                   "30% floor",               true],
+            ].map(([label, val, highlight]) => (
+              <div key={label as string} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                padding: "12px 20px",
+                borderBottom: `1px solid ${M.borderWeak}`,
+                background: highlight ? "rgba(196,160,110,0.06)" : "transparent",
+                borderLeft: highlight ? "2px solid #C4A06E" : "2px solid transparent",
+              }}>
+                <span style={{ fontSize: "14px", color: highlight ? M.text1 : M.text2, fontWeight: highlight ? 600 : 400 }}>{label}</span>
+                <span style={{ fontFamily: M.mono, fontSize: "15px", color: highlight ? "#C4A06E" : M.text1, fontWeight: highlight ? 700 : 400 }}>{val}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ border: `1px solid ${M.borderWeak}`, marginBottom: "32px" }}>
+            <div style={{ padding: "12px 20px", borderBottom: `1px solid ${M.borderWeak}` }}>
+              <SubHead>Example C — Mature Growth Blue-Chip (12% initial, Mature Growth stage)</SubHead>
+            </div>
+            {[
+              ["VDR",                       "max(5%, 12% × 20%) = 5%", false],
+              ["Year 1 (hold)",             "12%",                     false],
+              ["Year 2",                    "12% − 5% = 7%",          false],
+              ["Year 3+",                   "7% (below 30% floor — no fade applied)", true],
             ].map(([label, val, highlight]) => (
               <div key={label as string} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "baseline",

@@ -262,8 +262,8 @@ export async function lookupTicker(
     // 3) Balance Sheet (2 years)
     fetchFMP<FMPBalanceSheet[]>(`balance-sheet-statement?symbol=${t}&limit=2`).then(d => { log("  ✓ /balance-sheet-statement — debt, cash (2 yrs)"); return d; }),
 
-    // 4) Income Statement (10 years)
-    fetchFMP<FMPIncomeStatement[]>(`income-statement?symbol=${t}&limit=10`).then(d => { log("  ✓ /income-statement — revenue, net income (10 yrs)"); return d; }),
+    // 4) Income Statement (12 years — need 11 data points for true 10-year CAGR)
+    fetchFMP<FMPIncomeStatement[]>(`income-statement?symbol=${t}&limit=12`).then(d => { log("  ✓ /income-statement — revenue, net income (12 yrs)"); return d; }),
 
     // 5) Analyst Estimates
     fetchFMP<FMPEstimate[]>(`analyst-estimates?symbol=${t}&period=annual&limit=5`)
@@ -285,8 +285,8 @@ export async function lookupTicker(
       .then(d => { log("  ✓ /earnings-surprises — analyst beat/miss history"); return d; })
       .catch(() => { log("  ⚠ /earnings-surprises — not available"); return [] as FMPEarningSurprise[]; }),
 
-    // 8) Cash Flow Statement (10 years)
-    fetchFMP<FMPCashFlow[]>(`cash-flow-statement?symbol=${t}&limit=10`)
+    // 8) Cash Flow Statement (12 years — matches income statement window)
+    fetchFMP<FMPCashFlow[]>(`cash-flow-statement?symbol=${t}&limit=12`)
       .then(d => { log("  ✓ /cash-flow-statement — operating/investing/financing flows"); return d; })
       .catch(() => { log("  ⚠ /cash-flow-statement — not available"); return [] as FMPCashFlow[]; }),
 
@@ -393,8 +393,9 @@ export async function lookupTicker(
   const pastEst   = sortedEst.filter(e => new Date(e.date ?? "").getTime() <= today.getTime());
   const futureEst = sortedEst.filter(e => new Date(e.date ?? "").getTime() >  today.getTime());
   const estTTM    = pastEst[pastEst.length - 1] ?? null;
-  const estFwd    = futureEst[0]    ?? null;
-  const estFwd2   = futureEst[1]    ?? null;
+  const estFwd    = futureEst[0]    ?? null;   // EPS_T   (current fiscal year)
+  const estFwd2   = futureEst[1]    ?? null;   // EPS_T+1 (next fiscal year)
+  const estFwd3   = futureEst[2]    ?? null;   // EPS_T+2 (year after next)
 
   // Normalize analyst EPS estimates to the current share count so dilution
   // doesn't skew the blended yield.  epsOf returns per-share in price currency.
@@ -407,20 +408,29 @@ export async function lookupTicker(
   const latestRevenue = (inc[0]?.revenue || 0) * fxRate;
   const revenuePerShare = sharesOut > 0 ? latestRevenue / sharesOut : 0;
 
-  // ── Historical net income growth — independent of share buybacks ─────────
-  // Uses raw net income (Basic Earnings) instead of per-share EPS so that
-  // growth reflects actual profitability, not financial engineering.
-  const niHistory = inc.map(y => (y.netIncome || 0) * fxRate);
+  // ── Historical EPS growth — per-share basis (net income ÷ shares) ────────
+  // Uses diluted EPS per year so buyback-driven growth is captured, matching
+  // the methodology: "Derived from diluted EPS on the income statement."
+  const epsHistory = inc.map(y => {
+    const ni = (y.netIncome || 0) * fxRate;
+    const sh = y.weightedAverageShsOutDil || y.weightedAverageShsOut || sharesOut;
+    return sh > 0 ? ni / sh : 0;
+  });
 
-  const niGrowthRates: number[] = [];
-  for (let i = 0; i < niHistory.length - 1; i++) {
-    const cur = niHistory[i], prev = niHistory[i + 1];
+  if (import.meta.env.DEV) {
+    console.log(`[TUP HIST] ${t} | epsHistory.length=${epsHistory.length}`,
+      epsHistory.map((eps, i) => `${inc[i]?.calendarYear ?? `Y${i}`}: ${eps.toFixed(4)}`));
+  }
+
+  const epsGrowthRates: number[] = [];
+  for (let i = 0; i < epsHistory.length - 1; i++) {
+    const cur = epsHistory[i], prev = epsHistory[i + 1];
     if (prev > 0 && cur > 0) {
       const gr = (cur - prev) / prev;
-      if (isFinite(gr) && Math.abs(gr) < 10) niGrowthRates.push(gr);
+      if (isFinite(gr) && Math.abs(gr) < 10) epsGrowthRates.push(gr);
     }
   }
-  const sortedGrVals = [...niGrowthRates].sort((a, b) => a - b);
+  const sortedGrVals = [...epsGrowthRates].sort((a, b) => a - b);
   const grMid    = Math.floor(sortedGrVals.length / 2);
   const grMedian = sortedGrVals.length === 0 ? null
     : sortedGrVals.length % 2 !== 0
@@ -428,73 +438,111 @@ export async function lookupTicker(
       : (sortedGrVals[grMid - 1] + sortedGrVals[grMid]) / 2;
   const fallbackHistGrowth = grMedian != null ? grMedian * 100 : 10;
 
-  // ── CAGR helper — standard CAGR or Absolute Delta fallback ────────────
-  // Standard: (end / begin)^(1/n) − 1
-  // Fallback: (end − begin) / (|begin| × n)  when begin ≤ 0
-  // No hard cap — the lifecycle fade in calcTUP handles decay dynamically.
+  // ── CAGR helper — standard CAGR (positive-to-positive only) ──────────
   const growthCAGR = (end: number, begin: number, n: number): number | null => {
-    if (n <= 0 || end <= 0) return null;
-    if (begin > 0) {
-      return (Math.pow(end / begin, 1 / n) - 1) * 100;
-    }
-    const absBegin = Math.abs(begin) || 0.01;   // prevent division by zero
-    return ((end - begin) / (absBegin * n)) * 100;
+    if (n <= 0 || end <= 0 || begin <= 0) return null;
+    return (Math.pow(end / begin, 1 / n) - 1) * 100;
   };
 
-  // ── 10-year net income CAGR ─────────────────────────────────────────────
+  // ── Window-specific median YoY EPS growth — for turnaround fallback ────
+  // When starting EPS is negative, CAGR is meaningless. Use the median of
+  // profitable year-over-year growth rates within the window instead.
+  const windowMedianGrowth = (maxIdx: number): number => {
+    const rates: number[] = [];
+    for (let i = 0; i < maxIdx && i < epsHistory.length - 1; i++) {
+      const cur = epsHistory[i], prev = epsHistory[i + 1];
+      if (prev > 0 && cur > 0) {
+        const gr = (cur - prev) / prev;
+        if (isFinite(gr) && Math.abs(gr) < 10) rates.push(gr);
+      }
+    }
+    if (rates.length === 0) return fallbackHistGrowth;
+    rates.sort((a, b) => a - b);
+    const mid = Math.floor(rates.length / 2);
+    return (rates.length % 2 !== 0 ? rates[mid] : (rates[mid - 1] + rates[mid]) / 2) * 100;
+  };
+
+  // ── 10-year EPS CAGR ─────────────────────────────────────────────────
   let avgHistGrowth = fallbackHistGrowth;
-  if (niHistory.length >= 2 && niHistory[0] > 0) {
-    const maxIdx = niHistory.length - 1;
-    const rate = growthCAGR(niHistory[0], niHistory[maxIdx], maxIdx);
-    if (rate !== null) avgHistGrowth = rate;
+  const maxIdx10 = epsHistory.length - 1;  // use full available span
+  if (maxIdx10 >= 1) {
+    if (epsHistory[0] > 0) {
+      const rate = growthCAGR(epsHistory[0], epsHistory[maxIdx10], maxIdx10);
+      avgHistGrowth = rate !== null ? rate : windowMedianGrowth(maxIdx10);
+    } else {
+      // Current EPS negative — CAGR meaningless, use median YoY growth
+      avgHistGrowth = windowMedianGrowth(maxIdx10);
+    }
   }
 
-  // ── 5-year net income CAGR ──────────────────────────────────────────────
-  let avgHistGrowth5yr = avgHistGrowth;  // fallback to 10yr
-  if (niHistory.length >= 2 && niHistory[0] > 0) {
-    const maxIdx = Math.min(niHistory.length - 1, 4);
-    const rate = growthCAGR(niHistory[0], niHistory[maxIdx], maxIdx);
-    if (rate !== null) avgHistGrowth5yr = rate;
+  // ── 5-year EPS CAGR — index 5 = 6 data points = 5 compounding periods ──
+  let avgHistGrowth5yr = avgHistGrowth;  // fallback to 10yr if not enough data
+  const maxIdx5 = Math.min(epsHistory.length - 1, 5);
+  if (maxIdx5 >= 1 && maxIdx5 !== maxIdx10) {
+    // Only compute separately when we have more data than the 5yr window
+    if (epsHistory[0] > 0) {
+      const rate = growthCAGR(epsHistory[0], epsHistory[maxIdx5], maxIdx5);
+      avgHistGrowth5yr = rate !== null ? rate : windowMedianGrowth(maxIdx5);
+    } else {
+      avgHistGrowth5yr = windowMedianGrowth(maxIdx5);
+    }
   }
 
-  // ── Analyst forward growth — 2-year CAGR where available ─────────────────
-  let analystGrowth  = avgHistGrowth * 0.8;
+  if (import.meta.env.DEV) {
+    console.log(`[TUP CAGR] ${t} | maxIdx10=${maxIdx10} maxIdx5=${maxIdx5} | 10yr=${avgHistGrowth.toFixed(2)}% 5yr=${avgHistGrowth5yr.toFixed(2)}%`);
+  }
+
+  // ── Forward growth — estimate-to-estimate ratios ────────────────────────
+  // Framework:
+  //   EPS_T   = estFwd  (current fiscal year estimate)
+  //   EPS_T+1 = estFwd2 (next fiscal year estimate)
+  //   EPS_T+2 = estFwd3 (year after next estimate)
+  //   G1 = (EPS_T+1 - EPS_T) / EPS_T
+  //   G2 = (EPS_T+2 - EPS_T+1) / EPS_T+1
+  //   analystGrowth = G1  (used in TUP blend: (G_hist + G1) / 2)
   const ttmEstEps    = epsOf(estTTM);
-  const fwdEstEps    = epsOf(estFwd);
-  const fwd2EstEps   = epsOf(estFwd2);
-  if (fwd2EstEps && ttmEstEps && ttmEstEps > 0 && fwd2EstEps > 0) {
-    analystGrowth = (Math.sqrt(fwd2EstEps / ttmEstEps) - 1) * 100;
-  } else if (fwdEstEps && ttmEstEps && ttmEstEps > 0) {
-    analystGrowth = ((fwdEstEps / ttmEstEps) - 1) * 100;
+  const epsT         = epsOf(estFwd);     // EPS_T   (current year)
+  const epsTp1       = epsOf(estFwd2);    // EPS_T+1 (next year)
+  const epsTp2       = epsOf(estFwd3);    // EPS_T+2 (year after)
+
+  let analystGrowth  = avgHistGrowth * 0.8;
+  if (epsT > 0 && epsTp1 > 0) {
+    analystGrowth = ((epsTp1 / epsT) - 1) * 100;           // G1
   } else {
+    // Revenue fallback when EPS estimates unavailable
     const estRev  = (estFwd?.revenueAvg  || 0) * fxRate;
     const estRev2 = (estFwd2?.revenueAvg || 0) * fxRate;
-    if (estRev2 > 0 && latestRevenue > 0) {
-      analystGrowth = (Math.sqrt(estRev2 / latestRevenue) - 1) * 100;
+    if (estRev2 > 0 && estRev > 0) {
+      analystGrowth = ((estRev2 / estRev) - 1) * 100;
     } else if (estRev > 0 && latestRevenue > 0) {
       analystGrowth = ((estRev - latestRevenue) / latestRevenue) * 100;
     }
   }
 
+  // Forward EPS: analyst consensus for current year, normalized to current shares.
+  const fwdEstEps  = epsT;    // kept for forwardEPS derivation below
+  const fwd2EstEps = epsTp1;  // kept for compatibility
+
   // ── Forward growth components for variable rate sequence ─────────────────
-  let fwdGrowthY1 = analystGrowth; // default to blended CAGR
+  let fwdGrowthY1 = analystGrowth; // G1: (EPS_T+1 / EPS_T) - 1
   let fwdGrowthY2: number | null = null;
   let fwdCAGRValue: number | null = null;
 
-  const baselineEPS = ttmEstEps || ttmEPS;
-  if (baselineEPS > 0) {
-    if (fwdEstEps > 0) {
-      fwdGrowthY1 = ((fwdEstEps / baselineEPS) - 1) * 100;
-    }
-    if (fwdEstEps > 0 && fwd2EstEps > 0) {
-      fwdGrowthY2 = ((fwd2EstEps / fwdEstEps) - 1) * 100;
-    }
-    if (fwd2EstEps > 0) {
-      fwdCAGRValue = (Math.sqrt(fwd2EstEps / baselineEPS) - 1) * 100;
-    }
+  // G2: (EPS_T+2 / EPS_T+1) - 1
+  if (epsTp1 > 0 && epsTp2 > 0) {
+    fwdGrowthY2 = ((epsTp2 / epsTp1) - 1) * 100;
+  }
+  // Terminal CAGR: annualized growth from EPS_T to EPS_T+2 (3-year span)
+  if (epsT > 0 && epsTp2 > 0) {
+    fwdCAGRValue = (Math.pow(epsTp2 / epsT, 1 / 3) - 1) * 100;
+  } else if (epsT > 0 && epsTp1 > 0) {
+    // 2-year span fallback
+    fwdCAGRValue = (Math.sqrt(epsTp1 / epsT) - 1) * 100;
   }
 
   // ── Bear / Bull forward growth scenarios ────────────────────────────────
+  // Use base-case EPS_T (epsAvg) as denominator for all scenarios so that
+  // bear < base < bull is always maintained. Only future estimates vary.
   let fwdGrowthY1Bear: number | null = null;
   let fwdGrowthY2Bear: number | null = null;
   let fwdCAGRBear: number | null = null;
@@ -502,19 +550,23 @@ export async function lookupTicker(
   let fwdGrowthY2Bull: number | null = null;
   let fwdCAGRBull: number | null = null;
 
-  const fwdEstEpsBear = epsOfBear(estFwd);
-  const fwd2EstEpsBear = epsOfBear(estFwd2);
-  const fwdEstEpsBull = epsOfBull(estFwd);
-  const fwd2EstEpsBull = epsOfBull(estFwd2);
+  const epsTp1Bear  = epsOfBear(estFwd2);
+  const epsTp2Bear  = epsOfBear(estFwd3);
+  const epsTp1Bull  = epsOfBull(estFwd2);
+  const epsTp2Bull  = epsOfBull(estFwd3);
 
-  if (baselineEPS > 0) {
-    if (fwdEstEpsBear > 0) fwdGrowthY1Bear = ((fwdEstEpsBear / baselineEPS) - 1) * 100;
-    if (fwdEstEpsBear > 0 && fwd2EstEpsBear > 0) fwdGrowthY2Bear = ((fwd2EstEpsBear / fwdEstEpsBear) - 1) * 100;
-    if (fwd2EstEpsBear > 0) fwdCAGRBear = (Math.sqrt(fwd2EstEpsBear / baselineEPS) - 1) * 100;
+  if (epsT > 0) {
+    // Bear: G1 = (epsLow_T+1 / epsAvg_T) - 1
+    if (epsTp1Bear > 0) fwdGrowthY1Bear = ((epsTp1Bear / epsT) - 1) * 100;
+    if (epsTp1Bear > 0 && epsTp2Bear > 0) fwdGrowthY2Bear = ((epsTp2Bear / epsTp1Bear) - 1) * 100;
+    if (epsTp2Bear > 0) fwdCAGRBear = (Math.pow(epsTp2Bear / epsT, 1 / 3) - 1) * 100;
+    else if (epsTp1Bear > 0) fwdCAGRBear = (Math.sqrt(epsTp1Bear / epsT) - 1) * 100;
 
-    if (fwdEstEpsBull > 0) fwdGrowthY1Bull = ((fwdEstEpsBull / baselineEPS) - 1) * 100;
-    if (fwdEstEpsBull > 0 && fwd2EstEpsBull > 0) fwdGrowthY2Bull = ((fwd2EstEpsBull / fwdEstEpsBull) - 1) * 100;
-    if (fwd2EstEpsBull > 0) fwdCAGRBull = (Math.sqrt(fwd2EstEpsBull / baselineEPS) - 1) * 100;
+    // Bull: G1 = (epsHigh_T+1 / epsAvg_T) - 1
+    if (epsTp1Bull > 0) fwdGrowthY1Bull = ((epsTp1Bull / epsT) - 1) * 100;
+    if (epsTp1Bull > 0 && epsTp2Bull > 0) fwdGrowthY2Bull = ((epsTp2Bull / epsTp1Bull) - 1) * 100;
+    if (epsTp2Bull > 0) fwdCAGRBull = (Math.pow(epsTp2Bull / epsT, 1 / 3) - 1) * 100;
+    else if (epsTp1Bull > 0) fwdCAGRBull = (Math.sqrt(epsTp1Bull / epsT) - 1) * 100;
   }
 
   // ── Inception growth — revenue CAGR across all available years ───────────

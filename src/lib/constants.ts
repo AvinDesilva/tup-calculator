@@ -49,25 +49,30 @@ export const FALLBACK_FX: Record<string, number> = {
 
 // ─── Business Lifecycle S-curve ───────────────────────────────────────────────
 export const LC_CURVE: [number, number][] = [
-  [0.00, 0.97], [0.07, 0.96], [0.15, 0.93], [0.22, 0.88],
-  [0.28, 0.80], [0.35, 0.66], [0.42, 0.46], [0.50, 0.25],
-  [0.57, 0.09], [0.63, 0.04], [0.68, 0.05], [0.74, 0.13],
-  [0.81, 0.30], [0.89, 0.52], [1.00, 0.72],
+  [0.00, 0.97], [0.06, 0.96], [0.12, 0.93], [0.18, 0.88],
+  [0.24, 0.78], [0.30, 0.62], [0.36, 0.42], [0.42, 0.22],
+  [0.48, 0.10], [0.54, 0.04], [0.60, 0.03], [0.66, 0.05],
+  [0.72, 0.10], [0.78, 0.20], [0.85, 0.36], [0.92, 0.54],
+  [1.00, 0.72],
 ];
 
-// Four equally-spaced lifecycle zones
+// Six equally-spaced lifecycle zones
 export const LC_ZONES: Array<{ key: LifecycleStage; label: string; center: number }> = [
-  { key: "intro",    label: "Introduction", center: 0.125 },
-  { key: "growth",   label: "Growth",       center: 0.375 },
-  { key: "maturity", label: "Maturity",     center: 0.625 },
-  { key: "decline",  label: "Decline",      center: 0.875 },
+  { key: "startup",       label: "Start-Up",      center: 1/12 },
+  { key: "young_growth",  label: "Young",          center: 3/12 },
+  { key: "high_growth",   label: "High",           center: 5/12 },
+  { key: "mature_growth", label: "Mature",         center: 7/12 },
+  { key: "mature_stable", label: "Stable",         center: 9/12 },
+  { key: "decline",       label: "Decline",        center: 11/12 },
 ];
 
 // Lifecycle stage → display metadata
 export const STAGE_META: Record<LifecycleStage | "other", { label: string; color: string }> = {
-  intro:    { label: "Introduction", color: "#C4A06E" },
-  growth:   { label: "Growth",       color: "#10d97e" },
-  maturity: { label: "Maturity",     color: "#00BFA5" },
-  decline:  { label: "Decline",      color: "#FF4D00" },
-  other:    { label: "Mixed",        color: "#505050" },
+  startup:       { label: "Start-Up",       color: "#C4A06E" },
+  young_growth:  { label: "Young Growth",   color: "#a8d844" },
+  high_growth:   { label: "High Growth",    color: "#10d97e" },
+  mature_growth: { label: "Mature Growth",  color: "#00BFA5" },
+  mature_stable: { label: "Mature Stable",  color: "#4a90d9" },
+  decline:       { label: "Decline",        color: "#FF4D00" },
+  other:         { label: "Mixed",          color: "#505050" },
 };
