@@ -14,6 +14,15 @@ npm run typecheck # Run tsc --noEmit (TypeScript type checking)
 
 No test runner is configured.
 
+## Git Workflow
+
+- **Always create a feature branch before making substantive code changes**
+- Branch naming: `feature/`, `fix/`, `refactor/`, etc. for clarity
+- Test/review changes on the branch before merging to `main`
+- Merge to `main` only after verification (testing or user approval)
+- Push to GitHub to confirm commits are recorded there
+- **Why:** Keeps commit history clean, allows for proper review, and ensures changes are tracked on GitHub
+
 ## Environment
 
 The FMP API key can be pre-loaded via an env variable:
@@ -33,7 +42,6 @@ This is a single-page React 19 app (Vite + TypeScript + JSX). Source files use `
 The TUP ("Time Until Payback") algorithm computes how many years of compounded EPS growth it takes to recover the adjusted share price (enterprise value per share). Two modes:
 
 - **`standard`** — for profitable companies: blends TTM EPS + forward EPS as the base, averages historical EPS growth + analyst growth as the rate. Buy threshold: ≤ 10 years.
-- **`preprofit`** — for pre-profit companies: derives implied EPS from `revenuePerShare × targetMargin`, starts accumulating from `breakEvenYear`. Buy threshold: ≤ 8 years.
 
 Verdict logic: `fallingKnife` (price < 200-day SMA) forces `"avoid"`. Otherwise payback vs threshold determines `strong_buy / buy / hold / avoid`. Growth is capped implicitly at 30 years (SAFETY_CAP).
 
@@ -45,7 +53,7 @@ Fires 6 parallel requests to Financial Modeling Prep v3:
 3. `/balance-sheet-statement?limit=1` — debt, cash
 4. `/income-statement?limit=4` — revenue, net income (4 years)
 5. `/financial-growth?limit=5` — historical EPS growth (5 years)
-6. `/analyst-estimates?limit=1` — forward EPS & revenue estimates (gracefully absent on free plan)
+6. `/analyst-estimates?limit=1` — forward EPS & revenue estimates 
 
 The function derives all `inp` state fields from these responses and returns them for `setInp(...)`.
 
@@ -53,7 +61,6 @@ The function derives all `inp` state fields from these responses and returns the
 
 The main `App` component manages all state. Key state:
 - `inp` — all numeric calculator inputs (marketCap, debt, cash, shares, ttmEPS, forwardEPS, historicalGrowth, analystGrowth, revenuePerShare, targetMargin, inceptionGrowth, breakEvenYear, currentPrice, sma200)
-- `mode` — `"standard"` | `"preprofit"`
 - `manual` — toggles between API-fetched read-only display and editable `<Field>` inputs
 - `noiseFilter` — strips the verdict card down to just the payback number
 - `showMethodology` — swaps in the `<MethodologyPage>` full-screen view
