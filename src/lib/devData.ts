@@ -26,6 +26,7 @@ export const DEV_INP: InputState = {
   dividendYield: 0.5,
   lifecycleStage: "mature_growth",
   growthOverrides: {},
+  vdrEnabled: true,
 };
 
 export const DEV_VALUATION = { dcf: 248, altmanZ: 8.2 };

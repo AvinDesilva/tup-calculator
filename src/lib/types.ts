@@ -31,6 +31,7 @@ export interface InputState {
   dividendYield: number;
   lifecycleStage: LifecycleStage | null;
   growthOverrides: Record<number, number>;
+  vdrEnabled: boolean;
 }
 
 // ─── calcTUP result ───────────────────────────────────────────────────────────

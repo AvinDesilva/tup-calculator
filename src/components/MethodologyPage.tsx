@@ -326,9 +326,9 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
               ["Start-Up",       "Not yet profitable (any revenue growth)",  "7 years", "#C4A06E"],
               ["Young Growth",   "Profitable, revenue growth > 30%",        "5 years", "#a8d844"],
               ["High Growth",    "Profitable, revenue growth > 15%",        "3 years", "#10d97e"],
-              ["Mature Growth",  "Profitable, revenue growth > 5%",         "1 year",  "#00BFA5"],
-              ["Mature Stable",  "Profitable, revenue growth 0–5%",         "0 years", "#4a90d9"],
-              ["Decline",        "Revenue growth < 0%",                     "0 years", "#FF4D00"],
+              ["Mature Growth",  "Profitable, revenue growth > 5%",         "5 years", "#00BFA5"],
+              ["Mature Stable",  "Profitable, revenue growth 0–5%",         "3 years", "#4a90d9"],
+              ["Decline",        "Revenue growth < 0%",                     "3 years", "#FF4D00"],
             ] as [string, string, string, string][]).map(([stage, criteria, hold, color]) => (
               <div key={stage} style={{
                 display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "12px", alignItems: "baseline",
@@ -344,8 +344,8 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
             The original 4-stage model (Introduction, Growth, Maturity, Decline) grouped too many different
             business profiles together. A company growing revenue at 40% and one growing at 8% both landed in
             the same bucket. The 6-stage model separates these cases — a Young Growth company (30%+ revenue growth)
-            gets 5 years of full-rate compounding, while a Mature Growth company (5–15%) only gets 1 year before
-            decay begins. This produces more realistic long-term projections.
+            gets 5 years of full-rate compounding, and a Mature Growth company (5–15%) also gets 5 years before
+            decay begins. All stages have a minimum 3-year hold to avoid premature decay.
           </CalloutBlock>
 
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 16px" }}>
@@ -355,11 +355,15 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
           </p>
 
           <FormulaBlock label="Variable Decay Rate">
-            VDR = max( 5%, G<sub>initial</sub> × 20% )
+            VDR = max( 2%, G<sub>initial</sub> × VDR_Factor )
+          </FormulaBlock>
+
+          <FormulaBlock label="VDR Factor (tiered)">
+            G ≥ 40% → 20% &nbsp;|&nbsp; 20–40% → 15% &nbsp;|&nbsp; &lt;20% → 10%
           </FormulaBlock>
 
           <FormulaBlock label="Lifecycle Fade Formula">
-            G(n) = max( G<sub>initial</sub> − (n − HoldPeriod) × VDR, &nbsp;30% )
+            G(n) = max( G<sub>initial</sub> − (n − HoldPeriod) × VDR, &nbsp;5% )
           </FormulaBlock>
 
           <div style={{ border: `1px solid ${M.borderWeak}`, marginBottom: "32px" }}>
@@ -367,11 +371,13 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
               <SubHead>Example A — Pre-Profit Start-Up (70% initial, Start-Up stage)</SubHead>
             </div>
             {[
-              ["VDR",                       "max(5%, 70% × 20%) = 14%", false],
+              ["VDR",                       "max(2%, 70% × 20%) = 14%", false],
               ["Years 1–7 (hold)",          "70%",                      false],
               ["Year 8",                    "70% − 14% = 56%",         false],
               ["Year 9",                    "56% − 14% = 42%",         false],
-              ["Year 10+",                  "30% floor",               true],
+              ["Year 10",                   "42% − 14% = 28%",         false],
+              ["Year 11",                   "28% − 14% = 14%",         false],
+              ["Year 12+",                  "5% floor",                true],
             ].map(([label, val, highlight]) => (
               <div key={label as string} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "baseline",
@@ -391,10 +397,14 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
               <SubHead>Example B — Young Growth Company (35% initial, Young Growth stage)</SubHead>
             </div>
             {[
-              ["VDR",                       "max(5%, 35% × 20%) = 7%", false],
-              ["Years 1–5 (hold)",          "35%",                     false],
-              ["Year 6",                    "35% − 7% = 28% → 30% floor", false],
-              ["Year 7+",                   "30% floor",               true],
+              ["VDR",                       "max(2%, 35% × 15%) = 5.25%", false],
+              ["Years 1–5 (hold)",          "35%",                       false],
+              ["Year 6",                    "35% − 5.25% = 29.75%",     false],
+              ["Year 7",                    "29.75% − 5.25% = 24.5%",   false],
+              ["Year 8",                    "24.5% − 5.25% = 19.25%",   false],
+              ["Year 9",                    "19.25% − 5.25% = 14%",     false],
+              ["Year 10",                   "14% − 5.25% = 8.75%",      false],
+              ["Year 11+",                  "5% floor",                  true],
             ].map(([label, val, highlight]) => (
               <div key={label as string} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "baseline",
@@ -414,10 +424,12 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
               <SubHead>Example C — Mature Growth Blue-Chip (12% initial, Mature Growth stage)</SubHead>
             </div>
             {[
-              ["VDR",                       "max(5%, 12% × 20%) = 5%", false],
-              ["Year 1 (hold)",             "12%",                     false],
-              ["Year 2",                    "12% − 5% = 7%",          false],
-              ["Year 3+",                   "7% (below 30% floor — no fade applied)", true],
+              ["VDR",                       "max(2%, 12% × 10%) = 2%", false],
+              ["Years 1–5 (hold)",          "12%",                     false],
+              ["Year 6",                    "12% − 2% = 10%",         false],
+              ["Year 7",                    "10% − 2% = 8%",          false],
+              ["Year 8",                    "8% − 2% = 6%",           false],
+              ["Year 9+",                   "5% floor",                true],
             ].map(([label, val, highlight]) => (
               <div key={label as string} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "baseline",
@@ -434,14 +446,14 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
 
           <CalloutBlock>
             The VDR ensures that extreme growth rates (from turnaround stocks or high-growth disruptors)
-            are pulled toward reality faster, while companies with steady 30–40% growth hold their rate
-            longer. No hard ceiling is needed — the math self-corrects.
+            are pulled toward reality faster, while companies with steady 15–25% growth hold their rate
+            longer before decaying toward a 5% terminal rate. No hard ceiling is needed — the math self-corrects.
           </CalloutBlock>
 
           <SubHead>Key Guardrails</SubHead>
           {[
             ["Dividend Yield Adder", "The yield is added post-blend, not averaged in. This correctly preserves the growth signal: a 4.9% yield on a 17.5% grower produces 22.4% total compounding, not a misleadingly inflated 18% average."],
-            ["30% Floor", "The VDR decay never pushes the growth rate below 30%. This floor reflects a reasonable long-term compounding assumption — aggressive enough to reward quality businesses, conservative enough to avoid fantasy projections."],
+            ["5% Floor", "The VDR decay never pushes the growth rate below 5%. This floor reflects a terminal growth rate approximating GDP + inflation — realistic enough to model long-term survivors, conservative enough to prevent perpetual high-growth fantasy projections."],
             ["Consistency Check", "If historical growth is 50% but analysts expect 5%, the business model may be broken or the industry is maturing rapidly. In these cases, lean more heavily on the lower number."],
           ].map(([title, bodyText]) => (
             <div key={title as string} style={{ padding: "20px 0", borderTop: `1px solid ${M.borderWeak}` }}>

@@ -5,7 +5,6 @@ import { lookupTicker, lookupTickerQuick, fetchRandomTicker } from "./lib/api.ts
 import { C } from "./lib/theme.ts";
 import type { InputState, Mode, TUPResult, GrowthScenario, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement } from "./lib/types.ts";
 
-import { SectionLabel } from "./components/ui.tsx";
 import { VerdictCard } from "./components/VerdictCard.tsx";
 import { ValuationContext } from "./components/ValuationContext.tsx";
 import { CompanyScorecard } from "./components/CompanyScorecard.tsx";
@@ -65,7 +64,7 @@ export default function App() {
     marketCap: 0, debt: 0, cash: 0, shares: 1,
     ttmEPS: 0, forwardEPS: 0, historicalGrowth: 10, analystGrowth: 10, fwdGrowthY1: 10, fwdGrowthY2: null, fwdCAGR: null,
     revenuePerShare: 0, targetMargin: 15, inceptionGrowth: 30, breakEvenYear: 2,
-    currentPrice: 0, sma200: 0, dividendYield: 0, lifecycleStage: null, growthOverrides: {},
+    currentPrice: 0, sma200: 0, dividendYield: 0, lifecycleStage: null, growthOverrides: {}, vdrEnabled: true,
   });
 
   const result: TUPResult | null = useMemo(() => calcTUP(inp, mode), [inp, mode]);
@@ -109,7 +108,7 @@ export default function App() {
             revenuePerShare: data.revenuePerShare, targetMargin: data.targetMargin,
             inceptionGrowth: data.inceptionGrowth, breakEvenYear: data.breakEvenYear,
             currentPrice: data.currentPrice, sma200: data.sma200,
-            dividendYield: data.dividendYield || 0, lifecycleStage: data.lifecycleStage, growthOverrides: {},
+            dividendYield: data.dividendYield || 0, lifecycleStage: data.lifecycleStage, growthOverrides: {}, vdrEnabled: true,
           };
           const testResult = calcTUP(testInp, "standard");
           const pb = testResult?.payback;
@@ -166,7 +165,7 @@ export default function App() {
         revenuePerShare: data.revenuePerShare, targetMargin: data.targetMargin,
         inceptionGrowth: data.inceptionGrowth, breakEvenYear: data.breakEvenYear,
         currentPrice: data.currentPrice, sma200: data.sma200,
-        dividendYield: data.dividendYield || 0, lifecycleStage: data.lifecycleStage, growthOverrides: {},
+        dividendYield: data.dividendYield || 0, lifecycleStage: data.lifecycleStage, growthOverrides: {}, vdrEnabled: true,
       };
       let finalInp = origInp;
       const overrides = urlOverridesRef.current;
@@ -389,7 +388,19 @@ export default function App() {
           {/* Right column bottom: Table */}
           <div className="rsp-right-bottom" style={{ paddingLeft: "40px", paddingTop: "28px", paddingBottom: "40px" }}>
             <div>
-              <SectionLabel num="04" title="Year-by-Year Breakdown" />
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#C4A06E", fontSize: "14px", letterSpacing: "0.05em", fontWeight: 700 }}>04</span>
+                <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888" }}>Year-by-Year Breakdown</span>
+                <button onClick={() => setInp(p => ({ ...p, vdrEnabled: !p.vdrEnabled }))} style={{
+                  fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                  letterSpacing: "0.05em", padding: "2px 6px",
+                  background: inp.vdrEnabled ? "rgba(196,160,110,0.2)" : "transparent",
+                  border: `1px solid ${inp.vdrEnabled ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+                  color: inp.vdrEnabled ? "#C4A06E" : "#666",
+                  cursor: "pointer", borderRadius: "3px",
+                }}>VDR</button>
+                <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.06)" }} />
+              </div>
               <Table result={result} growthOverrides={inp.growthOverrides} onGrowthChange={(year, val) => {
                 setInp(p => {
                   const overrides = { ...p.growthOverrides };
