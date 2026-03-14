@@ -76,3 +76,18 @@ export const STAGE_META: Record<LifecycleStage | "other", { label: string; color
   decline:       { label: "Decline",        color: "#FF4D00" },
   other:         { label: "Mixed",          color: "#505050" },
 };
+
+// ─── Roll Dice filter constants ─────────────────────────────────────────────
+
+export const GICS_SECTORS = [
+  "Technology", "Healthcare", "Financial Services", "Consumer Cyclical",
+  "Communication Services", "Industrials", "Consumer Defensive",
+  "Energy", "Real Estate", "Utilities", "Basic Materials",
+] as const;
+
+export const MKTCAP_RANGES: Record<string, { min: number; max: number }> = {
+  Micro: { min: 0, max: 300_000_000 },
+  Small: { min: 300_000_000, max: 2_000_000_000 },
+  Mid:   { min: 2_000_000_000, max: 10_000_000_000 },
+  Large: { min: 10_000_000_000, max: Infinity },
+};

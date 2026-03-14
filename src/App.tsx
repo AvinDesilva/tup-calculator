@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 
 import { calcTUP } from "./lib/calcTUP.ts";
-import { lookupTicker, lookupTickerQuick, fetchRandomTicker } from "./lib/api.ts";
+import { lookupTicker, lookupTickerQuick, fetchRandomTickerFiltered } from "./lib/api.ts";
 import { C } from "./lib/theme.ts";
-import type { InputState, Mode, TUPResult, GrowthScenario, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement } from "./lib/types.ts";
+import { MKTCAP_RANGES } from "./lib/constants.ts";
+import type { InputState, Mode, TUPResult, GrowthScenario, RollFilters, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement } from "./lib/types.ts";
 
 import { VerdictCard } from "./components/VerdictCard.tsx";
 import { ValuationContext } from "./components/ValuationContext.tsx";
@@ -49,6 +50,9 @@ export default function App() {
     return () => clearInterval(iv);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rollingDice]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [rollFilters, setRollFilters] = useState<RollFilters>({ marketCap: "All", sector: "", exchange: "All", indexEtf: "" });
+  const hasActiveFilters = rollFilters.marketCap !== "All" || rollFilters.sector !== "" || rollFilters.exchange !== "All" || rollFilters.indexEtf !== "";
   const [showMethodology, setShowMethodology] = useState(false);
   const [company, setCompany] = useState("");
   const [meta, setMeta] = useState<{ sector: string; industry: string }>({ sector: "", industry: "" });
@@ -92,14 +96,30 @@ export default function App() {
     setRollingDice(true);
     setError("");
     const MAX_ATTEMPTS = 20;
-    const DELAY_MS = 3000;
+    const DELAY_MS = hasActiveFilters ? 1500 : 3000;
     const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
     try {
       for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
         if (attempt > 0) await wait(DELAY_MS);
-        const t = await fetchRandomTicker();
+        const t = await fetchRandomTickerFiltered(rollFilters.indexEtf);
         try {
           const data = await lookupTickerQuick(t);
+          // Market cap filter
+          if (rollFilters.marketCap !== "All") {
+            const range = MKTCAP_RANGES[rollFilters.marketCap];
+            if (data.marketCap < range.min || data.marketCap >= range.max) continue;
+          }
+          // Sector filter
+          if (rollFilters.sector && data.sector !== rollFilters.sector) continue;
+          // Exchange filter
+          if (rollFilters.exchange !== "All") {
+            const ex = data.exchange.toUpperCase();
+            if (rollFilters.exchange === "NYSE" && ex !== "NYSE" && ex !== "AMEX" && ex !== "NYSEAMERICAN") continue;
+            if (rollFilters.exchange === "NASDAQ" && ex !== "NASDAQ") continue;
+            if (rollFilters.exchange === "OTC" && ex !== "OTC") continue;
+            if (rollFilters.exchange === "LSE" && ex !== "LSE") continue;
+            if (rollFilters.exchange === "TSX" && ex !== "TSX" && ex !== "TSXV") continue;
+          }
           const testInp: InputState = {
             marketCap: data.marketCap, debt: data.debt, cash: data.cash, shares: data.shares,
             ttmEPS: data.ttmEPS, forwardEPS: data.forwardEPS,
@@ -122,10 +142,13 @@ export default function App() {
           // Skip tickers that fail to fetch
         }
       }
-      // If no match found after MAX_ATTEMPTS, use the last one anyway
-      const fallback = await fetchRandomTicker();
-      setTicker(fallback);
-      await doFetch(fallback);
+      if (hasActiveFilters) {
+        setError("No stocks match your filters — try broadening.");
+      } else {
+        const fallback = await fetchRandomTickerFiltered("");
+        setTicker(fallback);
+        await doFetch(fallback);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to roll dice.");
     }
@@ -289,6 +312,11 @@ export default function App() {
             onRollDice={rollDice}
             rollingDice={rollingDice}
             dicePhrase={dicePhrase}
+            isFilterOpen={isFilterOpen}
+            onToggleFilter={() => setIsFilterOpen(o => !o)}
+            rollFilters={rollFilters}
+            onRollFiltersChange={setRollFilters}
+            hasActiveFilters={hasActiveFilters}
           />
         )}
 
@@ -304,6 +332,11 @@ export default function App() {
             onRollDice={rollDice}
             rollingDice={rollingDice}
             dicePhrase={dicePhrase}
+            isFilterOpen={isFilterOpen}
+            onToggleFilter={() => setIsFilterOpen(o => !o)}
+            rollFilters={rollFilters}
+            onRollFiltersChange={setRollFilters}
+            hasActiveFilters={hasActiveFilters}
           />
         </>)}
 

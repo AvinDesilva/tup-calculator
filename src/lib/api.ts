@@ -30,29 +30,29 @@ export async function searchTickers(query: string): Promise<SearchResult[]> {
 // ─── Random stock picker (cached) ─────────────────────────────────────────────
 
 let _cachedCompanies: Array<{ symbol: string; name: string }> | null = null;
-let _vtiHoldings: Set<string> | null = null;
+const _etfCache: Record<string, Set<string>> = {};
 
-async function getVTIHoldings(): Promise<Set<string>> {
-  if (!_vtiHoldings) {
+async function getETFHoldings(etf: string): Promise<Set<string>> {
+  const key = etf.toUpperCase();
+  if (!_etfCache[key]) {
     try {
-      const holdings = await fetchFMP<Array<{ asset?: string; symbol?: string }>>("etf-holder?symbol=VTI");
-      _vtiHoldings = new Set(
+      const holdings = await fetchFMP<Array<{ asset?: string; symbol?: string }>>(`etf-holder?symbol=${key}`);
+      _etfCache[key] = new Set(
         (holdings || []).map(h => (h.asset || h.symbol || "").toUpperCase()).filter(Boolean)
       );
     } catch {
-      _vtiHoldings = new Set();
+      _etfCache[key] = new Set();
     }
   }
-  return _vtiHoldings;
+  return _etfCache[key];
 }
 
-export async function fetchRandomTicker(): Promise<string> {
+async function ensureCachedCompanies(): Promise<Array<{ symbol: string; name: string }>> {
   if (!_cachedCompanies) {
     const [list, vti] = await Promise.all([
       fetchFMP<Array<{ symbol: string; name: string; type?: string; exchange?: string }>>("actively-trading-list"),
-      getVTIHoldings(),
+      getETFHoldings("VTI"),
     ]);
-    // Filter to VTI-held companies only (exclude ETFs, funds, etc.)
     _cachedCompanies = list.filter(item => {
       if (!item.symbol || !item.name) return false;
       if (!/^[A-Z0-9$.]{1,10}$/.test(item.symbol)) return false;
@@ -66,9 +66,29 @@ export async function fetchRandomTicker(): Promise<string> {
       return true;
     });
   }
-  if (_cachedCompanies.length === 0) throw new Error("No actively traded stocks found.");
-  const pick = _cachedCompanies[Math.floor(Math.random() * _cachedCompanies.length)];
-  return pick.symbol;
+  return _cachedCompanies;
+}
+
+export async function fetchRandomTicker(): Promise<string> {
+  const companies = await ensureCachedCompanies();
+  if (companies.length === 0) throw new Error("No actively traded stocks found.");
+  return companies[Math.floor(Math.random() * companies.length)].symbol;
+}
+
+export async function fetchRandomTickerFiltered(indexEtf: string): Promise<string> {
+  const companies = await ensureCachedCompanies();
+  const etf = indexEtf || "VTI";
+  if (etf.toUpperCase() === "VTI") {
+    // Already filtered to VTI during caching
+    if (companies.length === 0) throw new Error("No actively traded stocks found.");
+    return companies[Math.floor(Math.random() * companies.length)].symbol;
+  }
+  const holdings = await getETFHoldings(etf);
+  const pool = holdings.size > 0
+    ? companies.filter(c => holdings.has(c.symbol.toUpperCase()))
+    : companies;
+  if (pool.length === 0) throw new Error(`No stocks found in ${etf.toUpperCase()}.`);
+  return pool[Math.floor(Math.random() * pool.length)].symbol;
 }
 
 // ─── Low-level HTTP wrapper ───────────────────────────────────────────────────
@@ -88,6 +108,8 @@ export async function fetchFMP<T = unknown>(endpoint: string): Promise<T> {
 
 export interface QuickTickerData {
   marketCap: number;
+  sector: string;
+  exchange: string;
   debt: number;
   cash: number;
   shares: number;
@@ -215,6 +237,8 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
 
   return {
     marketCap: mktCapVal,
+    sector: p.sector || "",
+    exchange,
     debt: totalDebt,
     cash: totalCash,
     shares: sharesOut,

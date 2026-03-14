@@ -1,6 +1,8 @@
 import { C } from "../lib/theme.ts";
 import { TickerSearch } from "./TickerSearch.tsx";
 import { ErrorDisplay } from "./ui.tsx";
+import { DiceFilterBar } from "./DiceFilterBar.tsx";
+import type { RollFilters } from "../lib/types.ts";
 
 interface HeroSearchProps {
   ticker: string;
@@ -12,9 +14,14 @@ interface HeroSearchProps {
   onRollDice: () => void;
   rollingDice: boolean;
   dicePhrase: string;
+  isFilterOpen: boolean;
+  onToggleFilter: () => void;
+  rollFilters: RollFilters;
+  onRollFiltersChange: (f: RollFilters) => void;
+  hasActiveFilters: boolean;
 }
 
-export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, onRollDice, rollingDice, dicePhrase }: HeroSearchProps) {
+export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, onRollDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onRollFiltersChange, hasActiveFilters }: HeroSearchProps) {
   return (
     <section className="rsp-hero-section" style={{ padding: "0 0 96px", display: "flex", flexDirection: "column", alignItems: "center", animation: "fadeInUp 0.5s 0.1s ease both" }}>
       <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: C.text3, marginBottom: "24px", marginTop: "24px" }}>
@@ -85,23 +92,51 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
 
       {error && <div style={{ marginTop: "12px", fontSize: "11px", textAlign: "center" }}><ErrorDisplay error={error} /></div>}
 
-      <button onClick={onRollDice} disabled={rollingDice || loading} style={{
-        marginTop: "20px",
-        padding: "10px 24px",
-        background: "transparent",
-        color: C.accent,
-        border: `1px solid ${C.accent}`,
-        fontSize: "11px",
-        fontWeight: 700,
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
-        cursor: (rollingDice || loading) ? "not-allowed" : "pointer",
-        fontFamily: C.body,
-        opacity: (rollingDice || loading) ? 0.5 : 1,
-        transition: "opacity 0.15s",
-      }}>
-        {rollingDice ? dicePhrase : "Roll the TUP Dice"} <span style={rollingDice ? { display: "inline-block", animation: "spin 0.6s linear infinite" } : undefined}>🎲</span>
-      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "20px" }}>
+        <button onClick={onRollDice} disabled={rollingDice || loading} style={{
+          padding: "10px 24px",
+          background: "transparent",
+          color: C.accent,
+          border: `1px solid ${C.accent}`,
+          fontSize: "11px",
+          fontWeight: 700,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          cursor: (rollingDice || loading) ? "not-allowed" : "pointer",
+          fontFamily: C.body,
+          opacity: (rollingDice || loading) ? 0.5 : 1,
+          transition: "opacity 0.15s",
+        }}>
+          {rollingDice ? dicePhrase : "Roll the TUP Dice"} <span style={rollingDice ? { display: "inline-block", animation: "spin 0.6s linear infinite" } : undefined}>🎲</span>
+        </button>
+        <button onClick={onToggleFilter} style={{
+          width: "32px", height: "32px",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "transparent",
+          border: `1px solid ${hasActiveFilters ? "#C4A06E" : "rgba(255,255,255,0.15)"}`,
+          color: hasActiveFilters ? "#C4A06E" : "#666",
+          cursor: "pointer",
+          transition: "all 0.15s",
+          flexShrink: 0,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="4" y1="6" x2="20" y2="6" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <line x1="4" y1="18" x2="20" y2="18" />
+            <circle cx="8" cy="6" r="2" fill="currentColor" />
+            <circle cx="16" cy="12" r="2" fill="currentColor" />
+            <circle cx="10" cy="18" r="2" fill="currentColor" />
+          </svg>
+        </button>
+      </div>
+
+      <div style={{ width: "100%", maxWidth: "600px" }}>
+        <DiceFilterBar
+          isOpen={isFilterOpen}
+          filters={rollFilters}
+          onFiltersChange={onRollFiltersChange}
+        />
+      </div>
 
       <div style={{ marginTop: "12px", fontSize: "10px", color: C.text3, letterSpacing: "0.08em" }}>
         Search by company name or ticker · US, UK & Canadian markets

@@ -463,6 +463,48 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
           ))}
         </section>
 
+        {/* ── Roll the TUP Dice ──────────────────────────────────────────── */}
+        <section style={{ marginBottom: "48px" }}>
+          <SectionNum n="06" title="Roll the TUP Dice" sub="Random Stock Discovery" />
+
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 16px" }}>
+            The <strong style={{ color: M.text1 }}>Roll Dice</strong> feature selects a random publicly traded stock,
+            fetches its financial data, and runs the TUP calculation automatically. It draws from the full universe
+            of VTI-held equities — roughly 3,000+ US-listed stocks — filtering out ETFs, funds, and non-equity instruments.
+          </p>
+
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 16px" }}>
+            Each roll attempts up to 20 candidates, validating that the stock produces a meaningful TUP payback
+            between 5 and 20 years. Stocks outside this range are skipped — this prevents the dice from landing
+            on companies with broken data, negative earnings, or unrealistically short/long payback periods.
+          </p>
+
+          <SubHead>Filter Settings</SubHead>
+
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 16px" }}>
+            Click the settings icon next to the Roll Dice button to reveal the filter bar.
+            Filters narrow the random pool so you can target specific types of companies:
+          </p>
+
+          {[
+            ["Market Cap", "Segment by size — Micro (&lt;$300M), Small ($300M–$2B), Mid ($2B–$10B), or Large (&gt;$10B). Defaults to All."],
+            ["Exchange", "Target a specific exchange — NYSE (includes AMEX), NASDAQ, OTC, LSE (London), or TSX (Toronto). Defaults to All."],
+            ["Sector", "Filter by GICS sector (Technology, Healthcare, Financial Services, etc.). The dropdown lists all 11 standard sectors."],
+            ["ETF", "Replace the default VTI universe with any ETF's holdings. Type a ticker like SPY, QQQ, or ARKK — the dice will only pick from that fund's constituents."],
+          ].map(([title, desc]) => (
+            <div key={title as string} style={{ padding: "16px 0", borderTop: `1px solid ${M.borderWeak}` }}>
+              <div style={{ fontSize: "14px", fontWeight: 700, color: M.text1, marginBottom: "6px" }}>{title}</div>
+              <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: 0 }} dangerouslySetInnerHTML={{ __html: desc as string }} />
+            </div>
+          ))}
+
+          <CalloutBlock>
+            When filters are active, the delay between attempts is reduced from 3 seconds to 1.5 seconds to compensate
+            for the smaller candidate pool. If no stock matches after 20 attempts, you will see an error suggesting
+            you broaden your filters rather than a silent fallback to an unfiltered pick.
+          </CalloutBlock>
+        </section>
+
         <footer style={{ paddingTop: "24px", paddingBottom: "40px", borderTop: `1px solid ${M.borderWeak}` }}>
           <p style={{ fontSize: "11px", color: M.text3, margin: 0 }}>TUP Calculator — For educational purposes only. Not financial advice.</p>
         </footer>

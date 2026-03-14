@@ -34,6 +34,19 @@ export interface InputState {
   vdrEnabled: boolean;
 }
 
+// ─── Roll Dice filters ───────────────────────────────────────────────────────
+
+export type MarketCapTier = "All" | "Micro" | "Small" | "Mid" | "Large";
+
+export type ExchangeFilter = "All" | "NYSE" | "NASDAQ" | "OTC" | "LSE" | "TSX";
+
+export interface RollFilters {
+  marketCap: MarketCapTier;
+  sector: string;
+  exchange: ExchangeFilter;
+  indexEtf: string;
+}
+
 // ─── calcTUP result ───────────────────────────────────────────────────────────
 
 export interface TUPRow {

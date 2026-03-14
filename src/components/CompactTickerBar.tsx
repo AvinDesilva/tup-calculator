@@ -1,6 +1,8 @@
 import { C, inputShared } from "../lib/theme.ts";
 import { TickerSearch } from "./TickerSearch.tsx";
 import { ErrorDisplay } from "./ui.tsx";
+import { DiceFilterBar } from "./DiceFilterBar.tsx";
+import type { RollFilters } from "../lib/types.ts";
 
 interface CompactTickerBarProps {
   ticker: string;
@@ -13,9 +15,14 @@ interface CompactTickerBarProps {
   onRollDice: () => void;
   rollingDice: boolean;
   dicePhrase: string;
+  isFilterOpen: boolean;
+  onToggleFilter: () => void;
+  rollFilters: RollFilters;
+  onRollFiltersChange: (f: RollFilters) => void;
+  hasActiveFilters: boolean;
 }
 
-export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, fetchLog, onRollDice, rollingDice, dicePhrase }: CompactTickerBarProps) {
+export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, fetchLog, onRollDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onRollFiltersChange, hasActiveFilters }: CompactTickerBarProps) {
   return (
     <section className="rsp-ticker-bar" style={{ paddingTop: "20px", paddingBottom: "20px", marginBottom: "20px", borderBottom: `1px solid ${C.borderWeak}`, animation: "fadeInUp 0.4s ease both" }}>
       <div className="rsp-api-bar" style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "20px", alignItems: "end" }}>
@@ -75,11 +82,36 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
           }}>
             {rollingDice ? dicePhrase : "Roll Dice"} <span style={rollingDice ? { display: "inline-block", animation: "spin 0.6s linear infinite" } : undefined}>🎲</span>
           </button>
+          <button onClick={onToggleFilter} style={{
+            width: "32px", height: "32px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: hasActiveFilters ? "rgba(196,160,110,0.1)" : "transparent",
+            border: `1px solid ${hasActiveFilters ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+            color: hasActiveFilters ? "#C4A06E" : "#666",
+            cursor: "pointer",
+            flexShrink: 0,
+            transition: "all 0.15s",
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="4" y1="6" x2="20" y2="6" />
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <line x1="4" y1="18" x2="20" y2="18" />
+              <circle cx="8" cy="6" r="2" fill="currentColor" />
+              <circle cx="16" cy="12" r="2" fill="currentColor" />
+              <circle cx="10" cy="18" r="2" fill="currentColor" />
+            </svg>
+          </button>
         </div>
         <div className="rsp-api-bar-status" style={{ fontSize: "11px", paddingBottom: "2px" }}>
           {error && <ErrorDisplay error={error} style={{ fontSize: "11px" }} />}
         </div>
       </div>
+
+      <DiceFilterBar
+        isOpen={isFilterOpen}
+        filters={rollFilters}
+        onFiltersChange={onRollFiltersChange}
+      />
 
       {fetchLog.some(m => m.startsWith("✕") && !/rate limit/i.test(m)) && (
         <div style={{ marginTop: "10px" }}>
