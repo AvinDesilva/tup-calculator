@@ -4,10 +4,13 @@ import { C } from "../lib/theme.ts";
 import { GICS_SECTORS } from "../lib/constants.ts";
 import type { RollFilters, MarketCapTier, ExchangeFilter } from "../lib/types.ts";
 
+const DEFAULT_FILTERS: RollFilters = { marketCap: "All", sector: "", exchange: "All", indexEtf: "" };
+
 interface DiceFilterBarProps {
   isOpen: boolean;
-  filters: RollFilters;
-  onFiltersChange: (f: RollFilters) => void;
+  activeFilters: RollFilters;
+  onApply: (f: RollFilters) => void;
+  onReset: () => void;
 }
 
 const CAPS: MarketCapTier[] = ["All", "Micro", "Small", "Mid", "Large"];
@@ -123,7 +126,36 @@ function SectorDropdown({ value, onChange }: { value: string; onChange: (v: stri
   );
 }
 
-export function DiceFilterBar({ isOpen, filters, onFiltersChange }: DiceFilterBarProps) {
+function filtersEqual(a: RollFilters, b: RollFilters): boolean {
+  return a.marketCap === b.marketCap && a.sector === b.sector && a.exchange === b.exchange && a.indexEtf === b.indexEtf;
+}
+
+function isDefault(f: RollFilters): boolean {
+  return filtersEqual(f, DEFAULT_FILTERS);
+}
+
+export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset }: DiceFilterBarProps) {
+  const [pending, setPending] = useState<RollFilters>(activeFilters);
+  const [applied, setApplied] = useState(false);
+
+  // Sync pending when activeFilters change externally (e.g. reset)
+  useEffect(() => { setPending(activeFilters); }, [activeFilters]);
+
+  const hasPendingChanges = !filtersEqual(pending, activeFilters);
+  const pendingIsDefault = isDefault(pending);
+  const showReset = !isDefault(activeFilters) || !pendingIsDefault;
+
+  const handleApply = () => {
+    onApply(pending);
+    setApplied(true);
+    setTimeout(() => setApplied(false), 1500);
+  };
+
+  const handleReset = () => {
+    setPending(DEFAULT_FILTERS);
+    onReset();
+  };
+
   return (
     <div style={{
       overflow: "hidden",
@@ -144,15 +176,15 @@ export function DiceFilterBar({ isOpen, filters, onFiltersChange }: DiceFilterBa
           <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: "4px" }}>Cap</div>
           <div style={{ display: "flex" }}>
             {CAPS.map((cap, i) => (
-              <button key={cap} onClick={() => onFiltersChange({ ...filters, marketCap: cap })} style={{
+              <button key={cap} onClick={() => setPending(p => ({ ...p, marketCap: cap }))} style={{
                 fontSize: "9px",
                 fontWeight: 700,
                 fontFamily: C.mono,
                 letterSpacing: "0.05em",
                 padding: "3px 7px",
-                background: filters.marketCap === cap ? "rgba(196,160,110,0.2)" : "transparent",
-                border: `1px solid ${filters.marketCap === cap ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
-                color: filters.marketCap === cap ? "#C4A06E" : "#666",
+                background: pending.marketCap === cap ? "rgba(196,160,110,0.2)" : "transparent",
+                border: `1px solid ${pending.marketCap === cap ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+                color: pending.marketCap === cap ? "#C4A06E" : "#666",
                 cursor: "pointer",
                 borderRadius: i === 0 ? "3px 0 0 3px" : i === CAPS.length - 1 ? "0 3px 3px 0" : "0",
                 marginLeft: i > 0 ? "-1px" : "0",
@@ -166,15 +198,15 @@ export function DiceFilterBar({ isOpen, filters, onFiltersChange }: DiceFilterBa
           <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: "4px" }}>Exchange</div>
           <div style={{ display: "flex" }}>
             {EXCHANGES.map((ex, i) => (
-              <button key={ex} onClick={() => onFiltersChange({ ...filters, exchange: ex })} style={{
+              <button key={ex} onClick={() => setPending(p => ({ ...p, exchange: ex }))} style={{
                 fontSize: "9px",
                 fontWeight: 700,
                 fontFamily: C.mono,
                 letterSpacing: "0.05em",
                 padding: "3px 7px",
-                background: filters.exchange === ex ? "rgba(196,160,110,0.2)" : "transparent",
-                border: `1px solid ${filters.exchange === ex ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
-                color: filters.exchange === ex ? "#C4A06E" : "#666",
+                background: pending.exchange === ex ? "rgba(196,160,110,0.2)" : "transparent",
+                border: `1px solid ${pending.exchange === ex ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+                color: pending.exchange === ex ? "#C4A06E" : "#666",
                 cursor: "pointer",
                 borderRadius: i === 0 ? "3px 0 0 3px" : i === EXCHANGES.length - 1 ? "0 3px 3px 0" : "0",
                 marginLeft: i > 0 ? "-1px" : "0",
@@ -186,7 +218,7 @@ export function DiceFilterBar({ isOpen, filters, onFiltersChange }: DiceFilterBa
         {/* Sector */}
         <div>
           <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: "4px" }}>Sector</div>
-          <SectorDropdown value={filters.sector} onChange={v => onFiltersChange({ ...filters, sector: v })} />
+          <SectorDropdown value={pending.sector} onChange={v => setPending(p => ({ ...p, sector: v }))} />
         </div>
 
         {/* ETF */}
@@ -195,13 +227,13 @@ export function DiceFilterBar({ isOpen, filters, onFiltersChange }: DiceFilterBa
           <input
             type="text"
             placeholder="VTI"
-            value={filters.indexEtf}
-            onChange={e => onFiltersChange({ ...filters, indexEtf: e.target.value.toUpperCase() })}
+            value={pending.indexEtf}
+            onChange={e => setPending(p => ({ ...p, indexEtf: e.target.value.toUpperCase() }))}
             style={{
               background: "transparent",
               border: "none",
               borderBottom: `1px solid rgba(255,255,255,0.1)`,
-              color: filters.indexEtf ? "#C4A06E" : C.text1,
+              color: pending.indexEtf ? "#C4A06E" : C.text1,
               fontFamily: C.mono,
               fontSize: "10px",
               padding: "3px 0",
@@ -211,6 +243,41 @@ export function DiceFilterBar({ isOpen, filters, onFiltersChange }: DiceFilterBa
               letterSpacing: "0.08em",
             }}
           />
+        </div>
+
+        {/* Apply + Reset */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button onClick={handleApply} disabled={!hasPendingChanges && !applied} style={{
+            fontSize: "9px",
+            fontWeight: 700,
+            fontFamily: C.mono,
+            letterSpacing: "0.08em",
+            padding: "4px 10px",
+            background: "transparent",
+            border: `1px solid ${applied ? "rgba(0,191,165,0.5)" : hasPendingChanges ? "rgba(0,191,165,0.5)" : "rgba(255,255,255,0.1)"}`,
+            color: applied ? "#00BFA5" : hasPendingChanges ? "#00BFA5" : "#444",
+            cursor: hasPendingChanges ? "pointer" : "default",
+            textTransform: "uppercase",
+            transition: "all 0.15s",
+            borderRadius: "3px",
+          }}>
+            {applied ? "Applied \u2713" : "Apply"}
+          </button>
+          {showReset && (
+            <button onClick={handleReset} style={{
+              fontSize: "9px",
+              fontWeight: 600,
+              fontFamily: C.mono,
+              letterSpacing: "0.05em",
+              padding: "0",
+              background: "transparent",
+              border: "none",
+              color: "#666",
+              cursor: "pointer",
+              textTransform: "uppercase",
+              transition: "color 0.15s",
+            }}>Reset</button>
+          )}
         </div>
       </div>
     </div>

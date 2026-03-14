@@ -315,7 +315,8 @@ export default function App() {
             isFilterOpen={isFilterOpen}
             onToggleFilter={() => setIsFilterOpen(o => !o)}
             rollFilters={rollFilters}
-            onRollFiltersChange={setRollFilters}
+            onApplyFilters={setRollFilters}
+            onResetFilters={() => setRollFilters({ marketCap: "All", sector: "", exchange: "All", indexEtf: "" })}
             hasActiveFilters={hasActiveFilters}
           />
         )}
@@ -335,7 +336,8 @@ export default function App() {
             isFilterOpen={isFilterOpen}
             onToggleFilter={() => setIsFilterOpen(o => !o)}
             rollFilters={rollFilters}
-            onRollFiltersChange={setRollFilters}
+            onApplyFilters={setRollFilters}
+            onResetFilters={() => setRollFilters({ marketCap: "All", sector: "", exchange: "All", indexEtf: "" })}
             hasActiveFilters={hasActiveFilters}
           />
         </>)}
@@ -519,8 +521,17 @@ export default function App() {
           .rsp-api-bar-btn {
             width: 100%;
           }
-          .rsp-api-bar-btn button {
+          .rsp-api-bar-btn button:first-child {
+            flex: 2 !important;
+          }
+          .rsp-api-bar-btn button:nth-child(2) {
             flex: 1 !important;
+          }
+          .rsp-api-bar-btn button:nth-child(3) {
+            flex: 0 0 32px !important;
+            width: 32px !important;
+            min-width: 32px !important;
+            padding: 0 !important;
           }
           .rsp-main-grid {
             display: flex !important;

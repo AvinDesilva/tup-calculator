@@ -18,11 +18,12 @@ interface CompactTickerBarProps {
   isFilterOpen: boolean;
   onToggleFilter: () => void;
   rollFilters: RollFilters;
-  onRollFiltersChange: (f: RollFilters) => void;
+  onApplyFilters: (f: RollFilters) => void;
+  onResetFilters: () => void;
   hasActiveFilters: boolean;
 }
 
-export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, fetchLog, onRollDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onRollFiltersChange, hasActiveFilters }: CompactTickerBarProps) {
+export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, fetchLog, onRollDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onApplyFilters, onResetFilters, hasActiveFilters }: CompactTickerBarProps) {
   return (
     <section className="rsp-ticker-bar" style={{ paddingTop: "20px", paddingBottom: "20px", marginBottom: "20px", borderBottom: `1px solid ${C.borderWeak}`, animation: "fadeInUp 0.4s ease both" }}>
       <div className="rsp-api-bar" style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "20px", alignItems: "end" }}>
@@ -66,6 +67,7 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
             ) : "Fetch Data →"}
           </button>
           <button onClick={onRollDice} disabled={rollingDice || loading} style={{
+            position: "relative",
             padding: "8px 16px",
             background: "transparent",
             color: C.accent,
@@ -80,6 +82,7 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
             transition: "opacity 0.15s",
             opacity: (rollingDice || loading) ? 0.5 : 1,
           }}>
+            {hasActiveFilters && <span style={{ position: "absolute", top: "-3px", right: "-3px", width: "6px", height: "6px", borderRadius: "50%", background: "#00BFA5", boxShadow: "0 0 4px rgba(0,191,165,0.6)" }} />}
             {rollingDice ? dicePhrase : "Roll Dice"} <span style={rollingDice ? { display: "inline-block", animation: "spin 0.6s linear infinite" } : undefined}>🎲</span>
           </button>
           <button onClick={onToggleFilter} style={{
@@ -109,8 +112,9 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
 
       <DiceFilterBar
         isOpen={isFilterOpen}
-        filters={rollFilters}
-        onFiltersChange={onRollFiltersChange}
+        activeFilters={rollFilters}
+        onApply={onApplyFilters}
+        onReset={onResetFilters}
       />
 
       {fetchLog.some(m => m.startsWith("✕") && !/rate limit/i.test(m)) && (

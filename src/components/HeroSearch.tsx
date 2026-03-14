@@ -17,11 +17,12 @@ interface HeroSearchProps {
   isFilterOpen: boolean;
   onToggleFilter: () => void;
   rollFilters: RollFilters;
-  onRollFiltersChange: (f: RollFilters) => void;
+  onApplyFilters: (f: RollFilters) => void;
+  onResetFilters: () => void;
   hasActiveFilters: boolean;
 }
 
-export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, onRollDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onRollFiltersChange, hasActiveFilters }: HeroSearchProps) {
+export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, onRollDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onApplyFilters, onResetFilters, hasActiveFilters }: HeroSearchProps) {
   return (
     <section className="rsp-hero-section" style={{ padding: "0 0 96px", display: "flex", flexDirection: "column", alignItems: "center", animation: "fadeInUp 0.5s 0.1s ease both" }}>
       <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: C.text3, marginBottom: "24px", marginTop: "24px" }}>
@@ -94,6 +95,7 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
 
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "20px" }}>
         <button onClick={onRollDice} disabled={rollingDice || loading} style={{
+          position: "relative",
           padding: "10px 24px",
           background: "transparent",
           color: C.accent,
@@ -107,6 +109,7 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
           opacity: (rollingDice || loading) ? 0.5 : 1,
           transition: "opacity 0.15s",
         }}>
+          {hasActiveFilters && <span style={{ position: "absolute", top: "-3px", right: "-3px", width: "6px", height: "6px", borderRadius: "50%", background: "#00BFA5", boxShadow: "0 0 4px rgba(0,191,165,0.6)" }} />}
           {rollingDice ? dicePhrase : "Roll the TUP Dice"} <span style={rollingDice ? { display: "inline-block", animation: "spin 0.6s linear infinite" } : undefined}>🎲</span>
         </button>
         <button onClick={onToggleFilter} style={{
@@ -133,8 +136,9 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
       <div style={{ width: "100%", maxWidth: "600px" }}>
         <DiceFilterBar
           isOpen={isFilterOpen}
-          filters={rollFilters}
-          onFiltersChange={onRollFiltersChange}
+          activeFilters={rollFilters}
+          onApply={onApplyFilters}
+          onReset={onResetFilters}
         />
       </div>
 
