@@ -1,5 +1,6 @@
 import { ADR_RATIO_TABLE, ADR_FINANCIALS_CCY, EXCHANGE_CCY, FALLBACK_FX } from "./constants.ts";
 import { f, fB } from "./utils.ts";
+import { classifyLifecycle } from "./lifecycle.ts";
 import type {
   TickerData, LifecycleStage,
   FMPProfile, FMPQuote, FMPBalanceSheet, FMPIncomeStatement,
@@ -229,20 +230,13 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
   };
   const dividendYield = normYield(q.dividendYield);
 
-  // Lifecycle stage
-  const lcRev0 = inc[0]?.revenue || 0;
-  const lcRev1 = inc[1]?.revenue || 0;
-  const lcRevGrowth = lcRev1 > 0 ? ((lcRev0 - lcRev1) / lcRev1) * 100 : null;
-  const lcIsProfit  = rawNetIncome > 0;
-  let lifecycleStage: LifecycleStage | null = null;
-  if (lcRevGrowth !== null) {
-    if (!lcIsProfit)           lifecycleStage = "startup";
-    else if (lcRevGrowth > 30) lifecycleStage = "young_growth";
-    else if (lcRevGrowth > 15) lifecycleStage = "high_growth";
-    else if (lcRevGrowth > 5)  lifecycleStage = "mature_growth";
-    else if (lcRevGrowth >= 0) lifecycleStage = "mature_stable";
-    else                       lifecycleStage = "decline";
-  }
+  // Lifecycle stage (multi-factor — Damodaran framework)
+  const lifecycleStage = classifyLifecycle({
+    revenueHistory: inc.map(y => (y.revenue || 0) * fxRate),
+    netIncome: rawNetIncome * fxRate,
+    operatingIncome: (inc[0]?.operatingIncome || 0) * fxRate,
+    dividendYield,
+  });
 
   return {
     marketCap: mktCapVal,
@@ -784,20 +778,13 @@ export async function lookupTicker(
   log(`  Hist Growth: ${avgHistGrowth.toFixed(1)}%  |  Analyst Growth: ${analystGrowth.toFixed(1)}%  |  Fwd Div Yield: ${dividendYield.toFixed(2)}%`);
   log(`  Price: $${q.price}  |  200-SMA: $${q.priceAvg200 || "N/A"}`);
 
-  // ── Lifecycle stage ─────────────────────────────────────────────────────
-  const lcRev0 = inc[0]?.revenue || 0;
-  const lcRev1 = inc[1]?.revenue || 0;
-  const lcRevGrowth = lcRev1 > 0 ? ((lcRev0 - lcRev1) / lcRev1) * 100 : null;
-  const lcIsProfit = (inc[0]?.netIncome || 0) > 0;
-  let lifecycleStage: LifecycleStage | null = null;
-  if (lcRevGrowth !== null) {
-    if (!lcIsProfit)                    lifecycleStage = "startup";
-    else if (lcRevGrowth > 30)          lifecycleStage = "young_growth";
-    else if (lcRevGrowth > 15)          lifecycleStage = "high_growth";
-    else if (lcRevGrowth > 5)           lifecycleStage = "mature_growth";
-    else if (lcRevGrowth >= 0)          lifecycleStage = "mature_stable";
-    else                                lifecycleStage = "decline";
-  }
+  // ── Lifecycle stage (multi-factor — Damodaran framework) ────────────────
+  const lifecycleStage = classifyLifecycle({
+    revenueHistory: inc.map(y => (y.revenue || 0) * fxRate),
+    netIncome: (inc[0]?.netIncome || 0) * fxRate,
+    operatingIncome: (inc[0]?.operatingIncome || 0) * fxRate,
+    dividendYield,
+  });
 
   return {
     companyName: p.companyName || t,

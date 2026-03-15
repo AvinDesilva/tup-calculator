@@ -415,6 +415,7 @@ export default function App() {
                 description={scorecard.description}
                 exchange={scorecard.exchange}
                 lifecycleOnly
+                dividendYield={inp.dividendYield}
               />
             )}
           </div>

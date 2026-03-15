@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LC_CURVE, LC_ZONES, STAGE_META } from "../lib/constants.ts";
-import type { FMPEarningSurprise, FMPIncomeStatement, FMPCashFlow, LifecycleStage } from "../lib/types.ts";
+import { classifyLifecycle, lifecycleDotX, lifecycleRevGrowth } from "../lib/lifecycle.ts";
+import type { FMPEarningSurprise, FMPIncomeStatement, FMPCashFlow } from "../lib/types.ts";
 
 
 // ─── Catmull-Rom spline helpers ───────────────────────────────────────────────
@@ -38,33 +39,6 @@ function findTForX(pts: [number, number][], targetX: number): number {
   return (lo + hi) / 2;
 }
 
-// ─── Lifecycle classification ─────────────────────────────────────────────────
-
-function revenueStage(revenueGrowthPct: number, isProfit: boolean): LifecycleStage {
-  if (!isProfit)                    return "startup";
-  if (revenueGrowthPct > 30)       return "young_growth";
-  if (revenueGrowthPct > 15)       return "high_growth";
-  if (revenueGrowthPct > 5)        return "mature_growth";
-  if (revenueGrowthPct >= 0)       return "mature_stable";
-  return "decline";
-}
-
-// Each zone is ~0.167 wide (1/6). Map growth into the appropriate zone.
-function growthToDotX(revenueGrowthPct: number, isProfit: boolean): number {
-  if (!isProfit)                   return 0.08;   // Start-Up zone center
-  if (revenueGrowthPct > 60)      return 0.20;   // Young Growth — high end
-  if (revenueGrowthPct > 40)      return 0.24;   // Young Growth — mid
-  if (revenueGrowthPct > 30)      return 0.28;   // Young Growth — low end
-  if (revenueGrowthPct > 22)      return 0.36;   // High Growth — high end
-  if (revenueGrowthPct > 15)      return 0.42;   // High Growth — low end
-  if (revenueGrowthPct > 10)      return 0.52;   // Mature Growth — high end
-  if (revenueGrowthPct > 5)       return 0.58;   // Mature Growth — low end
-  if (revenueGrowthPct >= 0)      return 0.75;   // Mature Stable
-  if (revenueGrowthPct > -10)     return 0.87;   // Decline — mild
-  if (revenueGrowthPct > -20)     return 0.91;   // Decline — moderate
-  return 0.95;                                    // Decline — severe
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface CompanyScorecardProps {
@@ -74,6 +48,7 @@ interface CompanyScorecardProps {
   description?: string;
   exchange?: string;
   lifecycleOnly?: boolean;
+  dividendYield?: number;
 }
 
 interface ProcessedQuarter {
@@ -82,7 +57,7 @@ interface ProcessedQuarter {
   date: string | undefined;
 }
 
-export function CompanyScorecard({ earnings, incomeHistory, description, exchange, lifecycleOnly }: CompanyScorecardProps) {
+export function CompanyScorecard({ earnings, incomeHistory, description, exchange, lifecycleOnly, dividendYield }: CompanyScorecardProps) {
   const [descExpanded, setDescExpanded] = useState(false);
   const body  = "'Space Grotesk', sans-serif";
   const mono  = "'JetBrains Mono', monospace";
@@ -106,15 +81,17 @@ export function CompanyScorecard({ earnings, incomeHistory, description, exchang
   const sqColor: Record<string, string>  = { beat: "#10d97e", miss: "#FF4D00", inline: "#444" };
   const sqLabel: Record<string, string>  = { beat: "Beat", miss: "Miss", inline: "In-line" };
 
-  // ── Business Lifecycle S-Curve ─────────────────────────────────────────────
+  // ── Business Lifecycle S-Curve (multi-factor — Damodaran framework) ──────
   const inc       = incomeHistory || [];
-  const rev0      = inc[0]?.revenue || 0;
-  const rev1      = inc[1]?.revenue || 0;
-  const revGrowth = rev1 > 0 ? ((rev0 - rev1) / rev1) * 100 : null;
-  const isProfit  = (inc[0]?.netIncome || 0) > 0;
-
-  const currentStage = revGrowth !== null ? revenueStage(revGrowth, isProfit) : null;
-  const dotTx        = revGrowth !== null ? growthToDotX(revGrowth, isProfit) : null;
+  const lcSignals = {
+    revenueHistory: inc.map(y => y.revenue || 0),
+    netIncome: inc[0]?.netIncome || 0,
+    operatingIncome: inc[0]?.operatingIncome || 0,
+    dividendYield,
+  };
+  const revGrowth    = lifecycleRevGrowth(lcSignals.revenueHistory);
+  const currentStage = classifyLifecycle(lcSignals);
+  const dotTx        = lifecycleDotX(lcSignals);
   const hasEarnings  = processed.length > 0;
   const hasLifecycle = revGrowth !== null;
   if (lifecycleOnly) {

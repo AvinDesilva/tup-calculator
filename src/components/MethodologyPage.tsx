@@ -312,9 +312,14 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
             while moderate growers decay gracefully — eliminating the need for a hard cap.
           </p>
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 20px" }}>
-            First, the company is classified into one of six lifecycle stages using its most recent revenue growth and profitability.
+            The company is classified into one of six lifecycle stages using a multi-factor approach
+            inspired by <strong style={{ color: M.text1 }}>Damodaran&apos;s corporate lifecycle framework</strong>.
+            Rather than relying on revenue growth alone, classification considers revenue growth (3-year CAGR),
+            profitability, operating margin level, and capital return policy (dividend yield as a maturity signal).
+          </p>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 20px" }}>
             Earlier-stage companies get longer hold periods because their high growth rates are expected to persist — a start-up
-            reinvesting heavily has years of runway ahead, while a mature company's growth is already near its ceiling.
+            reinvesting heavily has years of runway ahead, while a mature company&apos;s growth is already near its ceiling.
           </p>
           <div style={{ border: `1px solid ${M.borderWeak}`, marginBottom: "24px" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "12px", padding: "8px 20px", background: "rgba(255,255,255,0.02)", borderBottom: `1px solid ${M.borderWeak}` }}>
@@ -323,12 +328,12 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
               <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: M.text3, textAlign: "right" }}>Hold Period</span>
             </div>
             {([
-              ["Start-Up",       "Not yet profitable (any revenue growth)",  "7 years", "#C4A06E"],
-              ["Young Growth",   "Profitable, revenue growth > 30%",        "5 years", "#a8d844"],
+              ["Start-Up",       "Unprofitable, low/moderate revenue growth, no maturity signals",  "7 years", "#C4A06E"],
+              ["Young Growth",   "Revenue growth > 20% (unprofitable) or > 25% with thin margins",  "5 years", "#a8d844"],
               ["High Growth",    "Profitable, revenue growth > 15%",        "3 years", "#10d97e"],
-              ["Mature Growth",  "Profitable, revenue growth > 5%",         "5 years", "#00BFA5"],
-              ["Mature Stable",  "Profitable, revenue growth 0–5%",         "3 years", "#4a90d9"],
-              ["Decline",        "Revenue growth < 0%",                     "3 years", "#FF4D00"],
+              ["Mature Growth",  "Profitable, revenue growth 5–15%",        "5 years", "#00BFA5"],
+              ["Mature Stable",  "Profitable, revenue growth 0–5%, or mature company in downturn",  "3 years", "#4a90d9"],
+              ["Decline",        "Revenue declining (< −5%), or mildly declining without maturity signals",  "3 years", "#FF4D00"],
             ] as [string, string, string, string][]).map(([stage, criteria, hold, color]) => (
               <div key={stage} style={{
                 display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "12px", alignItems: "baseline",
@@ -340,12 +345,13 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
               </div>
             ))}
           </div>
-          <CalloutBlock label="Why 6 Stages?">
-            The original 4-stage model (Introduction, Growth, Maturity, Decline) grouped too many different
-            business profiles together. A company growing revenue at 40% and one growing at 8% both landed in
-            the same bucket. The 6-stage model separates these cases — a Young Growth company (30%+ revenue growth)
-            gets 5 years of full-rate compounding, and a Mature Growth company (5–15%) also gets 5 years before
-            decay begins. All stages have a minimum 3-year hold to avoid premature decay.
+          <CalloutBlock label="Multi-Factor Classification (Damodaran)">
+            Inspired by Aswath Damodaran&apos;s 6-stage corporate lifecycle model, the classifier goes beyond
+            simple revenue-growth thresholds. Unprofitable does not automatically mean &ldquo;Start-Up&rdquo; — a
+            fast-growing, cash-burning company (like early Uber) is &ldquo;Young Growth&rdquo;, while a
+            dividend-paying company in a temporary downturn stays &ldquo;Mature Stable&rdquo; rather than
+            regressing. Revenue growth uses a 3-year CAGR to smooth cyclical noise, and operating margins
+            distinguish companies still scaling (thin margins) from those with established profitability.
           </CalloutBlock>
 
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 16px" }}>
