@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { VERDICT } from "../lib/constants.ts";
 import { f } from "../lib/utils.ts";
 import { useHoldRepeat } from "./ui.tsx";
@@ -7,13 +8,14 @@ interface VerdictCardProps {
   result: TUPResult | null;
   noiseFilter: boolean;
   onGrowthStep: (delta: number) => void;
+  onGrowthSet: (val: number) => void;
   currentPrice: number;
   growthScenario: GrowthScenario;
   onScenarioChange: (s: GrowthScenario) => void;
   hasScenarioData: boolean;
 }
 
-export function VerdictCard({ result, noiseFilter, onGrowthStep, currentPrice, growthScenario, onScenarioChange, hasScenarioData }: VerdictCardProps) {
+export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, currentPrice, growthScenario, onScenarioChange, hasScenarioData }: VerdictCardProps) {
   if (!result) return null;
   const v   = VERDICT[result.verdict];
   const paybackPct = Math.min(100, ((result.payback || 30) / 30) * 100);
@@ -31,6 +33,9 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, currentPrice, g
   };
 
   const grPct = result.gr * 100;
+
+  const [editingGrowth, setEditingGrowth] = useState(false);
+  const [editGrowthVal, setEditGrowthVal] = useState("");
 
   const stepBtnBase: React.CSSProperties = {
     flex: 1,
@@ -121,9 +126,46 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, currentPrice, g
         <div style={{ padding: "10px 0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
             <div style={labelStyle}>Growth</div>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#10d97e" }}>
-              {f(grPct)}%
-            </span>
+            {editingGrowth ? (
+              <input
+                autoFocus
+                value={editGrowthVal}
+                onChange={e => {
+                  const s = e.target.value;
+                  if (s === "" || /^\d*\.?\d*$/.test(s)) setEditGrowthVal(s);
+                }}
+                onBlur={() => {
+                  const v = parseFloat(editGrowthVal);
+                  if (!isNaN(v) && isFinite(v)) onGrowthSet(Math.min(v, 200));
+                  setEditingGrowth(false);
+                }}
+                onKeyDown={e => {
+                  if (e.key === "Enter") {
+                    const v = parseFloat(editGrowthVal);
+                    if (!isNaN(v) && isFinite(v)) onGrowthSet(Math.min(v, 200));
+                    setEditingGrowth(false);
+                  } else if (e.key === "Escape") {
+                    setEditingGrowth(false);
+                  }
+                }}
+                style={{
+                  width: "60px", background: "rgba(255,255,255,0.08)", border: "1px solid #C4A06E",
+                  color: "#e8e4dc", fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600,
+                  textAlign: "right", padding: "2px 4px", borderRadius: "2px", outline: "none",
+                }}
+              />
+            ) : (
+              <span
+                onClick={() => { setEditingGrowth(true); setEditGrowthVal(f(grPct)); }}
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#10d97e",
+                  cursor: "pointer", borderBottom: "1px dashed rgba(255,255,255,0.12)", padding: "1px 2px",
+                }}
+                title="Click to edit"
+              >
+                {f(grPct)}%
+              </span>
+            )}
           </div>
           <div style={{ display: "flex", gap: "6px" }}>
             {hasScenarioData && (

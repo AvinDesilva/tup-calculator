@@ -60,16 +60,19 @@ export function Table({ result, growthOverrides, onGrowthChange }: TableProps) {
                     <input
                       autoFocus
                       value={editVal}
-                      onChange={e => setEditVal(e.target.value)}
+                      onChange={e => {
+                        const s = e.target.value;
+                        if (s === "" || /^-?\d*\.?\d*$/.test(s)) setEditVal(s);
+                      }}
                       onBlur={() => {
                         const v = parseFloat(editVal);
-                        if (!isNaN(v)) onGrowthChange(r.year, v);
+                        if (!isNaN(v) && isFinite(v)) onGrowthChange(r.year, Math.max(-100, Math.min(v, 200)));
                         setEditingYear(null);
                       }}
                       onKeyDown={e => {
                         if (e.key === "Enter") {
                           const v = parseFloat(editVal);
-                          if (!isNaN(v)) onGrowthChange(r.year, v);
+                          if (!isNaN(v) && isFinite(v)) onGrowthChange(r.year, Math.max(-100, Math.min(v, 200)));
                           setEditingYear(null);
                         } else if (e.key === "Escape") {
                           setEditingYear(null);

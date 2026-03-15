@@ -369,6 +369,19 @@ export default function App() {
                 fwdCAGR: p.fwdCAGR != null ? Math.max(0, p.fwdCAGR + d) : null,
                 growthOverrides: {},
               }));
+            }}
+              onGrowthSet={(val: number) => {
+              setGrowthScenario("base");
+              const adjusted = Math.max(0, val - (inp.dividendYield || 0));
+              setInp(p => ({
+                ...p,
+                historicalGrowth: adjusted,
+                analystGrowth: adjusted,
+                fwdGrowthY1: adjusted,
+                fwdGrowthY2: p.fwdGrowthY2 != null ? adjusted : null,
+                fwdCAGR: p.fwdCAGR != null ? adjusted : null,
+                growthOverrides: {},
+              }));
             }} />
 
           </div>
