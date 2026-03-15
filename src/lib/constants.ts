@@ -24,6 +24,15 @@ export const ADR_RATIO_TABLE: Record<string, number> = {
   TSM:  5,
 };
 
+// ─── ADR underlying financials currency ─────────────────────────────────────
+// FMP may report p.currency / reportingCurrency as "USD" for NYSE-listed ADRs,
+// but the balance sheet and income statement values are in the home currency.
+export const ADR_FINANCIALS_CCY: Record<string, string> = {
+  NVO:  "DKK",
+  ASML: "EUR",
+  TSM:  "TWD",
+};
+
 // ─── Exchange → listing currency ─────────────────────────────────────────────
 export const EXCHANGE_CCY: Record<string, string> = {
   NYSE: "USD", NASDAQ: "USD", AMEX: "USD", NYSEAMERICAN: "USD", BATS: "USD", OTC: "USD",

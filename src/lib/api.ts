@@ -1,4 +1,4 @@
-import { ADR_RATIO_TABLE, EXCHANGE_CCY, FALLBACK_FX } from "./constants.ts";
+import { ADR_RATIO_TABLE, ADR_FINANCIALS_CCY, EXCHANGE_CCY, FALLBACK_FX } from "./constants.ts";
 import { f, fB } from "./utils.ts";
 import type {
   TickerData, LifecycleStage,
@@ -154,7 +154,9 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
   // ── Minimal FX handling ──────────────────────────────────────────────────
   const exchange          = (p.exchangeShortName || p.exchange || "").toUpperCase();
   const priceCurrency     = EXCHANGE_CCY[exchange] || p.currency || "USD";
-  const financialsCurrency = inc[0]?.reportingCurrency || p.currency || "USD";
+  // ADR override: FMP may report "USD" for NYSE-listed ADRs, but financials
+  // are in the home currency (e.g. TSM balance sheet is TWD).
+  const financialsCurrency = ADR_FINANCIALS_CCY[t] || inc[0]?.reportingCurrency || p.currency || "USD";
 
   let fxRate = 1;
   if (priceCurrency !== financialsCurrency) {
@@ -333,7 +335,9 @@ export async function lookupTicker(
   // ── Currency normalisation ────────────────────────────────────────────────
   const exchange        = (p.exchangeShortName || p.exchange || "").toUpperCase();
   const priceCurrency   = EXCHANGE_CCY[exchange] || p.currency || "USD";
-  const financialsCurrency = inc[0]?.reportingCurrency || p.currency || "USD";
+  // ADR override: FMP may report "USD" for NYSE-listed ADRs, but financials
+  // are in the home currency (e.g. TSM balance sheet is TWD).
+  const financialsCurrency = ADR_FINANCIALS_CCY[t] || inc[0]?.reportingCurrency || p.currency || "USD";
 
   if (import.meta.env.DEV) console.log(`[TUP FX] ticker=${t} exchange=${exchange} priceCurrency=${priceCurrency} financialsCurrency=${financialsCurrency}`);
 
