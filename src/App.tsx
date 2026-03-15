@@ -95,8 +95,8 @@ export default function App() {
   const rollDice = async () => {
     setRollingDice(true);
     setError("");
-    const MAX_ATTEMPTS = 20;
-    const DELAY_MS = hasActiveFilters ? 1500 : 3000;
+    const MAX_ATTEMPTS = 100;
+    const DELAY_MS = 2000;
     const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
     try {
       for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
@@ -132,7 +132,7 @@ export default function App() {
           };
           const testResult = calcTUP(testInp, "standard");
           const pb = testResult?.payback;
-          if (pb && pb >= 5 && pb <= 20) {
+          if (pb && pb > 4 && pb < 18) {
             setTicker(t);
             await doFetch(t);
             setRollingDice(false);
@@ -142,13 +142,7 @@ export default function App() {
           // Skip tickers that fail to fetch
         }
       }
-      if (hasActiveFilters) {
-        setError("No stocks match your filters — try broadening.");
-      } else {
-        const fallback = await fetchRandomTickerFiltered("");
-        setTicker(fallback);
-        await doFetch(fallback);
-      }
+      setError("Could not find a suitable stock — try adjusting filters.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to roll dice.");
     }
@@ -575,6 +569,21 @@ export default function App() {
           .rsp-val-panel .rsp-val-title { min-height: 26px; }
           .rsp-two-col {
             grid-template-columns: 1fr !important;
+          }
+          .rsp-dice-filter-wrap {
+            max-height: 400px !important;
+          }
+          .rsp-dice-filter {
+            flex-direction: column !important;
+            align-items: flex-end !important;
+            gap: 12px !important;
+            padding-right: 8px !important;
+          }
+          .rsp-dice-filter > div > div:first-child {
+            text-align: right !important;
+          }
+          .rsp-dice-filter input[type="text"] {
+            text-align: right !important;
           }
         }
 

@@ -157,7 +157,7 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset }: DiceF
   };
 
   return (
-    <div style={{
+    <div className="rsp-dice-filter-wrap" style={{
       overflow: "hidden",
       maxHeight: isOpen ? "120px" : "0",
       transition: "max-height 0.25s ease",
