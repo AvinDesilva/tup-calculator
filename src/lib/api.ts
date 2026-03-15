@@ -170,9 +170,15 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
   const mktCapVal    = p.mktCap || q.marketCap || 0;
 
   const adrRatio     = ADR_RATIO_TABLE[t] || 1;
-  const adrShares    = adrRatio > 1 ? sharesOut / adrRatio : sharesOut;
+  const price        = q.price || p.price || 0;
+  // For ADR stocks, derive shares from mktCap / price — FMP may report
+  // either ordinary or depositary shares, but mktCap/price always gives
+  // the correct count in the listing share basis.
+  const adrShares    = adrRatio > 1 && mktCapVal > 0 && price > 0
+    ? mktCapVal / price
+    : sharesOut;
   const rawNetIncome = inc[0]?.netIncome || 0;
-  const ttmEPS       = (sharesOut > 0 ? rawNetIncome / sharesOut : 0) / adrRatio * fxRate;
+  const ttmEPS       = adrShares > 0 ? (rawNetIncome * fxRate) / adrShares : 0;
 
   const latestRevenue  = (inc[0]?.revenue || 0) * fxRate;
   const revenuePerShare = adrShares > 0 ? latestRevenue / adrShares : 0;
@@ -402,15 +408,20 @@ export async function lookupTicker(
   // Derive TTM EPS from netIncome / shares (Basic Earnings), not quote.eps.
   // This reflects the company's actual profitability per share.
   const adrRatio     = ADR_RATIO_TABLE[t] || 1;
-  const adrShares    = adrRatio > 1 ? sharesOut / adrRatio : sharesOut;
+  const price        = q.price || p.price || 0;
+  // For ADR stocks, derive shares from mktCap / price — FMP may report
+  // either ordinary or depositary shares, but mktCap/price always gives
+  // the correct count in the listing share basis.
+  const adrShares    = adrRatio > 1 && mktCapVal > 0 && price > 0
+    ? mktCapVal / price
+    : sharesOut;
   const rawNetIncome = (inc[0]?.netIncome || 0);
-  const rawTTMEPS    = sharesOut > 0 ? rawNetIncome / sharesOut : 0;
-  const ttmEPS       = (rawTTMEPS / adrRatio) * fxRate;
+  const ttmEPS       = adrShares > 0 ? (rawNetIncome * fxRate) / adrShares : 0;
 
   if (import.meta.env.DEV) console.log(
-    `[TUP EPS] ${t} | netIncome=${rawNetIncome} shares=${sharesOut} adrShares=${adrShares}` +
-    ` | rawEPS=${rawTTMEPS.toFixed(4)} ${financialsCurrency}` +
-    ` | ÷${adrRatio} ×${fxRate.toFixed(6)} → finalEPS=${ttmEPS.toFixed(4)} ${priceCurrency}`
+    `[TUP EPS] ${t} | netIncome=${rawNetIncome} sharesOut=${sharesOut} adrShares=${adrShares.toFixed(0)}` +
+    ` | netIncome_${priceCurrency}=${(rawNetIncome * fxRate).toFixed(0)}` +
+    ` | ÷adrShares → finalEPS=${ttmEPS.toFixed(4)} ${priceCurrency}`
   );
 
   // ── Analyst estimates ─────────────────────────────────────────────────────
@@ -425,9 +436,9 @@ export async function lookupTicker(
 
   // Normalize analyst EPS estimates to the current share count so dilution
   // doesn't skew the blended yield.  epsOf returns per-share in price currency.
-  const epsOf = (e: FMPEstimate | null): number => ((e?.epsAvg || 0) / adrRatio) * fxRate;
-  const epsOfBear = (e: FMPEstimate | null): number => ((e?.epsLow || 0) / adrRatio) * fxRate;
-  const epsOfBull = (e: FMPEstimate | null): number => ((e?.epsHigh || 0) / adrRatio) * fxRate;
+  const epsOf = (e: FMPEstimate | null): number => ((e?.epsAvg || 0) * adrRatio) * fxRate;
+  const epsOfBear = (e: FMPEstimate | null): number => ((e?.epsLow || 0) * adrRatio) * fxRate;
+  const epsOfBull = (e: FMPEstimate | null): number => ((e?.epsHigh || 0) * adrRatio) * fxRate;
 
   // Forward EPS: analyst consensus, normalized to current shares.
   const forwardEPS    = (estFwd ? epsOf(estFwd) : 0) || (ttmEPS > 0 ? ttmEPS * 1.1 : 0);
