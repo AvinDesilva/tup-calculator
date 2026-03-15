@@ -87,6 +87,20 @@ export function classifyLifecycle(s: LifecycleSignals): LifecycleStage | null {
       return revGrowth < 0 ? "decline" : "mature_stable";
     }
 
+    // Operationally profitable — net loss is from non-operating charges
+    // (write-downs, restructuring, FX, tax hits).  The core business model
+    // works; classify by growth just like a profitable company.
+    // Example: CROX FY2025 — $900M EBIT but one-off charges pushed net negative.
+    if (s.operatingIncome > 0) {
+      if (revGrowth > 25) {
+        if (opMargin < 10 && !hasMaturity) return "young_growth";
+        return "high_growth";
+      }
+      if (revGrowth > 15) return "high_growth";
+      if (revGrowth > 5)  return "mature_growth";
+      return "mature_stable";
+    }
+
     // Low/moderate growth, no maturity signals, unprofitable = startup
     return "startup";
   }
