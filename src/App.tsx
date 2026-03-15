@@ -570,7 +570,7 @@ export default function App() {
           .rsp-two-col {
             grid-template-columns: 1fr !important;
           }
-          .rsp-dice-filter-wrap {
+          .rsp-dice-filter-wrap.rsp-dice-filter-open {
             max-height: 400px !important;
           }
           .rsp-dice-filter {
