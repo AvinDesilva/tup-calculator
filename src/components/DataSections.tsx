@@ -8,11 +8,12 @@ interface DataSectionsProps {
   currencyMismatchWarning: string;
   growthPeriod: "5yr" | "10yr";
   growthValues: { g5: number; g10: number };
+  growthYears: { short: number; long: number };
   onGrowthPeriodChange: (period: "5yr" | "10yr") => void;
 }
 
 export function DataSections({
-  inp, company, currencyMismatchWarning, growthPeriod, growthValues,
+  inp, company, currencyMismatchWarning, growthPeriod, growthValues, growthYears,
   onGrowthPeriodChange,
 }: DataSectionsProps) {
   const divYield = inp.dividendYield || 0;
@@ -71,18 +72,25 @@ export function DataSections({
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888" }}>Historical EPS Growth</span>
             <div style={{ display: "flex", gap: "0px" }}>
-              {(["5yr", "10yr"] as const).map(p => (
-                <button key={p} onClick={() => onGrowthPeriodChange(p)} style={{
-                  fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
-                  letterSpacing: "0.05em", padding: "2px 6px",
-                  background: growthPeriod === p ? "rgba(196,160,110,0.2)" : "transparent",
-                  border: `1px solid ${growthPeriod === p ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
-                  color: growthPeriod === p ? "#C4A06E" : "#666",
-                  cursor: "pointer",
-                  borderRadius: p === "5yr" ? "3px 0 0 3px" : "0 3px 3px 0",
-                  marginLeft: p === "10yr" ? "-1px" : 0,
-                }}>{p}</button>
-              ))}
+              {(() => {
+                const showLong = growthYears.long > growthYears.short;
+                const buttons: { key: "5yr" | "10yr"; label: string }[] = [
+                  { key: "5yr", label: `${growthYears.short}yr` },
+                  ...(showLong ? [{ key: "10yr" as const, label: `${growthYears.long}yr` }] : []),
+                ];
+                return buttons.map((b, i) => (
+                  <button key={b.key} onClick={() => onGrowthPeriodChange(b.key)} style={{
+                    fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                    letterSpacing: "0.05em", padding: "2px 6px",
+                    background: growthPeriod === b.key ? "rgba(196,160,110,0.2)" : "transparent",
+                    border: `1px solid ${growthPeriod === b.key ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+                    color: growthPeriod === b.key ? "#C4A06E" : "#666",
+                    cursor: "pointer",
+                    borderRadius: buttons.length === 1 ? "3px" : i === 0 ? "3px 0 0 3px" : "0 3px 3px 0",
+                    marginLeft: i > 0 ? "-1px" : 0,
+                  }}>{b.label}</button>
+                ));
+              })()}
             </div>
           </div>
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#00BFA5" }}>

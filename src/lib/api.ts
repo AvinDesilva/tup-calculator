@@ -797,6 +797,8 @@ export async function lookupTicker(
     forwardEPS: parseFloat(forwardEPS.toFixed(2)),
     historicalGrowth: parseFloat(avgHistGrowth.toFixed(2)),
     historicalGrowth5yr: parseFloat(avgHistGrowth5yr.toFixed(2)),
+    epsYearsShort: maxIdx5,
+    epsYearsLong: maxIdx10,
     analystGrowth: parseFloat(analystGrowth.toFixed(2)),
     fwdGrowthY1: parseFloat(fwdGrowthY1.toFixed(2)),
     fwdGrowthY2: fwdGrowthY2 != null ? parseFloat(fwdGrowthY2.toFixed(2)) : null,

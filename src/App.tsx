@@ -77,6 +77,7 @@ export default function App() {
   const [buyPrice, setBuyPrice] = useState<number | null>(null);
   const [growthPeriod, setGrowthPeriod] = useState<"5yr" | "10yr">("5yr");
   const [growthValues, setGrowthValues] = useState<{ g5: number; g10: number }>({ g5: 10, g10: 10 });
+  const [growthYears, setGrowthYears] = useState<{ short: number; long: number }>({ short: 5, long: 10 });
   const [growthScenario, setGrowthScenario] = useState<GrowthScenario>("base");
   const [scenarioValues, setScenarioValues] = useState<Record<GrowthScenario, { y1: number; y2: number | null; cagr: number | null }>>({
     bear: { y1: 0, y2: null, cagr: null },
@@ -167,6 +168,7 @@ export default function App() {
       setScorecard({ earnings: data.earningsSurprises, cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory, description: data.description, exchange: data.exchange });
 
       setGrowthValues({ g5: data.historicalGrowth5yr, g10: data.historicalGrowth });
+      setGrowthYears({ short: data.epsYearsShort, long: data.epsYearsLong });
       setGrowthScenario("base");
       setScenarioValues({
         bear: { y1: data.fwdGrowthY1Bear ?? 0, y2: data.fwdGrowthY2Bear, cagr: data.fwdCAGRBear },
@@ -187,7 +189,7 @@ export default function App() {
       let finalInp = origInp;
       const overrides = urlOverridesRef.current;
       if (overrides) {
-        if (overrides.gp === "10yr") {
+        if (overrides.gp === "10yr" && data.epsYearsLong > data.epsYearsShort) {
           finalGrowthPeriod = "10yr";
           finalInp = { ...finalInp, historicalGrowth: data.historicalGrowth };
         }
@@ -243,6 +245,7 @@ export default function App() {
       setValuation(dev.DEV_VALUATION);
       setScorecard({ earnings: dev.DEV_EARNINGS, cashFlows: dev.DEV_CASH_FLOWS, incomeHistory: dev.DEV_INCOME_HISTORY, description: dev.DEV_DESCRIPTION, exchange: "NASDAQ" });
       setGrowthValues(dev.DEV_GROWTH_VALUES);
+      setGrowthYears(dev.DEV_GROWTH_YEARS);
       setScenarioValues({
         bear: dev.DEV_SCENARIO_VALUES.bear,
         base: dev.DEV_SCENARIO_VALUES.base,
@@ -379,7 +382,9 @@ export default function App() {
               currencyMismatchWarning={currencyMismatchWarning}
               growthPeriod={growthPeriod}
               growthValues={growthValues}
+              growthYears={growthYears}
               onGrowthPeriodChange={p => {
+                if (p === "10yr" && growthYears.long <= growthYears.short) return;
                 setGrowthPeriod(p);
                 setInp(prev => ({ ...prev, historicalGrowth: p === "5yr" ? growthValues.g5 : growthValues.g10, growthOverrides: {} }));
               }}

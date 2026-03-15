@@ -174,6 +174,8 @@ export interface TickerData {
   forwardEPS: number;
   historicalGrowth: number;
   historicalGrowth5yr: number;
+  epsYearsShort: number;
+  epsYearsLong: number;
   analystGrowth: number;
   fwdGrowthY1: number;
   fwdGrowthY2: number | null;
