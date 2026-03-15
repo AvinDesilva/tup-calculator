@@ -46,14 +46,8 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
   if (!hasStrongBuy && !hasBuy && !hasDCF && !hasAltman) return null;
 
   // Buy price (10y threshold)
-  const buyDelta = hasBuy ? ((buyPrice as number) - currentPrice) / (buyPrice as number) * 100 : 0;
   const buyBelow = hasBuy && currentPrice <= (buyPrice as number);
   const buyColor = buyBelow ? "#10d97e" : "#f5a020";
-  const buySub   = Math.abs(buyDelta) < 0.5
-    ? "Equal to current price"
-    : buyDelta > 0
-      ? `${Math.abs(buyDelta).toFixed(0)}% below`
-      : `${Math.abs(buyDelta).toFixed(0)}% above`;
 
   // DCF delta vs current price
   const dcfDelta    = hasDCF ? (((dcf as number) - currentPrice) / currentPrice) * 100 : 0;
@@ -73,26 +67,20 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
     : "";
 
   // Strong Buy target
-  const sbDelta   = hasStrongBuy ? ((strongBuyPrice as number) - currentPrice) / (strongBuyPrice as number) * 100 : 0;
   const sbBelow   = hasStrongBuy && currentPrice > (strongBuyPrice as number);
   const sbColor   = sbBelow ? "#10d97e" : "#f5a020";
-  const sbSub     = Math.abs(sbDelta) < 0.5
-    ? "Equal to current price"
-    : sbDelta < 0
-      ? `${Math.abs(sbDelta).toFixed(0)}% above`
-      : `${Math.abs(sbDelta).toFixed(0)}% below`;
 
   // Build panel data
   const sbPanel: PanelData | null = hasStrongBuy ? {
     key: "strongbuy", title: "Strong Buy Below",
     value: `$${(strongBuyPrice as number).toFixed(2)}`,
-    icon: sbBelow ? "▲▲" : null, color: sbColor, sub: sbSub,
+    icon: sbBelow ? "▲▲" : null, color: sbColor, sub: "",
   } : null;
 
   const buyPanel: PanelData | null = hasBuy ? {
     key: "buy", title: "Patient Buy Below",
     value: `$${(buyPrice as number).toFixed(2)}`,
-    icon: buyBelow ? "▲" : null, color: buyColor, sub: buySub,
+    icon: buyBelow ? "▲" : null, color: buyColor, sub: "",
   } : null;
 
   const dcfPanel: PanelData | null = hasDCF ? {
