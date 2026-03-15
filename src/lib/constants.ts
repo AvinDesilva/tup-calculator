@@ -45,6 +45,7 @@ export const FALLBACK_FX: Record<string, number> = {
   DKKUSD: 0.145, SEKUSD: 0.091, NOKUSD: 0.091, EURUSD: 1.09,
   CADUSD: 0.74,  GBPUSD: 1.26,  JPYUSD: 0.0067, AUDUSD: 0.63,
   HKDUSD: 0.128, SGDUSD: 0.74,  CHFUSD: 1.11,   CNHUSD: 0.138,
+  TWDUSD: 0.031, INRUSD: 0.012, KRWUSD: 0.00073,
 };
 
 // ─── Business Lifecycle S-curve ───────────────────────────────────────────────

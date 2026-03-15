@@ -170,11 +170,12 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
   const mktCapVal    = p.mktCap || q.marketCap || 0;
 
   const adrRatio     = ADR_RATIO_TABLE[t] || 1;
+  const adrShares    = adrRatio > 1 ? sharesOut / adrRatio : sharesOut;
   const rawNetIncome = inc[0]?.netIncome || 0;
   const ttmEPS       = (sharesOut > 0 ? rawNetIncome / sharesOut : 0) / adrRatio * fxRate;
 
   const latestRevenue  = (inc[0]?.revenue || 0) * fxRate;
-  const revenuePerShare = sharesOut > 0 ? latestRevenue / sharesOut : 0;
+  const revenuePerShare = adrShares > 0 ? latestRevenue / adrShares : 0;
 
   // Forward EPS: simple estimate (no analyst data)
   const forwardEPS = ttmEPS > 0 ? ttmEPS * 1.1 : 0;
@@ -241,7 +242,7 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
     exchange,
     debt: totalDebt,
     cash: totalCash,
-    shares: sharesOut,
+    shares: adrShares,
     ttmEPS,
     forwardEPS: parseFloat(forwardEPS.toFixed(2)),
     historicalGrowth5yr: parseFloat(avgHistGrowth5yr.toFixed(2)),
@@ -401,12 +402,13 @@ export async function lookupTicker(
   // Derive TTM EPS from netIncome / shares (Basic Earnings), not quote.eps.
   // This reflects the company's actual profitability per share.
   const adrRatio     = ADR_RATIO_TABLE[t] || 1;
+  const adrShares    = adrRatio > 1 ? sharesOut / adrRatio : sharesOut;
   const rawNetIncome = (inc[0]?.netIncome || 0);
   const rawTTMEPS    = sharesOut > 0 ? rawNetIncome / sharesOut : 0;
   const ttmEPS       = (rawTTMEPS / adrRatio) * fxRate;
 
   if (import.meta.env.DEV) console.log(
-    `[TUP EPS] ${t} | netIncome=${rawNetIncome} shares=${sharesOut}` +
+    `[TUP EPS] ${t} | netIncome=${rawNetIncome} shares=${sharesOut} adrShares=${adrShares}` +
     ` | rawEPS=${rawTTMEPS.toFixed(4)} ${financialsCurrency}` +
     ` | ÷${adrRatio} ×${fxRate.toFixed(6)} → finalEPS=${ttmEPS.toFixed(4)} ${priceCurrency}`
   );
@@ -430,7 +432,7 @@ export async function lookupTicker(
   // Forward EPS: analyst consensus, normalized to current shares.
   const forwardEPS    = (estFwd ? epsOf(estFwd) : 0) || (ttmEPS > 0 ? ttmEPS * 1.1 : 0);
   const latestRevenue = (inc[0]?.revenue || 0) * fxRate;
-  const revenuePerShare = sharesOut > 0 ? latestRevenue / sharesOut : 0;
+  const revenuePerShare = adrShares > 0 ? latestRevenue / adrShares : 0;
 
   // ── Historical EPS growth — per-share basis (net income ÷ shares) ────────
   // Uses diluted EPS per year so buyback-driven growth is captured, matching
@@ -763,7 +765,7 @@ export async function lookupTicker(
   log(`✓ ${p.companyName} — ${p.sector} / ${p.industry}`);
   if (isConverted) log(`  ${currencyNote}`);
   log(`  Market Cap: ${fB(p.mktCap || 0)}  |  Debt: ${fB(totalDebt)}  |  Cash: ${fB(totalCash)}`);
-  log(`  Shares: ${(sharesOut / 1e9).toFixed(3)}B  |  TTM EPS: $${f(ttmEPS)}  |  Fwd EPS: $${forwardEPS.toFixed(2)}`);
+  log(`  Shares: ${(adrShares / 1e9).toFixed(3)}B${adrRatio > 1 ? ` (ADR ${adrRatio}:1)` : ""}  |  TTM EPS: $${f(ttmEPS)}  |  Fwd EPS: $${forwardEPS.toFixed(2)}`);
   log(`  Hist Growth: ${avgHistGrowth.toFixed(1)}%  |  Analyst Growth: ${analystGrowth.toFixed(1)}%  |  Fwd Div Yield: ${dividendYield.toFixed(2)}%`);
   log(`  Price: $${q.price}  |  200-SMA: $${q.priceAvg200 || "N/A"}`);
 
@@ -790,7 +792,7 @@ export async function lookupTicker(
     marketCap: p.mktCap || q.marketCap || 0,
     debt: totalDebt,
     cash: totalCash,
-    shares: sharesOut,
+    shares: adrShares,
     ttmEPS,
     forwardEPS: parseFloat(forwardEPS.toFixed(2)),
     historicalGrowth: parseFloat(avgHistGrowth.toFixed(2)),
