@@ -1,9 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 
 import { calcTUP } from "./lib/calcTUP.ts";
-import { lookupTicker, lookupTickerQuick, fetchRandomTickerFiltered } from "./lib/api.ts";
+import { lookupTicker, lookupTickerQuick, fetchFilteredPool } from "./lib/api.ts";
 import { C } from "./lib/theme.ts";
-import { MKTCAP_RANGES } from "./lib/constants.ts";
 import type { InputState, Mode, TUPResult, GrowthScenario, RollFilters, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement } from "./lib/types.ts";
 
 import { VerdictCard } from "./components/VerdictCard.tsx";
@@ -96,31 +95,29 @@ export default function App() {
   const rollDice = async () => {
     setRollingDice(true);
     setError("");
-    const MAX_ATTEMPTS = 100;
-    const DELAY_MS = 2000;
+    const MAX_ATTEMPTS = 20;
+    const DELAY_MS = 1000;
     const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
     try {
-      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      // Pre-filter pool using FMP screener + ETF intersection (single API call)
+      const pool = await fetchFilteredPool(rollFilters);
+      if (pool.length === 0) {
+        setError("No stocks match these filters — try widening your criteria.");
+        setRollingDice(false);
+        return;
+      }
+      // Fisher-Yates shuffle — no duplicate picks
+      const shuffled = [...pool];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const limit = Math.min(MAX_ATTEMPTS, shuffled.length);
+      for (let attempt = 0; attempt < limit; attempt++) {
         if (attempt > 0) await wait(DELAY_MS);
-        const t = await fetchRandomTickerFiltered(rollFilters.indexEtf);
+        const t = shuffled[attempt];
         try {
           const data = await lookupTickerQuick(t);
-          // Market cap filter
-          if (rollFilters.marketCap !== "All") {
-            const range = MKTCAP_RANGES[rollFilters.marketCap];
-            if (data.marketCap < range.min || data.marketCap >= range.max) continue;
-          }
-          // Sector filter
-          if (rollFilters.sector && data.sector !== rollFilters.sector) continue;
-          // Exchange filter
-          if (rollFilters.exchange !== "All") {
-            const ex = data.exchange.toUpperCase();
-            if (rollFilters.exchange === "NYSE" && ex !== "NYSE" && ex !== "AMEX" && ex !== "NYSEAMERICAN") continue;
-            if (rollFilters.exchange === "NASDAQ" && ex !== "NASDAQ") continue;
-            if (rollFilters.exchange === "OTC" && ex !== "OTC") continue;
-            if (rollFilters.exchange === "LSE" && ex !== "LSE") continue;
-            if (rollFilters.exchange === "TSX" && ex !== "TSX" && ex !== "TSXV") continue;
-          }
           const testInp: InputState = {
             marketCap: data.marketCap, debt: data.debt, cash: data.cash, shares: data.shares,
             ttmEPS: data.ttmEPS, forwardEPS: data.forwardEPS,

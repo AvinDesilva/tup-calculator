@@ -1,8 +1,8 @@
-import { ADR_RATIO_TABLE, ADR_FINANCIALS_CCY, EXCHANGE_CCY, FALLBACK_FX } from "./constants.ts";
+import { ADR_RATIO_TABLE, ADR_FINANCIALS_CCY, EXCHANGE_CCY, FALLBACK_FX, MKTCAP_RANGES } from "./constants.ts";
 import { f, fB } from "./utils.ts";
 import { classifyLifecycle } from "./lifecycle.ts";
 import type {
-  TickerData, LifecycleStage,
+  TickerData, LifecycleStage, RollFilters,
   FMPProfile, FMPQuote, FMPBalanceSheet, FMPIncomeStatement,
   FMPEstimate,
   FMPDividend, FMPDividendHistory, FMPDCF,
@@ -90,6 +90,54 @@ export async function fetchRandomTickerFiltered(indexEtf: string): Promise<strin
     : companies;
   if (pool.length === 0) throw new Error(`No stocks found in ${etf.toUpperCase()}.`);
   return pool[Math.floor(Math.random() * pool.length)].symbol;
+}
+
+// ─── Pre-filtered pool (screener + ETF intersection) ─────────────────────────
+
+const _screenedCache: Record<string, string[]> = {};
+
+export async function fetchFilteredPool(filters: RollFilters): Promise<string[]> {
+  const cacheKey = `${filters.sector}|${filters.exchange}|${filters.marketCap}|${filters.indexEtf}`;
+  if (_screenedCache[cacheKey]) return _screenedCache[cacheKey];
+
+  // Build FMP stock-screener query params
+  const params: string[] = ["isActivelyTrading=true", "limit=5000"];
+  if (filters.sector) params.push(`sector=${encodeURIComponent(filters.sector)}`);
+  if (filters.marketCap !== "All") {
+    const range = MKTCAP_RANGES[filters.marketCap];
+    if (range.min > 0) params.push(`marketCapMoreThan=${range.min}`);
+    if (range.max < Infinity) params.push(`marketCapLowerThan=${range.max}`);
+  }
+
+  const results = await fetchFMP<Array<{ symbol: string; exchangeShortName?: string }>>(
+    `stock-screener?${params.join("&")}`
+  );
+
+  let symbols = (results || [])
+    .filter(r => {
+      if (!r.symbol || r.symbol.includes(".")) return false;
+      // Local exchange filter (handles NYSE→AMEX/NYSEAMERICAN aliases)
+      if (filters.exchange !== "All") {
+        const ex = (r.exchangeShortName || "").toUpperCase();
+        if (filters.exchange === "NYSE" && ex !== "NYSE" && ex !== "AMEX" && ex !== "NYSEAMERICAN") return false;
+        if (filters.exchange === "NASDAQ" && ex !== "NASDAQ") return false;
+        if (filters.exchange === "OTC" && ex !== "OTC") return false;
+        if (filters.exchange === "LSE" && ex !== "LSE") return false;
+        if (filters.exchange === "TSX" && ex !== "TSX" && ex !== "TSXV") return false;
+      }
+      return true;
+    })
+    .map(r => r.symbol.toUpperCase());
+
+  // Intersect with ETF holdings
+  const etf = (filters.indexEtf || "VTI").toUpperCase();
+  const holdings = await getETFHoldings(etf);
+  if (holdings.size > 0) {
+    symbols = symbols.filter(s => holdings.has(s));
+  }
+
+  _screenedCache[cacheKey] = symbols;
+  return symbols;
 }
 
 // ─── Low-level HTTP wrapper ───────────────────────────────────────────────────
