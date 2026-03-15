@@ -357,33 +357,81 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 16px" }}>
             During the <strong style={{ color: M.text1 }}>Hold Period</strong>, the initial blended growth rate is
             maintained at full strength. After the hold period expires, the rate decays annually using a
-            Variable Decay Rate that scales with the initial growth:
+            Variable Decay Rate that scales with the initial growth and is adjusted by multi-factor modifiers:
           </p>
 
-          <FormulaBlock label="Variable Decay Rate">
-            VDR = max( 2%, G<sub>initial</sub> × VDR_Factor )
+          <FormulaBlock label="Base Variable Decay Rate">
+            VDR<sub>base</sub> = max( 2%, G<sub>initial</sub> × VDR_Factor )
           </FormulaBlock>
 
           <FormulaBlock label="VDR Factor (tiered)">
             G ≥ 40% → 20% &nbsp;|&nbsp; 20–40% → 15% &nbsp;|&nbsp; &lt;20% → 10%
           </FormulaBlock>
 
-          <FormulaBlock label="Lifecycle Fade Formula">
-            G(n) = max( G<sub>initial</sub> − (n − HoldPeriod) × VDR, &nbsp;5% )
+          <FormulaBlock label="Multi-Factor Adjusted VDR">
+            VDR = VDR<sub>base</sub> × Margin_Mod × Profitability_Mod
           </FormulaBlock>
 
+          <FormulaBlock label="Lifecycle Fade Formula">
+            G(n) = max( G<sub>initial</sub> − (n − HoldPeriod) × VDR, &nbsp;Dynamic_Floor )
+          </FormulaBlock>
+
+          <SubHead>Multi-Factor Modifiers</SubHead>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 20px" }}>
+            The base VDR is adjusted by three additional signals that capture the quality and sustainability of growth:
+          </p>
+
+          <div style={{ border: `1px solid ${M.borderWeak}`, marginBottom: "24px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "12px", padding: "8px 20px", background: "rgba(255,255,255,0.02)", borderBottom: `1px solid ${M.borderWeak}` }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: M.text3 }}>Modifier</span>
+              <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: M.text3 }}>Condition</span>
+              <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: M.text3, textAlign: "right" }}>Effect</span>
+            </div>
+            {([
+              ["Margin", "Op. Margin ≥ 20%",   "0.8× (slower decay)", "#10d97e"],
+              ["Margin", "Op. Margin 10–20%",   "1.0× (neutral)",     "#00BFA5"],
+              ["Margin", "Op. Margin 5–10%",    "1.1× (faster decay)", "#C4A06E"],
+              ["Margin", "Op. Margin < 5%",     "1.2× (faster decay)", "#FF4D00"],
+              ["Profit", "TTM EPS ≤ 0",         "1.25× (speculative)", "#FF4D00"],
+              ["Profit", "TTM EPS > 0",         "1.0× (neutral)",      "#10d97e"],
+              ["Floor",  "Div Yield > 0",       "5% + ½ yield (cap 8%)", "#00BFA5"],
+              ["Floor",  "Div Yield = 0",       "5% base floor",       "#888888"],
+            ] as [string, string, string, string][]).map(([mod, condition, effect, color], i) => (
+              <div key={i} style={{
+                display: "grid", gridTemplateColumns: "1fr 2fr 1fr", gap: "12px", alignItems: "baseline",
+                padding: "10px 20px", borderBottom: `1px solid ${M.borderWeak}`,
+              }}>
+                <span style={{ fontSize: "13px", fontWeight: 600, color }}>{mod}</span>
+                <span style={{ fontSize: "13px", color: M.text2 }}>{condition}</span>
+                <span style={{ fontFamily: M.mono, fontSize: "12px", color: M.text1, textAlign: "right" }}>{effect}</span>
+              </div>
+            ))}
+          </div>
+
+          <CalloutBlock label="Why These Modifiers?">
+            The lifecycle stage and initial growth magnitude capture the broad trajectory, but they miss
+            qualitative differences between companies at the same stage. A &ldquo;Mature Growth&rdquo; company
+            with 30% operating margins (wide moat) should decay slower than one with 4% margins (commodity
+            business). Similarly, unprofitable companies with speculative growth estimates should fade faster,
+            and dividend payers deserve a higher growth floor because their total shareholder return includes
+            cash distributions that persist even as EPS growth slows.
+          </CalloutBlock>
+
           <div style={{ border: `1px solid ${M.borderWeak}`, marginBottom: "32px" }}>
             <div style={{ padding: "12px 20px", borderBottom: `1px solid ${M.borderWeak}` }}>
-              <SubHead>Example A — Pre-Profit Start-Up (70% initial, Start-Up stage)</SubHead>
+              <SubHead>Example A — Pre-Profit Start-Up (70% initial, Start-Up, 3% margin, EPS &lt; 0)</SubHead>
             </div>
             {[
-              ["VDR",                       "max(2%, 70% × 20%) = 14%", false],
-              ["Years 1–7 (hold)",          "70%",                      false],
-              ["Year 8",                    "70% − 14% = 56%",         false],
-              ["Year 9",                    "56% − 14% = 42%",         false],
-              ["Year 10",                   "42% − 14% = 28%",         false],
-              ["Year 11",                   "28% − 14% = 14%",         false],
-              ["Year 12+",                  "5% floor",                true],
+              ["Base VDR",                  "max(2%, 70% × 20%) = 14%",   false],
+              ["Margin modifier",           "3% margin → 1.2×",           false],
+              ["Profitability modifier",    "EPS ≤ 0 → 1.25×",            false],
+              ["Adjusted VDR",              "14% × 1.2 × 1.25 = 21%",     false],
+              ["Floor",                     "5% (no dividend)",            false],
+              ["Years 1–7 (hold)",          "70%",                         false],
+              ["Year 8",                    "70% − 21% = 49%",            false],
+              ["Year 9",                    "49% − 21% = 28%",            false],
+              ["Year 10",                   "28% − 21% = 7%",             false],
+              ["Year 11+",                  "5% floor",                    true],
             ].map(([label, val, highlight]) => (
               <div key={label as string} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "baseline",
@@ -400,17 +448,20 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
 
           <div style={{ border: `1px solid ${M.borderWeak}`, marginBottom: "32px" }}>
             <div style={{ padding: "12px 20px", borderBottom: `1px solid ${M.borderWeak}` }}>
-              <SubHead>Example B — Young Growth Company (35% initial, Young Growth stage)</SubHead>
+              <SubHead>Example B — Young Growth Company (35% initial, Young Growth, 25% margin)</SubHead>
             </div>
             {[
-              ["VDR",                       "max(2%, 35% × 15%) = 5.25%", false],
-              ["Years 1–5 (hold)",          "35%",                       false],
-              ["Year 6",                    "35% − 5.25% = 29.75%",     false],
-              ["Year 7",                    "29.75% − 5.25% = 24.5%",   false],
-              ["Year 8",                    "24.5% − 5.25% = 19.25%",   false],
-              ["Year 9",                    "19.25% − 5.25% = 14%",     false],
-              ["Year 10",                   "14% − 5.25% = 8.75%",      false],
-              ["Year 11+",                  "5% floor",                  true],
+              ["Base VDR",                  "max(2%, 35% × 15%) = 5.25%",  false],
+              ["Margin modifier",           "25% margin → 0.8×",           false],
+              ["Profitability modifier",    "EPS > 0 → 1.0×",              false],
+              ["Adjusted VDR",              "5.25% × 0.8 = 4.2%",          false],
+              ["Floor",                     "5% (no dividend)",             false],
+              ["Years 1–5 (hold)",          "35%",                          false],
+              ["Year 6",                    "35% − 4.2% = 30.8%",          false],
+              ["Year 7",                    "30.8% − 4.2% = 26.6%",        false],
+              ["Year 8",                    "26.6% − 4.2% = 22.4%",        false],
+              ["Year 12",                   "22.4% − (4 × 4.2%) = 5.6%",   false],
+              ["Year 13+",                  "5% floor",                     true],
             ].map(([label, val, highlight]) => (
               <div key={label as string} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "baseline",
@@ -427,15 +478,18 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
 
           <div style={{ border: `1px solid ${M.borderWeak}`, marginBottom: "32px" }}>
             <div style={{ padding: "12px 20px", borderBottom: `1px solid ${M.borderWeak}` }}>
-              <SubHead>Example C — Mature Growth Blue-Chip (12% initial, Mature Growth stage)</SubHead>
+              <SubHead>Example C — Mature Dividend Blue-Chip (12% initial, Mature Growth, 30% margin, 3% yield)</SubHead>
             </div>
             {[
-              ["VDR",                       "max(2%, 12% × 10%) = 2%", false],
-              ["Years 1–5 (hold)",          "12%",                     false],
-              ["Year 6",                    "12% − 2% = 10%",         false],
-              ["Year 7",                    "10% − 2% = 8%",          false],
-              ["Year 8",                    "8% − 2% = 6%",           false],
-              ["Year 9+",                   "5% floor",                true],
+              ["Base VDR",                  "max(2%, 12% × 10%) = 2%",    false],
+              ["Margin modifier",           "30% margin → 0.8×",          false],
+              ["Profitability modifier",    "EPS > 0 → 1.0×",             false],
+              ["Adjusted VDR",              "max(2%, 2% × 0.8) = 2%",     false],
+              ["Dynamic Floor",             "5% + ½(3%) = 6.5%",          false],
+              ["Years 1–5 (hold)",          "12%",                         false],
+              ["Year 6",                    "12% − 2% = 10%",             false],
+              ["Year 7",                    "10% − 2% = 8%",              false],
+              ["Year 8+",                   "6.5% floor (dividend-lifted)", true],
             ].map(([label, val, highlight]) => (
               <div key={label as string} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "baseline",
@@ -451,15 +505,17 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
           </div>
 
           <CalloutBlock>
-            The VDR ensures that extreme growth rates (from turnaround stocks or high-growth disruptors)
-            are pulled toward reality faster, while companies with steady 15–25% growth hold their rate
-            longer before decaying toward a 5% terminal rate. No hard ceiling is needed — the math self-corrects.
+            The multi-factor VDR ensures that growth rates decay at a pace informed by the company&apos;s actual
+            financial quality. Wide-moat companies with high margins hold their growth longer; unprofitable
+            companies with speculative estimates fade faster; and dividend payers never drop below a floor
+            that reflects their total shareholder return. No hard ceiling is needed — the math self-corrects.
           </CalloutBlock>
 
           <SubHead>Key Guardrails</SubHead>
           {[
             ["Dividend Yield Adder", "The yield is added post-blend, not averaged in. This correctly preserves the growth signal: a 4.9% yield on a 17.5% grower produces 22.4% total compounding, not a misleadingly inflated 18% average."],
-            ["5% Floor", "The VDR decay never pushes the growth rate below 5%. This floor reflects a terminal growth rate approximating GDP + inflation — realistic enough to model long-term survivors, conservative enough to prevent perpetual high-growth fantasy projections."],
+            ["Dynamic Floor", "The VDR decay floor starts at 5% (GDP + inflation) and rises by half the dividend yield, capped at 8%. A 3% dividend payer floors at 6.5%, reflecting that even as EPS growth stalls, the total return to shareholders includes persistent cash distributions."],
+            ["Margin & Profitability Modifiers", "All modifiers default to neutral (1.0×) when data is unavailable. This ensures the VDR gracefully degrades to the base single-factor model rather than producing distorted results for companies with missing data."],
             ["Consistency Check", "If historical growth is 50% but analysts expect 5%, the business model may be broken or the industry is maturing rapidly. In these cases, lean more heavily on the lower number."],
           ].map(([title, bodyText]) => (
             <div key={title as string} style={{ padding: "20px 0", borderTop: `1px solid ${M.borderWeak}` }}>

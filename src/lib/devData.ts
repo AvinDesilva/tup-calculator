@@ -24,6 +24,7 @@ export const DEV_INP: InputState = {
   currentPrice: 230,
   sma200: 218,
   dividendYield: 0.5,
+  operatingMargin: 30.4,
   lifecycleStage: "mature_stable",
   growthOverrides: {},
   vdrEnabled: true,

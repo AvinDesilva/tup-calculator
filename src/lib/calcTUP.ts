@@ -1,41 +1,6 @@
 import { SAFETY_CAP, STD_THRESHOLD, PP_THRESHOLD } from "./constants.ts";
-import type { InputState, Mode, TUPResult, TUPRow, VerdictKey, LifecycleStage } from "./types.ts";
-
-/**
- * Lifecycle Fade with Variable Decay Rate (VDR).
- *
- * Hold periods by stage:
- *   Start-Up: 7yr, Young Growth: 5yr, High Growth: 3yr,
- *   Mature Growth: 5yr, Mature Stable: 3yr, Decline: 3yr
- *
- * After the hold period, growth decays annually:
- *   VDR = max(2%, G_initial × VDR_FACTOR)
- *   VDR_FACTOR: 20% if G ≥ 40%, 15% if 20–40%, 10% if < 20%
- *   G(n) = max(G_initial − (n − HoldPeriod) × VDR, 0.05)
- *
- * Hyper-growth companies (e.g. 70% → VDR ≈ 14%) decay aggressively,
- * while moderate growers (e.g. 12% → VDR = 2%) fade gracefully.
- */
-const HOLD_PERIOD: Record<LifecycleStage, number> = {
-  startup: 7, young_growth: 5, high_growth: 3, mature_growth: 5, mature_stable: 3, decline: 3,
-};
-const MIN_VDR    = 0.02;   // minimum 2pp/yr decay (as decimal)
-const FADE_FLOOR = 0.05;   // 5% growth floor (as decimal)
-
-function vdrFactor(initial: number): number {
-  if (initial >= 0.40) return 0.20;   // hyper-growth: 20%
-  if (initial >= 0.20) return 0.15;   // high-growth:  15%
-  return 0.10;                        // moderate:     10%
-}
-
-function fadedGrowth(initial: number, year: number, stage: LifecycleStage | null): number {
-  if (initial <= FADE_FLOOR) return initial;          // already at or below floor
-  const hold = stage ? HOLD_PERIOD[stage] : 0;
-  if (year <= hold) return initial;                   // hold period — full rate
-  const vdr   = Math.max(MIN_VDR, initial * vdrFactor(initial));
-  const decay = (year - hold) * vdr;
-  return Math.max(initial - decay, FADE_FLOOR);
-}
+import type { InputState, Mode, TUPResult, TUPRow, VerdictKey } from "./types.ts";
+import { fadedGrowth, type VDRContext } from "./vdr.ts";
 
 /**
  * Core TUP (Time Until Payback) calculation engine.
@@ -49,7 +14,7 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
     historicalGrowth, analystGrowth, fwdGrowthY1, fwdGrowthY2, fwdCAGR,
     revenuePerShare, targetMargin,
     inceptionGrowth, breakEvenYear, currentPrice, sma200, dividendYield,
-    lifecycleStage, growthOverrides, vdrEnabled,
+    operatingMargin, lifecycleStage, growthOverrides, vdrEnabled,
   } = inp;
 
   if (!shares || shares <= 0) return null;
@@ -99,6 +64,14 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
   const impliedRev10 = revenuePerShare * shares * Math.pow(1 + gr, 10);
   const tamWarning   = impliedRev10 > 5e12;
 
+  // Build VDR context for multi-factor lifecycle fade
+  const vdrCtx: VDRContext = {
+    stage: lifecycleStage,
+    operatingMargin,
+    dividendYield,
+    ttmEPS,
+  };
+
   // Year-by-year accumulation with variable growth rates + lifecycle fade
   const rows: TUPRow[] = [];
   let cum = 0, eps = epsBase, payback: number | null = null;
@@ -111,7 +84,7 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
     } else if (y === 2) {
       yearGr = grY2;
     } else {
-      yearGr = vdrEnabled ? fadedGrowth(grTerminal, y, lifecycleStage) : grTerminal;
+      yearGr = vdrEnabled ? fadedGrowth(grTerminal, y, vdrCtx) : grTerminal;
     }
     eps *= (1 + yearGr);
     const annual = y >= startYr ? eps : 0;

@@ -68,7 +68,7 @@ export default function App() {
     marketCap: 0, debt: 0, cash: 0, shares: 1,
     ttmEPS: 0, forwardEPS: 0, historicalGrowth: 10, analystGrowth: 10, fwdGrowthY1: 10, fwdGrowthY2: null, fwdCAGR: null,
     revenuePerShare: 0, targetMargin: 15, inceptionGrowth: 30, breakEvenYear: 2,
-    currentPrice: 0, sma200: 0, dividendYield: 0, lifecycleStage: null, growthOverrides: {}, vdrEnabled: true,
+    currentPrice: 0, sma200: 0, dividendYield: 0, operatingMargin: null, lifecycleStage: null, growthOverrides: {}, vdrEnabled: true,
   });
 
   const result: TUPResult | null = useMemo(() => calcTUP(inp, mode), [inp, mode]);
@@ -129,7 +129,7 @@ export default function App() {
             revenuePerShare: data.revenuePerShare, targetMargin: data.targetMargin,
             inceptionGrowth: data.inceptionGrowth, breakEvenYear: data.breakEvenYear,
             currentPrice: data.currentPrice, sma200: data.sma200,
-            dividendYield: data.dividendYield || 0, lifecycleStage: data.lifecycleStage, growthOverrides: {}, vdrEnabled: true,
+            dividendYield: data.dividendYield || 0, operatingMargin: data.operatingMargin ?? null, lifecycleStage: data.lifecycleStage, growthOverrides: {}, vdrEnabled: true,
           };
           const testResult = calcTUP(testInp, "standard");
           const pb = testResult?.payback;
@@ -184,7 +184,7 @@ export default function App() {
         revenuePerShare: data.revenuePerShare, targetMargin: data.targetMargin,
         inceptionGrowth: data.inceptionGrowth, breakEvenYear: data.breakEvenYear,
         currentPrice: data.currentPrice, sma200: data.sma200,
-        dividendYield: data.dividendYield || 0, lifecycleStage: data.lifecycleStage, growthOverrides: {}, vdrEnabled: true,
+        dividendYield: data.dividendYield || 0, operatingMargin: data.operatingMargin ?? null, lifecycleStage: data.lifecycleStage, growthOverrides: {}, vdrEnabled: true,
       };
       let finalInp = origInp;
       const overrides = urlOverridesRef.current;

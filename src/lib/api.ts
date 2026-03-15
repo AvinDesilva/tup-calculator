@@ -128,6 +128,7 @@ export interface QuickTickerData {
   currentPrice: number;
   sma200: number;
   dividendYield: number;
+  operatingMargin: number | null;
   lifecycleStage: LifecycleStage | null;
 }
 
@@ -230,11 +231,15 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
   };
   const dividendYield = normYield(q.dividendYield);
 
+  // Operating margin (percentage)
+  const operatingIncome = (inc[0]?.operatingIncome || 0) * fxRate;
+  const operatingMargin = latestRevenue > 0 ? (operatingIncome / latestRevenue) * 100 : null;
+
   // Lifecycle stage (multi-factor — Damodaran framework)
   const lifecycleStage = classifyLifecycle({
     revenueHistory: inc.map(y => (y.revenue || 0) * fxRate),
     netIncome: rawNetIncome * fxRate,
-    operatingIncome: (inc[0]?.operatingIncome || 0) * fxRate,
+    operatingIncome,
     dividendYield,
   });
 
@@ -259,6 +264,7 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
     currentPrice: q.price || p.price || 0,
     sma200: q.priceAvg200 || 0,
     dividendYield: parseFloat(dividendYield.toFixed(2)),
+    operatingMargin: operatingMargin != null ? parseFloat(operatingMargin.toFixed(1)) : null,
     lifecycleStage,
   };
 }
@@ -778,11 +784,15 @@ export async function lookupTicker(
   log(`  Hist Growth: ${avgHistGrowth.toFixed(1)}%  |  Analyst Growth: ${analystGrowth.toFixed(1)}%  |  Fwd Div Yield: ${dividendYield.toFixed(2)}%`);
   log(`  Price: $${q.price}  |  200-SMA: $${q.priceAvg200 || "N/A"}`);
 
+  // ── Operating margin (percentage) ─────────────────────────────────────
+  const operatingIncomeVal = (inc[0]?.operatingIncome || 0) * fxRate;
+  const operatingMargin = latestRevenue > 0 ? (operatingIncomeVal / latestRevenue) * 100 : null;
+
   // ── Lifecycle stage (multi-factor — Damodaran framework) ────────────────
   const lifecycleStage = classifyLifecycle({
     revenueHistory: inc.map(y => (y.revenue || 0) * fxRate),
     netIncome: (inc[0]?.netIncome || 0) * fxRate,
-    operatingIncome: (inc[0]?.operatingIncome || 0) * fxRate,
+    operatingIncome: operatingIncomeVal,
     dividendYield,
   });
 
@@ -818,6 +828,7 @@ export async function lookupTicker(
     currentPrice: q.price || p.price || 0,
     sma200: q.priceAvg200 || 0,
     dividendYield: parseFloat(dividendYield.toFixed(2)),
+    operatingMargin: operatingMargin != null ? parseFloat(operatingMargin.toFixed(1)) : null,
     lifecycleStage,
     divNote,
     peterLynchRatio: peterLynchRatio != null ? parseFloat(Number(peterLynchRatio).toFixed(2)) : null,

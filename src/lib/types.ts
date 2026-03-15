@@ -29,6 +29,7 @@ export interface InputState {
   currentPrice: number;
   sma200: number;
   dividendYield: number;
+  operatingMargin: number | null;
   lifecycleStage: LifecycleStage | null;
   growthOverrides: Record<number, number>;
   vdrEnabled: boolean;
@@ -193,6 +194,7 @@ export interface TickerData {
   currentPrice: number;
   sma200: number;
   dividendYield: number;
+  operatingMargin: number | null;
   lifecycleStage: LifecycleStage | null;
   divNote: string;
   peterLynchRatio: number | null;
