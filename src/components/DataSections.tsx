@@ -183,13 +183,7 @@ export function DataSections({
                 <line x1={padL} y1={zeroY} x2={W - padR} y2={zeroY}
                   stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
 
-                {/* Y-axis tick grid lines (no numerical labels) */}
-                {ticks.map(v => v !== 0 ? (
-                  <line key={`tick-${v}`} x1={padL} y1={valToY(v)} x2={W - padR} y2={valToY(v)}
-                    stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" strokeDasharray="2,3" />
-                ) : null)}
-
-                {/* Y-axis label */}
+{/* Y-axis label */}
                 <text x={10} y={(padTop + H - padBot) / 2} textAnchor="middle"
                   fill="rgba(255,255,255,0.25)"
                   style={{ fontSize: "6px", fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "0.05em" }}

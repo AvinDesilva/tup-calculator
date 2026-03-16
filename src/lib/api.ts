@@ -515,11 +515,12 @@ export async function lookupTicker(
   const epsGrowthHistory: EpsGrowthPoint[] = [];
   for (let i = 0; i < epsHistory.length - 1; i++) {
     const cur = epsHistory[i], prev = epsHistory[i + 1];
-    if (prev > 0 && cur > 0) {
-      const gr = (cur - prev) / prev;
+    if (prev !== 0) {
+      const gr = (cur - prev) / Math.abs(prev);
       if (isFinite(gr) && Math.abs(gr) < 10) {
         epsGrowthRates.push(gr);
-        epsGrowthHistory.push({ year: String(inc[i]?.calendarYear ?? `Y${i}`), growth: gr });
+        const yr = inc[i]?.calendarYear ?? (inc[i]?.date ? new Date(inc[i].date!).getFullYear() : null);
+        epsGrowthHistory.push({ year: yr != null ? String(yr) : `Y${i}`, growth: gr });
       }
     }
   }
@@ -544,8 +545,8 @@ export async function lookupTicker(
     const rates: number[] = [];
     for (let i = 0; i < maxIdx && i < epsHistory.length - 1; i++) {
       const cur = epsHistory[i], prev = epsHistory[i + 1];
-      if (prev > 0 && cur > 0) {
-        const gr = (cur - prev) / prev;
+      if (prev !== 0) {
+        const gr = (cur - prev) / Math.abs(prev);
         if (isFinite(gr) && Math.abs(gr) < 10) rates.push(gr);
       }
     }
