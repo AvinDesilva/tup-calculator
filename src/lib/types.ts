@@ -160,6 +160,13 @@ export interface FMPCashFlow {
   netCashProvidedByOperatingActivities?: number;
 }
 
+// ─── EPS growth history point ────────────────────────────────────────────────
+
+export interface EpsGrowthPoint {
+  year: string;
+  growth: number; // decimal, e.g. 0.15 = 15%
+}
+
 // ─── lookupTicker return ──────────────────────────────────────────────────────
 
 export interface TickerData {
@@ -207,6 +214,7 @@ export interface TickerData {
   earningsSurprises: FMPEarningSurprise[];
   cashFlowHistory: FMPCashFlow[];
   incomeHistory: FMPIncomeStatement[];
+  epsGrowthHistory: EpsGrowthPoint[];
   description: string;
   exchange: string;
 }

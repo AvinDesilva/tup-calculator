@@ -1,4 +1,4 @@
-import type { InputState, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement } from "./types.ts";
+import type { InputState, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement, EpsGrowthPoint } from "./types.ts";
 
 /** Dummy AAPL data for local dev preview — no API key needed. */
 export const DEV_TICKER = "AAPL";
@@ -58,6 +58,19 @@ export const DEV_INCOME_HISTORY: FMPIncomeStatement[] = [
 ];
 
 export const DEV_DESCRIPTION = "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide. The company offers iPhone, Mac, iPad, and wearables, home, and accessories. It also provides AppleCare support and cloud services, and operates various platforms including the App Store.";
+
+export const DEV_EPS_GROWTH_HISTORY: EpsGrowthPoint[] = [
+  { year: "2025", growth: 0.09 },
+  { year: "2024", growth: 0.10 },
+  { year: "2023", growth: -0.01 },
+  { year: "2022", growth: 0.09 },
+  { year: "2021", growth: 0.71 },
+  { year: "2020", growth: 0.10 },
+  { year: "2019", growth: -0.01 },
+  { year: "2018", growth: 0.30 },
+  { year: "2017", growth: 0.11 },
+  { year: "2016", growth: -0.10 },
+];
 
 export const DEV_GROWTH_VALUES = { g5: 17, g10: 12 };
 

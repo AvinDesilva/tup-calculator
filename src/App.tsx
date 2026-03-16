@@ -29,6 +29,7 @@ interface ScorecardState {
   earnings: FMPEarningSurprise[];
   cashFlows: FMPCashFlow[];
   incomeHistory: FMPIncomeStatement[];
+  epsGrowthHistory: import("./lib/types.ts").EpsGrowthPoint[];
   description: string;
   exchange: string;
 }
@@ -59,7 +60,7 @@ export default function App() {
   const [currencyNote, setCurrencyNote] = useState("");
   const [currencyMismatchWarning, setCurrencyMismatchWarning] = useState("");
   const [valuation, setValuation] = useState<ValuationState>({ dcf: null, altmanZ: null });
-  const [scorecard, setScorecard] = useState<ScorecardState>({ earnings: [], cashFlows: [], incomeHistory: [], description: "", exchange: "" });
+  const [scorecard, setScorecard] = useState<ScorecardState>({ earnings: [], cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "", exchange: "" });
 
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -150,7 +151,7 @@ export default function App() {
   const doFetch = async (tickerOverride?: string) => {
     const t = (tickerOverride || ticker).trim().toUpperCase();
     if (!t) { setError("Enter a ticker symbol."); return; }
-    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, altmanZ: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [], description: "", exchange: "" }); setStrongBuyPrice(null); setBuyPrice(null); setHasSearched(true);
+    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, altmanZ: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "", exchange: "" }); setStrongBuyPrice(null); setBuyPrice(null); setHasSearched(true);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
     try {
@@ -162,7 +163,7 @@ export default function App() {
       setCurrencyNote(data.currencyNote || "");
       setCurrencyMismatchWarning(data.currencyMismatchWarning || "");
       setValuation({ dcf: data.dcfValue, altmanZ: data.altmanZ });
-      setScorecard({ earnings: data.earningsSurprises, cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory, description: data.description, exchange: data.exchange });
+      setScorecard({ earnings: data.earningsSurprises, cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory, epsGrowthHistory: data.epsGrowthHistory, description: data.description, exchange: data.exchange });
 
       setGrowthValues({ g5: data.historicalGrowth5yr, g10: data.historicalGrowth });
       setGrowthYears({ short: data.epsYearsShort, long: data.epsYearsLong });
@@ -240,7 +241,7 @@ export default function App() {
       setMeta(dev.DEV_META);
       setInp(dev.DEV_INP);
       setValuation(dev.DEV_VALUATION);
-      setScorecard({ earnings: dev.DEV_EARNINGS, cashFlows: dev.DEV_CASH_FLOWS, incomeHistory: dev.DEV_INCOME_HISTORY, description: dev.DEV_DESCRIPTION, exchange: "NASDAQ" });
+      setScorecard({ earnings: dev.DEV_EARNINGS, cashFlows: dev.DEV_CASH_FLOWS, incomeHistory: dev.DEV_INCOME_HISTORY, epsGrowthHistory: dev.DEV_EPS_GROWTH_HISTORY, description: dev.DEV_DESCRIPTION, exchange: "NASDAQ" });
       setGrowthValues(dev.DEV_GROWTH_VALUES);
       setGrowthYears(dev.DEV_GROWTH_YEARS);
       setScenarioValues({
@@ -393,6 +394,7 @@ export default function App() {
               growthPeriod={growthPeriod}
               growthValues={growthValues}
               growthYears={growthYears}
+              epsGrowthHistory={scorecard.epsGrowthHistory}
               onGrowthPeriodChange={p => {
                 if (p === "10yr" && growthYears.long <= growthYears.short) return;
                 setGrowthPeriod(p);

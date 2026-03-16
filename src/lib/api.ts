@@ -6,7 +6,7 @@ import type {
   FMPProfile, FMPQuote, FMPBalanceSheet, FMPIncomeStatement,
   FMPEstimate,
   FMPDividend, FMPDividendHistory, FMPDCF,
-  FMPEarningSurprise, FMPCashFlow,
+  FMPEarningSurprise, FMPCashFlow, EpsGrowthPoint,
 } from "./types.ts";
 
 // ─── Ticker Search ────────────────────────────────────────────────────────────
@@ -512,11 +512,15 @@ export async function lookupTicker(
   }
 
   const epsGrowthRates: number[] = [];
+  const epsGrowthHistory: EpsGrowthPoint[] = [];
   for (let i = 0; i < epsHistory.length - 1; i++) {
     const cur = epsHistory[i], prev = epsHistory[i + 1];
     if (prev > 0 && cur > 0) {
       const gr = (cur - prev) / prev;
-      if (isFinite(gr) && Math.abs(gr) < 10) epsGrowthRates.push(gr);
+      if (isFinite(gr) && Math.abs(gr) < 10) {
+        epsGrowthRates.push(gr);
+        epsGrowthHistory.push({ year: String(inc[i]?.calendarYear ?? `Y${i}`), growth: gr });
+      }
     }
   }
   const sortedGrVals = [...epsGrowthRates].sort((a, b) => a - b);
@@ -889,6 +893,7 @@ export async function lookupTicker(
     earningsSurprises: Array.isArray(earningsSurprises) ? earningsSurprises : [],
     cashFlowHistory: Array.isArray(cashFlows) ? cashFlows : [],
     incomeHistory: Array.isArray(income) ? income : [],
+    epsGrowthHistory,
     description: p.description || "",
     exchange,
   };
