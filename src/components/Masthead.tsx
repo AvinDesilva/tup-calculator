@@ -6,9 +6,10 @@ interface MastheadProps {
   isConverted: boolean;
   currencyNote: string;
   onShowMethodology: () => void;
+  onReset?: () => void;
 }
 
-export function Masthead({ company, meta, isConverted, currencyNote, onShowMethodology }: MastheadProps) {
+export function Masthead({ company, meta, isConverted, currencyNote, onShowMethodology, onReset }: MastheadProps) {
   return (
     <header className="rsp-header" style={{
       paddingTop: "28px",
@@ -21,7 +22,10 @@ export function Masthead({ company, meta, isConverted, currencyNote, onShowMetho
       animation: "fadeInUp 0.4s ease both",
     }}>
       <div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
+        <div
+          onClick={onReset}
+          style={{ display: "flex", alignItems: "baseline", gap: "10px", cursor: onReset ? "pointer" : undefined }}
+        >
           <h1 style={{
             fontFamily: C.serif,
             fontWeight: 400,

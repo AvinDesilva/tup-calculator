@@ -299,6 +299,14 @@ export default function App() {
           isConverted={isConverted}
           currencyNote={currencyNote}
           onShowMethodology={() => { setShowMethodology(true); window.scrollTo(0, 0); }}
+          onReset={hasSearched ? () => {
+            setHasSearched(false);
+            setCompany("");
+            setTicker("");
+            setError("");
+            setFetchLog([]);
+            window.scrollTo(0, 0);
+          } : undefined}
         />
 
         {!hasSearched && (

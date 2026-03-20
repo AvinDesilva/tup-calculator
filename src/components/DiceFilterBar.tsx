@@ -11,13 +11,14 @@ interface DiceFilterBarProps {
   activeFilters: RollFilters;
   onApply: (f: RollFilters) => void;
   onReset: () => void;
+  variant?: "hero" | "compact";
 }
 
 const CAPS: MarketCapTier[] = ["All", "Micro", "Small", "Mid", "Large"];
 const EXCHANGES: ExchangeFilter[] = ["All", "NYSE", "NASDAQ", "OTC", "LSE", "TSX"];
 const SECTOR_OPTIONS = ["", ...GICS_SECTORS] as const;
 
-function SectorDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function SectorDropdown({ value, onChange, large }: { value: string; onChange: (v: string) => void; large?: boolean }) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -28,7 +29,7 @@ function SectorDropdown({ value, onChange }: { value: string; onChange: (v: stri
     if (!open) return;
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      const width = Math.max(rect.width, 180);
+      const width = Math.max(rect.width, large ? 260 : 180);
       setPos({ top: rect.bottom + window.scrollY, left: rect.right + window.scrollX - width, width });
     }
     const handler = (e: MouseEvent) => {
@@ -39,7 +40,7 @@ function SectorDropdown({ value, onChange }: { value: string; onChange: (v: stri
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+  }, [open, large]);
 
   useEffect(() => {
     if (activeIndex < 0 || !listRef.current) return;
@@ -57,6 +58,9 @@ function SectorDropdown({ value, onChange }: { value: string; onChange: (v: stri
     else if (e.key === "Escape") setOpen(false);
   };
 
+  const dropdownFontSize = large ? "18px" : "13px";
+  const dropdownPadding = large ? "12px 20px" : "8px 16px";
+
   const dropdown = open && pos ? createPortal(
     <div ref={listRef} style={{
       position: "absolute",
@@ -67,7 +71,7 @@ function SectorDropdown({ value, onChange }: { value: string; onChange: (v: stri
       background: "#1a1a1a",
       border: "1px solid rgba(255,255,255,0.12)",
       borderTop: "none",
-      maxHeight: "240px",
+      maxHeight: large ? "320px" : "240px",
       overflowY: "auto",
       boxShadow: "0 8px 24px rgba(0,0,0,0.8)",
     }}>
@@ -77,7 +81,7 @@ function SectorDropdown({ value, onChange }: { value: string; onChange: (v: stri
           onMouseDown={e => { e.preventDefault(); select(s); }}
           onMouseEnter={() => setActiveIndex(i)}
           style={{
-            padding: "8px 16px",
+            padding: dropdownPadding,
             cursor: "pointer",
             background: i === activeIndex ? "#2a2520" : "#1a1a1a",
             transition: "background 0.1s",
@@ -86,7 +90,7 @@ function SectorDropdown({ value, onChange }: { value: string; onChange: (v: stri
         >
           <span style={{
             fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: "13px",
+            fontSize: dropdownFontSize,
             color: (s === value) ? "#C4A06E" : "#e8e4dc",
             fontWeight: (s === value) ? 600 : 400,
           }}>
@@ -110,8 +114,8 @@ function SectorDropdown({ value, onChange }: { value: string; onChange: (v: stri
           borderBottom: `1px solid ${open ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
           color: value ? "#C4A06E" : "#666",
           fontFamily: C.mono,
-          fontSize: "10px",
-          padding: "3px 0",
+          fontSize: large ? "18px" : "10px",
+          padding: large ? "6px 0" : "3px 0",
           cursor: "pointer",
           textAlign: "left",
           outline: "none",
@@ -119,7 +123,7 @@ function SectorDropdown({ value, onChange }: { value: string; onChange: (v: stri
           transition: "border-color 0.15s",
         }}
       >
-        {value || "All"} <span style={{ fontSize: "7px", marginLeft: "2px", opacity: 0.5 }}>▼</span>
+        {value || "All"} <span style={{ fontSize: large ? "12px" : "7px", marginLeft: "2px", opacity: 0.5 }}>▼</span>
       </button>
       {dropdown}
     </>
@@ -134,9 +138,10 @@ function isDefault(f: RollFilters): boolean {
   return filtersEqual(f, DEFAULT_FILTERS);
 }
 
-export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset }: DiceFilterBarProps) {
+export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant = "compact" }: DiceFilterBarProps) {
   const [pending, setPending] = useState<RollFilters>(activeFilters);
   const [applied, setApplied] = useState(false);
+  const hero = variant === "hero";
 
   // Sync pending when activeFilters change externally (e.g. reset)
   useEffect(() => { setPending(activeFilters); }, [activeFilters]);
@@ -156,6 +161,168 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset }: DiceF
     onReset();
   };
 
+  // Size multipliers for hero variant (2x) — clamp for mobile scaling
+  const labelSize = hero ? "clamp(10px, 3.5vw, 16px)" : "8px";
+  const btnFontSize = hero ? "clamp(11px, 3.8vw, 18px)" : "9px";
+  const btnPadding = hero ? "clamp(4px, 1.5vw, 8px) clamp(6px, 2vw, 16px)" : "3px 7px";
+  const etfInputSize = hero ? "18px" : "10px";
+  const etfInputWidth = hero ? "100px" : "50px";
+  const etfInputPadding = hero ? "6px 0" : "3px 0";
+  const applyFontSize = hero ? "18px" : "9px";
+  const applyPadding = hero ? "8px 20px" : "4px 10px";
+  const resetFontSize = hero ? "18px" : "9px";
+
+  const heroRowStyle: React.CSSProperties = hero ? { width: "100%", maxWidth: "100%", padding: "0 12px", boxSizing: "border-box" } : {};
+
+  const capButtons = (
+    <div style={heroRowStyle}>
+      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px", textAlign: hero ? "center" : undefined }}>Cap</div>
+      <div style={{ display: "flex", justifyContent: hero ? "center" : undefined }}>
+        {CAPS.map((cap, i) => (
+          <button key={cap} onClick={() => setPending(p => ({ ...p, marketCap: cap }))} style={{
+            fontSize: btnFontSize,
+            fontWeight: 700,
+            fontFamily: C.mono,
+            letterSpacing: "0.05em",
+            padding: btnPadding,
+            ...(hero ? { flex: "1 1 0", minWidth: 0 } : {}),
+            background: pending.marketCap === cap ? "rgba(196,160,110,0.2)" : "transparent",
+            border: `1px solid ${pending.marketCap === cap ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+            color: pending.marketCap === cap ? "#C4A06E" : "#666",
+            cursor: "pointer",
+            borderRadius: i === 0 ? "3px 0 0 3px" : i === CAPS.length - 1 ? "0 3px 3px 0" : "0",
+            marginLeft: i > 0 ? "-1px" : "0",
+          }}>{cap}</button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Wider labels get more flex share so "NASDAQ" doesn't overflow
+  const exchangeFlex: Record<string, string> = { All: "1.4 1 0", NYSE: "1.4 1 0", NASDAQ: "1.8 1 0", OTC: "1 1 0", LSE: "1 1 0", TSX: "1 1 0" };
+
+  const exchangeButtons = (
+    <div style={heroRowStyle}>
+      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px", textAlign: hero ? "center" : undefined }}>Exchange</div>
+      <div style={{ display: "flex", justifyContent: hero ? "center" : undefined }}>
+        {EXCHANGES.map((ex, i) => (
+          <button key={ex} onClick={() => setPending(p => ({ ...p, exchange: ex }))} style={{
+            fontSize: btnFontSize,
+            fontWeight: 700,
+            fontFamily: C.mono,
+            letterSpacing: "0.05em",
+            padding: btnPadding,
+            ...(hero ? { flex: exchangeFlex[ex] || "1 1 0", minWidth: 0 } : {}),
+            background: pending.exchange === ex ? "rgba(196,160,110,0.2)" : "transparent",
+            border: `1px solid ${pending.exchange === ex ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+            color: pending.exchange === ex ? "#C4A06E" : "#666",
+            cursor: "pointer",
+            borderRadius: i === 0 ? "3px 0 0 3px" : i === EXCHANGES.length - 1 ? "0 3px 3px 0" : "0",
+            marginLeft: i > 0 ? "-1px" : "0",
+          }}>{ex}</button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const sectorField = (
+    <div>
+      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px" }}>Sector</div>
+      <SectorDropdown value={pending.sector} onChange={v => setPending(p => ({ ...p, sector: v }))} large={hero} />
+    </div>
+  );
+
+  const etfField = (
+    <div>
+      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px" }}>ETF</div>
+      <input
+        type="text"
+        placeholder="VTI"
+        value={pending.indexEtf}
+        onChange={e => setPending(p => ({ ...p, indexEtf: e.target.value.toUpperCase() }))}
+        style={{
+          background: "transparent",
+          border: "none",
+          borderBottom: `1px solid rgba(255,255,255,0.1)`,
+          color: pending.indexEtf ? "#C4A06E" : C.text1,
+          fontFamily: C.mono,
+          fontSize: etfInputSize,
+          padding: etfInputPadding,
+          width: etfInputWidth,
+          outline: "none",
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+        }}
+      />
+    </div>
+  );
+
+  const applyResetButtons = (
+    <div style={{ display: "flex", alignItems: "center", gap: hero ? "16px" : "10px" }}>
+      <button onClick={handleApply} disabled={!hasPendingChanges && !applied} style={{
+        fontSize: applyFontSize,
+        fontWeight: 700,
+        fontFamily: C.mono,
+        letterSpacing: "0.08em",
+        padding: applyPadding,
+        background: "transparent",
+        border: `1px solid ${applied ? "rgba(0,191,165,0.5)" : hasPendingChanges ? "rgba(0,191,165,0.5)" : "rgba(255,255,255,0.1)"}`,
+        color: applied ? "#00BFA5" : hasPendingChanges ? "#00BFA5" : "#444",
+        cursor: hasPendingChanges ? "pointer" : "default",
+        textTransform: "uppercase",
+        transition: "all 0.15s",
+        borderRadius: "3px",
+      }}>
+        {applied ? "Applied \u2713" : "Apply"}
+      </button>
+      {showReset && (
+        <button onClick={handleReset} style={{
+          fontSize: resetFontSize,
+          fontWeight: 600,
+          fontFamily: C.mono,
+          letterSpacing: "0.05em",
+          padding: "0",
+          background: "transparent",
+          border: "none",
+          color: "#666",
+          cursor: "pointer",
+          textTransform: "uppercase",
+          transition: "color 0.15s",
+        }}>Reset</button>
+      )}
+    </div>
+  );
+
+  if (hero) {
+    return (
+      <div className={`rsp-dice-filter-wrap${isOpen ? " rsp-dice-filter-open" : ""}`} style={{
+        overflow: "hidden",
+        maxHeight: isOpen ? "400px" : "0",
+        transition: "max-height 0.3s ease",
+      }}>
+        <div style={{
+          paddingTop: "20px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "16px",
+          width: "100%",
+        }}>
+          {/* Row 1: Cap */}
+          {capButtons}
+          {/* Row 2: Exchange */}
+          {exchangeButtons}
+          {/* Row 3: Sector + ETF + Apply */}
+          <div style={{ display: "flex", alignItems: "flex-end", gap: "24px", flexWrap: "wrap", justifyContent: "center", padding: "0 12px" }}>
+            {sectorField}
+            {etfField}
+            {applyResetButtons}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`rsp-dice-filter-wrap${isOpen ? " rsp-dice-filter-open" : ""}`} style={{
       overflow: "hidden",
@@ -171,114 +338,11 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset }: DiceF
         alignItems: "flex-end",
         justifyContent: "flex-end",
       }}>
-        {/* Market Cap */}
-        <div>
-          <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: "4px" }}>Cap</div>
-          <div style={{ display: "flex" }}>
-            {CAPS.map((cap, i) => (
-              <button key={cap} onClick={() => setPending(p => ({ ...p, marketCap: cap }))} style={{
-                fontSize: "9px",
-                fontWeight: 700,
-                fontFamily: C.mono,
-                letterSpacing: "0.05em",
-                padding: "3px 7px",
-                background: pending.marketCap === cap ? "rgba(196,160,110,0.2)" : "transparent",
-                border: `1px solid ${pending.marketCap === cap ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
-                color: pending.marketCap === cap ? "#C4A06E" : "#666",
-                cursor: "pointer",
-                borderRadius: i === 0 ? "3px 0 0 3px" : i === CAPS.length - 1 ? "0 3px 3px 0" : "0",
-                marginLeft: i > 0 ? "-1px" : "0",
-              }}>{cap}</button>
-            ))}
-          </div>
-        </div>
-
-        {/* Exchange */}
-        <div>
-          <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: "4px" }}>Exchange</div>
-          <div style={{ display: "flex" }}>
-            {EXCHANGES.map((ex, i) => (
-              <button key={ex} onClick={() => setPending(p => ({ ...p, exchange: ex }))} style={{
-                fontSize: "9px",
-                fontWeight: 700,
-                fontFamily: C.mono,
-                letterSpacing: "0.05em",
-                padding: "3px 7px",
-                background: pending.exchange === ex ? "rgba(196,160,110,0.2)" : "transparent",
-                border: `1px solid ${pending.exchange === ex ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
-                color: pending.exchange === ex ? "#C4A06E" : "#666",
-                cursor: "pointer",
-                borderRadius: i === 0 ? "3px 0 0 3px" : i === EXCHANGES.length - 1 ? "0 3px 3px 0" : "0",
-                marginLeft: i > 0 ? "-1px" : "0",
-              }}>{ex}</button>
-            ))}
-          </div>
-        </div>
-
-        {/* Sector */}
-        <div>
-          <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: "4px" }}>Sector</div>
-          <SectorDropdown value={pending.sector} onChange={v => setPending(p => ({ ...p, sector: v }))} />
-        </div>
-
-        {/* ETF */}
-        <div>
-          <div style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: "4px" }}>ETF</div>
-          <input
-            type="text"
-            placeholder="VTI"
-            value={pending.indexEtf}
-            onChange={e => setPending(p => ({ ...p, indexEtf: e.target.value.toUpperCase() }))}
-            style={{
-              background: "transparent",
-              border: "none",
-              borderBottom: `1px solid rgba(255,255,255,0.1)`,
-              color: pending.indexEtf ? "#C4A06E" : C.text1,
-              fontFamily: C.mono,
-              fontSize: "10px",
-              padding: "3px 0",
-              width: "50px",
-              outline: "none",
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-            }}
-          />
-        </div>
-
-        {/* Apply + Reset */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <button onClick={handleApply} disabled={!hasPendingChanges && !applied} style={{
-            fontSize: "9px",
-            fontWeight: 700,
-            fontFamily: C.mono,
-            letterSpacing: "0.08em",
-            padding: "4px 10px",
-            background: "transparent",
-            border: `1px solid ${applied ? "rgba(0,191,165,0.5)" : hasPendingChanges ? "rgba(0,191,165,0.5)" : "rgba(255,255,255,0.1)"}`,
-            color: applied ? "#00BFA5" : hasPendingChanges ? "#00BFA5" : "#444",
-            cursor: hasPendingChanges ? "pointer" : "default",
-            textTransform: "uppercase",
-            transition: "all 0.15s",
-            borderRadius: "3px",
-          }}>
-            {applied ? "Applied \u2713" : "Apply"}
-          </button>
-          {showReset && (
-            <button onClick={handleReset} style={{
-              fontSize: "9px",
-              fontWeight: 600,
-              fontFamily: C.mono,
-              letterSpacing: "0.05em",
-              padding: "0",
-              background: "transparent",
-              border: "none",
-              color: "#666",
-              cursor: "pointer",
-              textTransform: "uppercase",
-              transition: "color 0.15s",
-            }}>Reset</button>
-          )}
-        </div>
+        {capButtons}
+        {exchangeButtons}
+        {sectorField}
+        {etfField}
+        {applyResetButtons}
       </div>
     </div>
   );

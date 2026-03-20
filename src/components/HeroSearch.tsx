@@ -93,14 +93,14 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
 
       {error && <div style={{ marginTop: "12px", fontSize: "11px", textAlign: "center" }}><ErrorDisplay error={error} /></div>}
 
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "20px" }}>
         <button onClick={onRollDice} disabled={rollingDice || loading} style={{
           position: "relative",
-          padding: "10px 24px",
+          padding: "clamp(6px, 1.5vw, 12px) clamp(14px, 4vw, 32px)",
           background: "transparent",
           color: C.accent,
           border: `1px solid ${C.accent}`,
-          fontSize: "11px",
+          fontSize: "clamp(11px, 3.8vw, 18px)",
           fontWeight: 700,
           letterSpacing: "0.12em",
           textTransform: "uppercase",
@@ -113,7 +113,7 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
           {rollingDice ? dicePhrase : "Roll the TUP Dice"} <span style={rollingDice ? { display: "inline-block", animation: "spin 0.6s linear infinite" } : undefined}>🎲</span>
         </button>
         <button onClick={onToggleFilter} style={{
-          width: "32px", height: "32px",
+          width: "clamp(32px, 8vw, 48px)", height: "clamp(32px, 8vw, 48px)",
           display: "flex", alignItems: "center", justifyContent: "center",
           background: "transparent",
           border: `1px solid ${hasActiveFilters ? "#C4A06E" : "rgba(255,255,255,0.15)"}`,
@@ -122,7 +122,7 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
           transition: "all 0.15s",
           flexShrink: 0,
         }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="clamp(14px, 4vw, 24px)" height="clamp(14px, 4vw, 24px)" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="4" y1="6" x2="20" y2="6" />
             <line x1="4" y1="12" x2="20" y2="12" />
             <line x1="4" y1="18" x2="20" y2="18" />
@@ -133,17 +133,20 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
         </button>
       </div>
 
-      <div style={{ width: "100%", maxWidth: "600px" }}>
+      <div style={{ width: "100%", maxWidth: "700px" }}>
         <DiceFilterBar
           isOpen={isFilterOpen}
           activeFilters={rollFilters}
           onApply={onApplyFilters}
           onReset={onResetFilters}
+          variant="hero"
         />
       </div>
 
-      <div style={{ marginTop: "12px", fontSize: "10px", color: C.text3, letterSpacing: "0.08em" }}>
-        Search by company name or ticker · US, UK & Canadian markets
+      <div style={{ marginTop: "16px", fontSize: "10px", color: C.text3, letterSpacing: "0.08em", textAlign: "center" }}>
+        Search by company name or ticker — US, UK & Canadian markets
+        <span style={{ margin: "0 8px", opacity: 0.4 }}>·</span>
+        For educational purposes only. Not financial advice.
       </div>
     </section>
   );
