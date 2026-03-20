@@ -116,6 +116,7 @@ export interface FMPIncomeStatement {
   revenue?: number;
   netIncome?: number;
   calendarYear?: string | number;
+  fiscalYear?: string | number;
   date?: string;
   weightedAverageShsOut?: number;
   weightedAverageShsOutDil?: number;

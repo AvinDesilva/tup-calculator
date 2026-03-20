@@ -28,71 +28,7 @@ export async function searchTickers(query: string): Promise<SearchResult[]> {
   }
 }
 
-// ─── Random stock picker (cached) ─────────────────────────────────────────────
-
-let _cachedCompanies: Array<{ symbol: string; name: string }> | null = null;
-const _etfCache: Record<string, Set<string>> = {};
-
-async function getETFHoldings(etf: string): Promise<Set<string>> {
-  const key = etf.toUpperCase();
-  if (!_etfCache[key]) {
-    try {
-      const holdings = await fetchFMP<Array<{ asset?: string; symbol?: string }>>(`etf-holder?symbol=${key}`);
-      _etfCache[key] = new Set(
-        (holdings || []).map(h => (h.asset || h.symbol || "").toUpperCase()).filter(Boolean)
-      );
-    } catch {
-      _etfCache[key] = new Set();
-    }
-  }
-  return _etfCache[key];
-}
-
-async function ensureCachedCompanies(): Promise<Array<{ symbol: string; name: string }>> {
-  if (!_cachedCompanies) {
-    const [list, vti] = await Promise.all([
-      fetchFMP<Array<{ symbol: string; name: string; type?: string; exchange?: string }>>("actively-trading-list"),
-      getETFHoldings("VTI"),
-    ]);
-    _cachedCompanies = list.filter(item => {
-      if (!item.symbol || !item.name) return false;
-      if (!/^[A-Z0-9$.]{1,10}$/.test(item.symbol)) return false;
-      if (item.type && item.type.toLowerCase() !== "stock") return false;
-      if (item.symbol.includes(".")) return false;
-      if (vti.size > 0 && !vti.has(item.symbol.toUpperCase())) return false;
-      const lower = item.name.toLowerCase();
-      if (lower.includes(" etf") || lower.includes("ishares") || lower.includes("vanguard") ||
-          lower.includes("spdr") || lower.includes(" fund") || lower.includes("proshares") ||
-          lower.includes("direxion") || lower.includes("wisdomtree") || lower.includes("trust")) return false;
-      return true;
-    });
-  }
-  return _cachedCompanies;
-}
-
-export async function fetchRandomTicker(): Promise<string> {
-  const companies = await ensureCachedCompanies();
-  if (companies.length === 0) throw new Error("No actively traded stocks found.");
-  return companies[Math.floor(Math.random() * companies.length)].symbol;
-}
-
-export async function fetchRandomTickerFiltered(indexEtf: string): Promise<string> {
-  const companies = await ensureCachedCompanies();
-  const etf = indexEtf || "VTI";
-  if (etf.toUpperCase() === "VTI") {
-    // Already filtered to VTI during caching
-    if (companies.length === 0) throw new Error("No actively traded stocks found.");
-    return companies[Math.floor(Math.random() * companies.length)].symbol;
-  }
-  const holdings = await getETFHoldings(etf);
-  const pool = holdings.size > 0
-    ? companies.filter(c => holdings.has(c.symbol.toUpperCase()))
-    : companies;
-  if (pool.length === 0) throw new Error(`No stocks found in ${etf.toUpperCase()}.`);
-  return pool[Math.floor(Math.random() * pool.length)].symbol;
-}
-
-// ─── Pre-filtered pool (screener + ETF intersection) ─────────────────────────
+// ─── Dice-roll stock pool (company-screener) ─────────────────────────────────
 
 const _screenedCache: Record<string, string[]> = {};
 
@@ -100,7 +36,7 @@ export async function fetchFilteredPool(filters: RollFilters): Promise<string[]>
   const cacheKey = `${filters.sector}|${filters.exchange}|${filters.marketCap}|${filters.indexEtf}`;
   if (_screenedCache[cacheKey]) return _screenedCache[cacheKey];
 
-  // Build FMP stock-screener query params
+  // Build FMP company-screener query params (stable API replacement for legacy stock-screener)
   const params: string[] = ["isActivelyTrading=true", "limit=5000"];
   if (filters.sector) params.push(`sector=${encodeURIComponent(filters.sector)}`);
   if (filters.marketCap !== "All") {
@@ -109,32 +45,33 @@ export async function fetchFilteredPool(filters: RollFilters): Promise<string[]>
     if (range.max < Infinity) params.push(`marketCapLowerThan=${range.max}`);
   }
 
-  const results = await fetchFMP<Array<{ symbol: string; exchangeShortName?: string }>>(
-    `stock-screener?${params.join("&")}`
+  const results = await fetchFMP<Array<{ symbol: string; exchangeShortName?: string; isEtf?: boolean; isFund?: boolean }>>(
+    `company-screener?${params.join("&")}`
   );
 
-  let symbols = (results || [])
+  const symbols = (results || [])
     .filter(r => {
       if (!r.symbol || r.symbol.includes(".")) return false;
-      // Local exchange filter (handles NYSE→AMEX/NYSEAMERICAN aliases)
-      if (filters.exchange !== "All") {
-        const ex = (r.exchangeShortName || "").toUpperCase();
-        if (filters.exchange === "NYSE" && ex !== "NYSE" && ex !== "AMEX" && ex !== "NYSEAMERICAN") return false;
-        if (filters.exchange === "NASDAQ" && ex !== "NASDAQ") return false;
-        if (filters.exchange === "OTC" && ex !== "OTC") return false;
-        if (filters.exchange === "LSE" && ex !== "LSE") return false;
-        if (filters.exchange === "TSX" && ex !== "TSX" && ex !== "TSXV") return false;
+      // Exclude ETFs and funds
+      if (r.isEtf || r.isFund) return false;
+      const ex = (r.exchangeShortName || "").toUpperCase();
+      // Exchange filter — default ("All") restricts to NYSE+NASDAQ (VTI-like universe)
+      if (filters.exchange === "All" || !filters.exchange) {
+        if (ex !== "NYSE" && ex !== "NASDAQ" && ex !== "AMEX" && ex !== "NYSEAMERICAN") return false;
+      } else if (filters.exchange === "NYSE") {
+        if (ex !== "NYSE" && ex !== "AMEX" && ex !== "NYSEAMERICAN") return false;
+      } else if (filters.exchange === "NASDAQ") {
+        if (ex !== "NASDAQ") return false;
+      } else if (filters.exchange === "OTC") {
+        if (ex !== "OTC") return false;
+      } else if (filters.exchange === "LSE") {
+        if (ex !== "LSE") return false;
+      } else if (filters.exchange === "TSX") {
+        if (ex !== "TSX" && ex !== "TSXV") return false;
       }
       return true;
     })
     .map(r => r.symbol.toUpperCase());
-
-  // Intersect with ETF holdings
-  const etf = (filters.indexEtf || "VTI").toUpperCase();
-  const holdings = await getETFHoldings(etf);
-  if (holdings.size > 0) {
-    symbols = symbols.filter(s => holdings.has(s));
-  }
 
   _screenedCache[cacheKey] = symbols;
   return symbols;
@@ -145,10 +82,11 @@ export async function fetchFilteredPool(filters: RollFilters): Promise<string[]>
 export async function fetchFMP<T = unknown>(endpoint: string): Promise<T> {
   const res = await fetch(`/api/fmp/${endpoint}`);
   if (!res.ok) {
-    if (import.meta.env.DEV) console.error(`FMP proxy ${res.status}: ${endpoint}`);
+    const body = await res.text().catch(() => "(no body)");
+    console.error(`[fetchFMP] FAIL ${res.status} /${endpoint}`, body);
     if (res.status === 401) throw new Error("Invalid API key.");
     if (res.status === 429) throw new Error("API rate limit reached. Try again later.");
-    throw new Error("Unable to fetch market data. Please try again.");
+    throw new Error(`Unable to fetch market data (HTTP ${res.status}: ${endpoint.split("?")[0]}). Please try again.`);
   }
   return res.json() as T;
 }
@@ -517,10 +455,10 @@ export async function lookupTicker(
     const cur = epsHistory[i], prev = epsHistory[i + 1];
     if (prev !== 0) {
       const gr = (cur - prev) / Math.abs(prev);
-      if (isFinite(gr) && Math.abs(gr) < 10) {
-        epsGrowthRates.push(gr);
-        const yr = inc[i]?.calendarYear ?? (inc[i]?.date ? new Date(inc[i].date!).getFullYear() : null);
+      if (isFinite(gr)) {
+        const yr = inc[i]?.calendarYear ?? inc[i]?.fiscalYear ?? (inc[i]?.date ? new Date(inc[i].date!).getFullYear() : null);
         epsGrowthHistory.push({ year: yr != null ? String(yr) : `Y${i}`, growth: gr });
+        if (Math.abs(gr) < 10) epsGrowthRates.push(gr);
       }
     }
   }

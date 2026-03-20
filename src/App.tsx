@@ -101,7 +101,9 @@ export default function App() {
     const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
     try {
       // Pre-filter pool using FMP screener + ETF intersection (single API call)
+      console.log("[rollDice] filters:", rollFilters);
       const pool = await fetchFilteredPool(rollFilters);
+      console.log("[rollDice] pool size:", pool.length);
       if (pool.length === 0) {
         setError("No stocks match these filters — try widening your criteria.");
         setRollingDice(false);
@@ -118,6 +120,7 @@ export default function App() {
         if (attempt > 0) await wait(DELAY_MS);
         const t = shuffled[attempt];
         try {
+          console.log(`[rollDice] attempt ${attempt + 1}/${limit}: ${t}`);
           const data = await lookupTickerQuick(t);
           const testInp: InputState = {
             marketCap: data.marketCap, debt: data.debt, cash: data.cash, shares: data.shares,
@@ -131,14 +134,16 @@ export default function App() {
           };
           const testResult = calcTUP(testInp, "standard");
           const pb = testResult?.payback;
+          console.log(`[rollDice] ${t} payback=${pb}`);
           if (pb && pb > 4 && pb < 18) {
+            console.log(`[rollDice] MATCH ${t} — running full fetch`);
             setTicker(t);
             await doFetch(t);
             setRollingDice(false);
             return;
           }
-        } catch {
-          // Skip tickers that fail to fetch
+        } catch (err) {
+          console.warn(`[rollDice] ${t} failed:`, err instanceof Error ? err.message : err);
         }
       }
       setError("Could not find a suitable stock — try adjusting filters.");

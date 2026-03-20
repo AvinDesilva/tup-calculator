@@ -172,6 +172,8 @@ app.get("/fmp/:endpoint(*)", async (req, res) => {
     const upstream = await fetch(url);
 
     if (!upstream.ok) {
+      const upBody = await upstream.text().catch(() => "(no body)");
+      console.error(`[tup-proxy] FMP ${upstream.status} for /${endpoint}`, upBody.slice(0, 200));
       if (upstream.status === 401) return res.status(401).json({ error: "Invalid API key." });
       if (upstream.status === 429) return res.status(429).json({ error: "API rate limit reached." });
       return res.status(upstream.status).json({ error: "Data unavailable." });
