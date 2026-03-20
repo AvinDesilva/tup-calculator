@@ -11,27 +11,27 @@ Automating my favorite way of evaluating growth stocks: calculating the time unt
 TUP Calculator is a single-page React 19 application built with TypeScript and Vite. The frontend communicates with Financial Modeling Prep via an Express proxy server running on EC2.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Browser (tupcalculator.org)                            │
-│                                                         │
-│  React 19 SPA                                           │
-│  ┌───────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ HeroSearch │→│ lookupTicker │→│ calcTUP(inp,mode)│  │
-│  │ DiceRoll   │  │  (api.ts)    │  │  (calcTUP.ts)    │  │
-│  └───────────┘  └──────┬───────┘  └────────┬─────────┘  │
-│                        │                   │             │
-│              ┌─────────┴─────────┐  ┌──────┴──────────┐  │
-│              │ 9 parallel FMP    │  │ VerdictCard     │  │
-│              │ API fetches       │  │ ValuationContext │  │
-│              └─────────┬─────────┘  │ CompanyScorecard│  │
-│                        │            │ Table           │  │
-│                        ▼            └─────────────────┘  │
-│              Express Proxy (:3001)                        │
-└────────────────────────┬────────────────────────────────┘
-                         │
-                         ▼
-              Financial Modeling Prep API
-              (financialmodelingprep.com)
++-----------------------------------------------------------+
+|  Browser (tupcalculator.org)                              |
+|                                                           |
+|  React 19 SPA                                             |
+|  +-------------+  +----------------+  +------------------+|
+|  | HeroSearch  |->| lookupTicker   |->| calcTUP(inp,mode)||
+|  | DiceRoll    |  | (api.ts)       |  | (calcTUP.ts)     ||
+|  +-------------+  +-------+--------+  +--------+---------+|
+|                           |                    |           |
+|                 +---------+----------+  +------+----------+|
+|                 | 9 parallel FMP     |  | VerdictCard     ||
+|                 | API fetches        |  | ValuationContext ||
+|                 +---------+----------+  | CompanyScorecard||
+|                           |             | Table           ||
+|                           v             +-----------------+|
+|                 Express Proxy (:3001)                      |
++---------------------------+--------------------------------+
+                            |
+                            v
+                 Financial Modeling Prep API
+                 (financialmodelingprep.com)
 ```
 
 ### Source Layout
