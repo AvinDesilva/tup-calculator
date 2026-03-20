@@ -158,6 +158,7 @@ export default function App() {
     const t = (tickerOverride || ticker).trim().toUpperCase();
     if (!t) { setError("Enter a ticker symbol."); return; }
     setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, altmanZ: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "", exchange: "" }); setStrongBuyPrice(null); setBuyPrice(null); setHasSearched(true);
+    window.scrollTo(0, 0);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
     try {
@@ -571,6 +572,9 @@ export default function App() {
           .rsp-ticker-bar {
             padding-bottom: 12px !important;
             margin-bottom: 4px !important;
+          }
+          .rsp-ticker-bar .rsp-api-bar {
+            padding-top: 18px !important;
           }
           .rsp-left-verdict {
             order: 1;

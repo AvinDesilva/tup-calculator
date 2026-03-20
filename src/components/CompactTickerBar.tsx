@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { C, inputShared } from "../lib/theme.ts";
 import { TickerSearch } from "./TickerSearch.tsx";
 import { ErrorDisplay } from "./ui.tsx";
@@ -24,18 +25,22 @@ interface CompactTickerBarProps {
 }
 
 export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, fetchLog, onRollDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onApplyFilters, onResetFilters, hasActiveFilters }: CompactTickerBarProps) {
+  const [hovered, setHovered] = useState(false);
   return (
-    <section className="rsp-ticker-bar" style={{ paddingTop: "20px", paddingBottom: "20px", marginBottom: "20px", borderBottom: `1px solid ${C.borderWeak}`, animation: "fadeInUp 0.4s ease both" }}>
-      <div className="rsp-api-bar" style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "20px", alignItems: "end" }}>
+    <section className="rsp-ticker-bar" style={{ position: "sticky", top: 0, zIndex: 100, background: C.bg, paddingTop: "20px", paddingBottom: "20px", marginBottom: "20px", borderBottom: `1px solid ${C.borderWeak}`, animation: "fadeInUp 0.4s ease both" }}>
+      <div className="rsp-api-bar" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "20px", alignItems: "center", border: `1px solid ${hovered ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)"}`, boxShadow: hovered ? "0 0 12px rgba(255,255,255,0.08)" : "none", padding: "14px 18px", borderRadius: "4px", transition: "border-color 0.2s, box-shadow 0.2s" }}>
         <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "10px" }}>
-          <label style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: C.text2, flexShrink: 0 }}>Ticker</label>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.text2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
           <TickerSearch
             value={ticker}
             onChange={onTickerChange}
             onSelect={onTickerSelect}
             onSubmit={onFetch}
-            placeholder="AAPL"
-            inputStyle={{ ...inputShared, letterSpacing: "0.12em", textTransform: "uppercase" }}
+            placeholder="click to search..."
+            inputStyle={{ ...inputShared, letterSpacing: "0.12em", textTransform: "uppercase", paddingBottom: 0, borderBottom: "none", lineHeight: 1, position: "relative", top: "-1.5px" }}
             onFocus={e => (e.target.style.borderBottomColor = C.accent)}
             onBlur={e => (e.target.style.borderBottomColor = C.borderWeak)}
           />
