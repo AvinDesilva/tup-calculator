@@ -138,6 +138,7 @@ export default function App() {
           if (pb && pb > 4 && pb < 18) {
             console.log(`[rollDice] MATCH ${t} — running full fetch`);
             setTicker(t);
+            setIsFilterOpen(false);
             await doFetch(t);
             setRollingDice(false);
             return;
