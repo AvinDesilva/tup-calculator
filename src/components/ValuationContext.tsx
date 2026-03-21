@@ -206,7 +206,7 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
         return (
           <div style={{ display: "flex", alignItems: "stretch", gap: "0", paddingTop: "14px" }}>
             {industryPanel && <div style={{ paddingRight: "3px" }}><Panel p={industryPanel} mono={mono} /></div>}
-            <div style={{ display: "flex", gap: "clamp(4px, 1.5vw, 9px)", paddingLeft: "4px", flex: 1, justifyContent: "center", minWidth: 0 }}>
+            <div style={{ display: "flex", gap: "clamp(4px, 1.5vw, 20px)", paddingLeft: "4px", flex: 1, justifyContent: "center", minWidth: 0 }}>
               {peers.map((peer) => (
                 <PeerCard key={peer.symbol} peer={peer} mono={mono} onSelect={onPeerSelect} />
               ))}
