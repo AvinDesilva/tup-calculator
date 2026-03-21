@@ -62,7 +62,6 @@ export default function App() {
   const [currencyNote, setCurrencyNote] = useState("");
   const [currencyMismatchWarning, setCurrencyMismatchWarning] = useState("");
   const [valuation, setValuation] = useState<ValuationState>({ dcf: null, industryGrowth: null, industryGrowthLoading: false });
-  const [seenPeers, setSeenPeers] = useState<string[]>([]);
   const [scorecard, setScorecard] = useState<ScorecardState>({ earnings: [], cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "", exchange: "" });
 
   const [hasSearched, setHasSearched] = useState(false);
@@ -168,8 +167,6 @@ export default function App() {
       const data = await lookupTicker(t, log);
 
       setCompany(data.companyName);
-      // Reset seen peers when industry changes
-      if (data.industry !== meta.industry) setSeenPeers([]);
       setMeta({ sector: data.sector, industry: data.industry });
       setIsConverted(data.isConverted || false);
       setCurrencyNote(data.currencyNote || "");
@@ -453,13 +450,7 @@ export default function App() {
               industryGrowth={valuation.industryGrowth}
               industryGrowthLoading={valuation.industryGrowthLoading}
               companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
-              onPeerSelect={(t) => {
-                // Remember currently visible peers before navigating
-                const currentPeers = valuation.industryGrowth?.peers?.slice(0, 3).map(p => p.symbol) || [];
-                setSeenPeers(prev => [...new Set([...prev, ...currentPeers])]);
-                setTicker(t); doFetch(t);
-              }}
-              excludePeers={seenPeers}
+              onPeerSelect={(t) => { setTicker(t); doFetch(t); }}
             />
             {company && (
               <CompanyScorecard
