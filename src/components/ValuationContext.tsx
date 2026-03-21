@@ -49,34 +49,36 @@ function PeerCard({ peer, mono, onSelect }: { peer: IndustryPeer; mono: string; 
       onClick={() => onSelect?.(peer.symbol)}
       aria-label={`Load ${peer.symbol} — ${pb} year payback`}
       style={{
-        padding: "4px 4px 4px 10px",
+        padding: "clamp(2px, 1vw, 4px) clamp(2px, 1vw, 4px) clamp(2px, 1vw, 4px) clamp(4px, 2vw, 10px)",
         background: "transparent",
         border: "1px solid #C4A06E",
         cursor: "pointer",
         textAlign: "center",
         height: "100%",
+        flex: "1 1 0",
+        minWidth: 0,
         boxSizing: "border-box",
         fontFamily: "'Space Grotesk', sans-serif",
         fontWeight: 700,
-        letterSpacing: "0.12em",
+        letterSpacing: "0.08em",
         textTransform: "uppercase" as const,
         color: "#C4A06E",
         transition: "opacity 0.15s",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: "6px",
+        gap: "clamp(2px, 1vw, 6px)",
       }}
     >
-      <span style={{ fontFamily: mono, fontSize: "11px", letterSpacing: "0.08em", color: "#888" }}>
+      <span style={{ fontFamily: mono, fontSize: "clamp(8px, 2.2vw, 11px)", letterSpacing: "0.06em", color: "#888", whiteSpace: "nowrap" }}>
         {peer.symbol}
       </span>
-      <span style={{ fontSize: "11px", color: "#555" }}>→</span>
-      <div style={{ display: "flex", alignItems: "baseline", gap: "2px" }}>
-        <span style={{ fontFamily: mono, fontSize: "16px", fontWeight: 600, color, letterSpacing: "-0.02em" }}>
+      <span style={{ fontSize: "clamp(8px, 2.2vw, 11px)", color: "#555" }}>→</span>
+      <div style={{ display: "flex", alignItems: "baseline", gap: "1px" }}>
+        <span style={{ fontFamily: mono, fontSize: "clamp(12px, 3.5vw, 16px)", fontWeight: 600, color, letterSpacing: "-0.02em" }}>
           {pb}
         </span>
-        <span style={{ fontSize: "9px", color: "#666", fontWeight: 400 }}>yr</span>
+        <span style={{ fontSize: "clamp(7px, 1.8vw, 9px)", color: "#666", fontWeight: 400 }}>yr</span>
       </div>
     </button>
   );
@@ -204,7 +206,7 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
         return (
           <div style={{ display: "flex", alignItems: "stretch", gap: "0", paddingTop: "14px" }}>
             {industryPanel && <div style={{ paddingRight: "3px" }}><Panel p={industryPanel} mono={mono} /></div>}
-            <div style={{ display: "flex", gap: "9px", paddingLeft: "4px", flex: 1, justifyContent: "center" }}>
+            <div style={{ display: "flex", gap: "clamp(4px, 1.5vw, 9px)", paddingLeft: "4px", flex: 1, justifyContent: "center", minWidth: 0 }}>
               {peers.map((peer) => (
                 <PeerCard key={peer.symbol} peer={peer} mono={mono} onSelect={onPeerSelect} />
               ))}
