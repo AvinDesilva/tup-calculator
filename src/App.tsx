@@ -176,7 +176,7 @@ export default function App() {
       // Fire industry growth fetch asynchronously (non-blocking)
       if (data.industry) {
         setValuation(prev => ({ ...prev, industryGrowthLoading: true }));
-        fetchIndustryGrowth(data.industry, t).then(ig => {
+        fetchIndustryGrowth(data.industry, t, data.exchange).then(ig => {
           setValuation(prev => ({ ...prev, industryGrowth: ig, industryGrowthLoading: false }));
         });
       }
