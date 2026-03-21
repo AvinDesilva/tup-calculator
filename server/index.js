@@ -228,17 +228,19 @@ app.get("/industry-growth", async (req, res) => {
       const batchPromises = batch.map(async (company) => {
         const sym = company.symbol;
         try {
-          const [growthRes, estimatesRes, quoteRes, incomeRes] = await Promise.allSettled([
+          const [growthRes, estimatesRes, quoteRes, incomeRes, bsRes] = await Promise.allSettled([
             fetch(`${FMP_BASE}/financial-growth?symbol=${encodeURIComponent(sym)}&limit=10&apikey=${API_KEY}`).then(r => r.ok ? r.json() : []),
             fetch(`${FMP_BASE}/analyst-estimates?symbol=${encodeURIComponent(sym)}&period=annual&limit=5&apikey=${API_KEY}`).then(r => r.ok ? r.json() : []),
             fetch(`${FMP_BASE}/quote?symbol=${encodeURIComponent(sym)}&apikey=${API_KEY}`).then(r => r.ok ? r.json() : []),
             fetch(`${FMP_BASE}/income-statement?symbol=${encodeURIComponent(sym)}&limit=1&apikey=${API_KEY}`).then(r => r.ok ? r.json() : []),
+            fetch(`${FMP_BASE}/balance-sheet-statement?symbol=${encodeURIComponent(sym)}&limit=1&apikey=${API_KEY}`).then(r => r.ok ? r.json() : []),
           ]);
 
           const growthData = growthRes.status === "fulfilled" ? growthRes.value : [];
           const estimatesData = estimatesRes.status === "fulfilled" ? estimatesRes.value : [];
           const quoteData = quoteRes.status === "fulfilled" ? quoteRes.value : [];
           const incomeData = incomeRes.status === "fulfilled" ? incomeRes.value : [];
+          const bsData = bsRes.status === "fulfilled" ? bsRes.value : [];
 
           // Historical EPS growth — median of YoY rates (matches frontend approach),
           // filtering outliers |g| >= 10
@@ -292,22 +294,42 @@ app.get("/industry-growth", async (req, res) => {
           // Sanity check — skip extreme outliers
           if (!isFinite(blended) || Math.abs(blended) > 2) return null;
 
-          // Simplified TUP payback (price-based, no debt/cash adjustment)
-          const price = quoteData?.[0]?.price || company.price || 0;
-          // EPS: try quote first, fall back to income statement (netIncome / diluted shares)
-          let eps = quoteData?.[0]?.eps || 0;
-          if (!eps && Array.isArray(incomeData) && incomeData[0]) {
+          // TUP payback — matches calcTUP: adjusted price + blended EPS base
+          const mktCap = quoteData?.[0]?.marketCap || company.marketCap || 0;
+          const shares = quoteData?.[0]?.sharesOutstanding
+            || (Array.isArray(incomeData) && incomeData[0]
+              ? (incomeData[0].weightedAverageShsOutDil || incomeData[0].weightedAverageShsOut || 0)
+              : 0);
+
+          // TTM EPS: quote → income statement fallback
+          let ttmEPS = quoteData?.[0]?.eps || 0;
+          if (!ttmEPS && Array.isArray(incomeData) && incomeData[0]) {
             const ni = incomeData[0].netIncome || 0;
             const sh = incomeData[0].weightedAverageShsOutDil || incomeData[0].weightedAverageShsOut || 0;
-            if (sh > 0) eps = ni / sh;
+            if (sh > 0) ttmEPS = ni / sh;
           }
+
+          // Forward EPS from analyst estimates (first year epsAvg)
+          const fwdEPS = (Array.isArray(estimatesData) && estimatesData.length > 0)
+            ? [...estimatesData].sort((a, b) => (a.date || "").localeCompare(b.date || ""))[0]?.epsAvg || 0
+            : 0;
+
+          // Blended EPS base: (TTM + forward) / 2, fallback to TTM only
+          const epsBase = (ttmEPS > 0 && fwdEPS > 0) ? (ttmEPS + fwdEPS) / 2 : ttmEPS;
+
+          // Adjusted price (enterprise value per share): (mktCap + debt - cash) / shares
+          const bs = Array.isArray(bsData) && bsData[0] ? bsData[0] : {};
+          const debt = bs.totalDebt || 0;
+          const cash = bs.cashAndCashEquivalents || bs.cashAndShortTermInvestments || 0;
+          const adjPrice = shares > 0 ? (mktCap + debt - cash) / shares : 0;
+
           let payback = null;
-          if (eps > 0 && price > 0 && blended > 0) {
-            let cum = 0, epsY = eps;
+          if (epsBase > 0 && adjPrice > 0 && blended > 0) {
+            let cum = 0, epsY = epsBase;
             for (let y = 1; y <= 30; y++) {
               epsY *= (1 + blended);
               cum += epsY;
-              if (cum >= price) { payback = y; break; }
+              if (cum >= adjPrice) { payback = y; break; }
             }
           }
 
