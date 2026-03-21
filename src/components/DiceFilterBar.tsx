@@ -62,7 +62,7 @@ function SectorDropdown({ value, onChange, large }: { value: string; onChange: (
   const dropdownPadding = large ? "12px 20px" : "8px 16px";
 
   const dropdown = open && pos ? createPortal(
-    <div ref={listRef} style={{
+    <div ref={listRef} role="listbox" aria-label="Sector options" style={{
       position: "absolute",
       top: pos.top,
       left: pos.left,
@@ -78,6 +78,10 @@ function SectorDropdown({ value, onChange, large }: { value: string; onChange: (
       {SECTOR_OPTIONS.map((s, i) => (
         <div
           key={s || "_all"}
+          role="option"
+          id={`sector-option-${i}`}
+          aria-selected={s === value}
+          tabIndex={-1}
           onMouseDown={e => { e.preventDefault(); select(s); }}
           onMouseEnter={() => setActiveIndex(i)}
           style={{
@@ -108,6 +112,9 @@ function SectorDropdown({ value, onChange, large }: { value: string; onChange: (
         ref={triggerRef}
         onClick={() => setOpen(o => !o)}
         onKeyDown={handleKeyDown}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`Select sector: ${value || "All"}`}
         style={{
           background: "transparent",
           border: "none",
@@ -118,7 +125,6 @@ function SectorDropdown({ value, onChange, large }: { value: string; onChange: (
           padding: large ? "6px 0" : "3px 0",
           cursor: "pointer",
           textAlign: "left",
-          outline: "none",
           whiteSpace: "nowrap",
           transition: "border-color 0.15s",
         }}
@@ -175,11 +181,11 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
   const heroRowStyle: React.CSSProperties = hero ? { width: "100%", maxWidth: "100%", padding: "0 12px", boxSizing: "border-box" } : {};
 
   const capButtons = (
-    <div style={heroRowStyle}>
+    <div style={heroRowStyle} role="group" aria-label="Market cap filter">
       <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px", textAlign: hero ? "center" : undefined }}>Cap</div>
       <div style={{ display: "flex", justifyContent: hero ? "center" : undefined }}>
         {CAPS.map((cap, i) => (
-          <button key={cap} onClick={() => setPending(p => ({ ...p, marketCap: cap }))} style={{
+          <button key={cap} aria-pressed={pending.marketCap === cap} onClick={() => setPending(p => ({ ...p, marketCap: cap }))} style={{
             fontSize: btnFontSize,
             fontWeight: 700,
             fontFamily: C.mono,
@@ -202,11 +208,11 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
   const exchangeFlex: Record<string, string> = { All: "1.4 1 0", NYSE: "1.4 1 0", NASDAQ: "1.8 1 0", OTC: "1 1 0", LSE: "1 1 0", TSX: "1 1 0" };
 
   const exchangeButtons = (
-    <div style={heroRowStyle}>
+    <div style={heroRowStyle} role="group" aria-label="Exchange filter">
       <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px", textAlign: hero ? "center" : undefined }}>Exchange</div>
       <div style={{ display: "flex", justifyContent: hero ? "center" : undefined }}>
         {EXCHANGES.map((ex, i) => (
-          <button key={ex} onClick={() => setPending(p => ({ ...p, exchange: ex }))} style={{
+          <button key={ex} aria-pressed={pending.exchange === ex} onClick={() => setPending(p => ({ ...p, exchange: ex }))} style={{
             fontSize: btnFontSize,
             fontWeight: 700,
             fontFamily: C.mono,
@@ -238,6 +244,7 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
       <input
         type="text"
         placeholder="VTI"
+        aria-label="Filter by ETF ticker"
         value={pending.indexEtf}
         onChange={e => setPending(p => ({ ...p, indexEtf: e.target.value.toUpperCase() }))}
         style={{
@@ -249,7 +256,6 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
           fontSize: etfInputSize,
           padding: etfInputPadding,
           width: etfInputWidth,
-          outline: "none",
           textTransform: "uppercase",
           letterSpacing: "0.08em",
         }}
@@ -295,7 +301,7 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
 
   if (hero) {
     return (
-      <div className={`rsp-dice-filter-wrap${isOpen ? " rsp-dice-filter-open" : ""}`} style={{
+      <div className={`rsp-dice-filter-wrap${isOpen ? " rsp-dice-filter-open" : ""}`} inert={!isOpen || undefined} style={{
         overflow: "hidden",
         maxHeight: isOpen ? "400px" : "0",
         transition: "max-height 0.3s ease",
@@ -324,7 +330,7 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
   }
 
   return (
-    <div className={`rsp-dice-filter-wrap${isOpen ? " rsp-dice-filter-open" : ""}`} style={{
+    <div className={`rsp-dice-filter-wrap${isOpen ? " rsp-dice-filter-open" : ""}`} inert={!isOpen || undefined} style={{
       overflow: "hidden",
       maxHeight: isOpen ? "120px" : "0",
       transition: "max-height 0.25s ease",

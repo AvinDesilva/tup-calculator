@@ -65,6 +65,8 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
           </div>
         </header>
 
+        <main id="main-content">
+
         {/* Overview */}
         <div style={{ padding: "32px 0 40px", borderBottom: `1px solid ${M.borderWeak}` }}>
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.9, margin: 0 }}>
@@ -570,6 +572,8 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         <footer style={{ paddingTop: "24px", paddingBottom: "40px", borderTop: `1px solid ${M.borderWeak}` }}>
           <p style={{ fontSize: "11px", color: M.text3, margin: 0 }}>TUP Calculator — For educational purposes only. Not financial advice.</p>
         </footer>
+
+        </main>
       </div>
     </div>
   );

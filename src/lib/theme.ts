@@ -24,7 +24,6 @@ export const inputShared: React.CSSProperties = {
   color: C.text1,
   fontFamily: C.mono,
   fontSize: "13px",
-  outline: "none",
   width: "100%",
   paddingBottom: "6px",
   boxSizing: "border-box",

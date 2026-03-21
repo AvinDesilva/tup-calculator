@@ -32,13 +32,14 @@ export function Table({ result, growthOverrides, onGrowthChange }: TableProps) {
   return (
     <div style={{ overflowX: "auto" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
+        <caption className="sr-only">Year-by-year EPS payback breakdown</caption>
         <thead>
           <tr>
-            <th style={thStyle("left")}>Year</th>
-            <th style={thStyle("right")}>Growth</th>
-            <th style={thStyle("right")}>Annual EPS</th>
-            <th style={thStyle("right")}>Cumulative EPS</th>
-            <th style={thStyle("right")}>Remaining</th>
+            <th scope="col" style={thStyle("left")}>Year</th>
+            <th scope="col" style={thStyle("right")}>Growth</th>
+            <th scope="col" style={thStyle("right")}>Annual EPS</th>
+            <th scope="col" style={thStyle("right")}>Cumulative EPS</th>
+            <th scope="col" style={thStyle("right")}>Remaining</th>
           </tr>
         </thead>
         <tbody>
@@ -59,6 +60,7 @@ export function Table({ result, growthOverrides, onGrowthChange }: TableProps) {
                   {isEditing ? (
                     <input
                       autoFocus
+                      aria-label={`Edit growth rate for year ${r.year}`}
                       value={editVal}
                       onChange={e => {
                         const s = e.target.value;
@@ -81,20 +83,22 @@ export function Table({ result, growthOverrides, onGrowthChange }: TableProps) {
                       style={{
                         width: "52px", background: "rgba(255,255,255,0.08)", border: "1px solid #C4A06E",
                         color: "#e8e4dc", fontFamily: mono, fontSize: "11px", textAlign: "right",
-                        padding: "2px 4px", borderRadius: "2px", outline: "none",
+                        padding: "2px 4px", borderRadius: "2px",
                       }}
                     />
                   ) : (
-                    <span
+                    <button
                       onClick={() => { setEditingYear(r.year); setEditVal(r.growthRate.toFixed(1)); }}
+                      aria-label={`Edit growth rate for year ${r.year}, currently ${r.growthRate.toFixed(1)}%`}
                       style={{
+                        background: "none", border: "none", padding: "1px 2px",
                         cursor: "pointer", color: isOverridden ? "#C4A06E" : "#666",
-                        borderBottom: "1px dashed rgba(255,255,255,0.12)", padding: "1px 2px",
+                        borderBottom: "1px dashed rgba(255,255,255,0.12)",
+                        fontFamily: mono, fontSize: "inherit",
                       }}
-                      title="Click to edit"
                     >
                       {r.growthRate.toFixed(1)}%
-                    </span>
+                    </button>
                   )}
                 </td>
                 <td style={{ padding: "8px 12px", textAlign: "right", fontFamily: mono, color: "#888888" }}>${f(r.annual)}</td>

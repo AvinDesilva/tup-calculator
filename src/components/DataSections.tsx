@@ -87,7 +87,7 @@ export function DataSections({
                   ...(showLong ? [{ key: "10yr" as const, label: `${growthYears.long}yr` }] : []),
                 ];
                 return buttons.map((b, i) => (
-                  <button key={b.key} onClick={() => onGrowthPeriodChange(b.key)} style={{
+                  <button key={b.key} aria-pressed={growthPeriod === b.key} onClick={() => onGrowthPeriodChange(b.key)} style={{
                     fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
                     letterSpacing: "0.05em", padding: "2px 6px",
                     background: growthPeriod === b.key ? "rgba(196,160,110,0.2)" : "transparent",
@@ -103,6 +103,8 @@ export function DataSections({
             {epsGrowthHistory.length > 0 && (
               <button
                 onClick={() => setChartExpanded(v => !v)}
+                aria-expanded={chartExpanded}
+                aria-label="Toggle EPS growth chart"
                 style={{
                   fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
                   letterSpacing: "0.05em", padding: "2px 6px",
@@ -174,7 +176,7 @@ export function DataSections({
             const barW = Math.min(12, Math.max(3, slotW * 0.45));
 
             return (
-              <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block", marginTop: "6px", marginBottom: "4px" }}>
+              <svg width="100%" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="EPS growth history chart" style={{ display: "block", marginTop: "6px", marginBottom: "4px" }}>
                 {/* Y-axis line */}
                 <line x1={padL} y1={padTop} x2={padL} y2={H - padBot}
                   stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />

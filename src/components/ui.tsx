@@ -26,15 +26,16 @@ export function useHoldRepeat(callback: () => void, delay = 400, interval = 80) 
 
 // ─── Hold Button — single arrow with hold-to-repeat ─────────────────────────
 
-export function HoldButton({ onStep, children, style }: {
+export function HoldButton({ onStep, children, style, ...rest }: {
   onStep: () => void;
   children: React.ReactNode;
   style?: React.CSSProperties;
-}) {
+} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   const hold = useHoldRepeat(onStep);
   return (
     <button
       {...hold}
+      {...rest}
       onClick={e => e.preventDefault()}
       style={{
         userSelect: "none",
@@ -75,11 +76,11 @@ export function StepperRow({ label, value, onStep, badge, stepSize = 1, suffix =
         {badge}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-        <HoldButton onStep={() => onStep(-stepSize)} style={btnStyle}>▼</HoldButton>
+        <HoldButton onStep={() => onStep(-stepSize)} style={btnStyle} aria-label={`Decrease ${label}`}>▼</HoldButton>
         <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#00BFA5", minWidth: "52px", textAlign: "center" }}>
           {value.toFixed(1)}{suffix}
         </span>
-        <HoldButton onStep={() => onStep(stepSize)} style={btnStyle}>▲</HoldButton>
+        <HoldButton onStep={() => onStep(stepSize)} style={btnStyle} aria-label={`Increase ${label}`}>▲</HoldButton>
       </div>
     </div>
   );
@@ -96,8 +97,8 @@ export function SectionLabel({ num, title }: SectionLabelProps) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
       <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#C4A06E", fontSize: "14px", letterSpacing: "0.05em", fontWeight: 700 }}>{num}</span>
-      <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888" }}>{title}</span>
-      <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.06)" }} />
+      <h3 style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888", margin: 0 }}>{title}</h3>
+      <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.06)" }} aria-hidden="true" />
     </div>
   );
 }
@@ -112,9 +113,10 @@ interface FieldProps {
 }
 
 export function Field({ label, value, onChange, suffix, prefix, tip }: FieldProps) {
+  const inputId = `field-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   return (
     <div>
-      <label style={{ display: "block", fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888", marginBottom: "6px" }}>
+      <label htmlFor={inputId} style={{ display: "block", fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888", marginBottom: "6px" }}>
         {label}{tip && <span style={{ marginLeft: "4px", cursor: "help" }} title={tip}>ⓘ</span>}
       </label>
       <div style={{ position: "relative" }}>
@@ -122,6 +124,7 @@ export function Field({ label, value, onChange, suffix, prefix, tip }: FieldProp
           <span style={{ position: "absolute", left: "0", top: "50%", transform: "translateY(-50%)", color: "#888888", fontSize: "12px", fontFamily: "'JetBrains Mono', monospace" }}>{prefix}</span>
         )}
         <input
+          id={inputId}
           type="number" step="any" value={value}
           onChange={e => onChange(Number(e.target.value))}
           style={{
@@ -135,7 +138,6 @@ export function Field({ label, value, onChange, suffix, prefix, tip }: FieldProp
             fontSize: "13px",
             color: "#e8e4dc",
             fontFamily: "'JetBrains Mono', monospace",
-            outline: "none",
             boxSizing: "border-box",
             transition: "border-color 0.15s",
           }}
@@ -201,13 +203,13 @@ export function ErrorDisplay({ error, style }: { error: string; style?: React.CS
   if (!error) return null;
 
   if (!isRateLimit) {
-    return <span style={{ color: "#ff4136", ...style }}>{error}</span>;
+    return <span role="alert" style={{ color: "#ff4136", ...style }}>{error}</span>;
   }
 
   const done = countdown === 0;
 
   return (
-    <span style={{ ...style, transition: "color 0.3s" }}>
+    <span role="alert" style={{ ...style, transition: "color 0.3s" }}>
       {done ? (
         <>
           <span style={{ color: "#10d97e" }}>API limit reset</span>

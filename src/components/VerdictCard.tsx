@@ -98,7 +98,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
       </div>
 
       {/* Progress bar */}
-      <div style={{ height: "3px", background: "rgba(255,255,255,0.04)", marginBottom: "12px", overflow: "hidden" }}>
+      <div role="progressbar" aria-label="Payback progress" aria-valuenow={result.payback || 30} aria-valuemin={0} aria-valuemax={30} style={{ height: "3px", background: "rgba(255,255,255,0.04)", marginBottom: "12px", overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${paybackPct}%`, background: v.color, opacity: 0.5, transition: "width 0.7s ease" }} />
       </div>
 
@@ -129,6 +129,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
             {editingGrowth ? (
               <input
                 autoFocus
+                aria-label="Edit growth rate"
                 value={editGrowthVal}
                 onChange={e => {
                   const s = e.target.value;
@@ -151,20 +152,21 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
                 style={{
                   width: "60px", background: "rgba(255,255,255,0.08)", border: "1px solid #C4A06E",
                   color: "#e8e4dc", fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600,
-                  textAlign: "right", padding: "2px 4px", borderRadius: "2px", outline: "none",
+                  textAlign: "right", padding: "2px 4px", borderRadius: "2px",
                 }}
               />
             ) : (
-              <span
+              <button
                 onClick={() => { setEditingGrowth(true); setEditGrowthVal(f(grPct)); }}
+                aria-label={`Edit growth rate, currently ${f(grPct)}%`}
                 style={{
+                  background: "none", border: "none", padding: "1px 2px",
                   fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#10d97e",
-                  cursor: "pointer", borderBottom: "1px dashed rgba(255,255,255,0.12)", padding: "1px 2px",
+                  cursor: "pointer", borderBottom: "1px dashed rgba(255,255,255,0.12)",
                 }}
-                title="Click to edit"
               >
                 {f(grPct)}%
-              </span>
+              </button>
             )}
           </div>
           <div style={{ display: "flex", gap: "6px" }}>
@@ -179,7 +181,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
                   const c = colors[s];
                   const isActive = growthScenario === s;
                   return (
-                    <button key={s} onClick={() => onScenarioChange(s)} style={{
+                    <button key={s} aria-pressed={growthScenario === s} onClick={() => onScenarioChange(s)} style={{
                       fontSize: "11px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
                       letterSpacing: "0.05em", padding: "2px 6px", height: "30px", flex: 1,
                       background: isActive ? c.activeBg : c.idleBg,
@@ -197,6 +199,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
             <div style={{ display: "flex", gap: "6px", flex: 1 }}>
               <button
                 {...holdDown}
+                aria-label="Decrease growth rate"
                 onClick={e => e.preventDefault()}
                 style={{
                   ...stepBtnBase,
@@ -209,6 +212,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
               </button>
               <button
                 {...holdUp}
+                aria-label="Increase growth rate"
                 onClick={e => e.preventDefault()}
                 style={{
                   ...stepBtnBase,

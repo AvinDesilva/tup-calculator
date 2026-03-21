@@ -139,6 +139,7 @@ export function CompanyScorecard({ earnings, incomeHistory, description, exchang
           </p>
           <button
             onClick={() => setDescExpanded(e => !e)}
+            aria-expanded={descExpanded}
             style={{
               background: "none", border: "none", padding: 0, marginTop: "4px",
               color: "#C4A06E", fontSize: "11px", fontFamily: body, cursor: "pointer",
@@ -179,7 +180,7 @@ export function CompanyScorecard({ earnings, incomeHistory, description, exchang
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
               {processed.map((q, i) => (
-                <div key={i} title={`${q.date} · ${sqLabel[q.status]} · ${q.pct > 0 ? "+" : ""}${q.pct.toFixed(1)}%`}
+                <div key={i} role="img" aria-label={`${q.date}: ${sqLabel[q.status]}, ${q.pct > 0 ? "+" : ""}${q.pct.toFixed(1)}%`} title={`${q.date} · ${sqLabel[q.status]} · ${q.pct > 0 ? "+" : ""}${q.pct.toFixed(1)}%`}
                   style={{ width: "18px", height: "18px", borderRadius: "3px", flexShrink: 0, background: sqColor[q.status], opacity: q.status === "inline" ? 0.45 : 1 }} />
               ))}
             </div>
@@ -205,7 +206,7 @@ export function CompanyScorecard({ earnings, incomeHistory, description, exchang
           <div>
             <div style={label9}>Business Lifecycle</div>
 
-            <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block", marginTop: "8px", overflow: "visible" }}>
+            <svg width="100%" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Business lifecycle S-curve. Current stage: ${currentStage || "unknown"}`} style={{ display: "block", marginTop: "8px", overflow: "visible" }}>
               {/* Axes */}
               <line x1={PL} y1={PT} x2={PL} y2={PT + plotH} stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
               <line x1={PL} y1={PT + plotH} x2={PL + plotW} y2={PT + plotH} stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
@@ -279,7 +280,7 @@ export function CompanyScorecard({ earnings, incomeHistory, description, exchang
           <div style={label9}>Business Lifecycle</div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
-            <svg width="65%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block", overflow: "visible", flexShrink: 0 }}>
+            <svg width="65%" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Business lifecycle S-curve. Current stage: ${currentStage || "unknown"}`} style={{ display: "block", overflow: "visible", flexShrink: 0 }}>
               <line x1={PL} y1={PT} x2={PL} y2={PT + plotH} stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
               <line x1={PL} y1={PT + plotH} x2={PL + plotW} y2={PT + plotH} stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
               <text

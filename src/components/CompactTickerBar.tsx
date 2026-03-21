@@ -30,7 +30,7 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
     <section className="rsp-ticker-bar" style={{ position: "sticky", top: 0, zIndex: 100, background: C.bg, paddingTop: "20px", paddingBottom: "20px", marginBottom: "20px", borderBottom: `1px solid ${C.borderWeak}`, animation: "fadeInUp 0.4s ease both" }}>
       <div className="rsp-api-bar" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "20px", alignItems: "center", border: `1px solid ${hovered ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)"}`, boxShadow: hovered ? "0 0 12px rgba(255,255,255,0.08)" : "none", padding: "14px 18px", borderRadius: "4px", transition: "border-color 0.2s, box-shadow 0.2s" }}>
         <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "10px" }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.text2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.text2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
@@ -63,7 +63,7 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
           }}>
             {loading ? (
               <>
-                <svg style={{ animation: "spin 1s linear infinite", width: "12px", height: "12px" }} viewBox="0 0 24 24">
+                <svg aria-hidden="true" style={{ animation: "spin 1s linear infinite", width: "12px", height: "12px" }} viewBox="0 0 24 24">
                   <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                   <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                 </svg>
@@ -87,10 +87,10 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
             transition: "opacity 0.15s",
             opacity: (rollingDice || loading) ? 0.5 : 1,
           }}>
-            {hasActiveFilters && <span style={{ position: "absolute", top: "-3px", right: "-3px", width: "6px", height: "6px", borderRadius: "50%", background: "#00BFA5", boxShadow: "0 0 4px rgba(0,191,165,0.6)" }} />}
+            {hasActiveFilters && <span aria-hidden="true" style={{ position: "absolute", top: "-3px", right: "-3px", width: "6px", height: "6px", borderRadius: "50%", background: "#00BFA5", boxShadow: "0 0 4px rgba(0,191,165,0.6)" }} />}
             {rollingDice ? dicePhrase : "Roll Dice"} <span style={rollingDice ? { display: "inline-block", animation: "spin 0.6s linear infinite" } : undefined}>🎲</span>
           </button>
-          <button onClick={onToggleFilter} style={{
+          <button onClick={onToggleFilter} aria-label="Dice roll filters" aria-expanded={isFilterOpen} aria-haspopup="true" style={{
             width: "32px", height: "32px",
             display: "flex", alignItems: "center", justifyContent: "center",
             background: hasActiveFilters ? "rgba(196,160,110,0.1)" : "transparent",
@@ -100,7 +100,7 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
             flexShrink: 0,
             transition: "all 0.15s",
           }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="4" y1="6" x2="20" y2="6" />
               <line x1="4" y1="12" x2="20" y2="12" />
               <line x1="4" y1="18" x2="20" y2="18" />

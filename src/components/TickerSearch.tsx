@@ -127,10 +127,14 @@ export function TickerSearch({
   };
 
   const showDropdown = isOpen || (isLoading && value.trim().length >= 2);
+  const listboxId = "ticker-search-listbox";
 
   const dropdown = showDropdown && dropdownPos ? createPortal(
     <div
       ref={listRef}
+      id={listboxId}
+      role="listbox"
+      aria-label="Search results"
       style={{
         position: "absolute",
         top: dropdownPos.top,
@@ -146,16 +150,20 @@ export function TickerSearch({
       }}
     >
       {isLoading ? (
-        <div style={{ padding: "12px 16px", fontSize: "14px", color: "#888888", fontFamily: "'Space Grotesk', sans-serif", background: "#1a1a1a" }}>
+        <div role="status" style={{ padding: "12px 16px", fontSize: "14px", color: "#888888", fontFamily: "'Space Grotesk', sans-serif", background: "#1a1a1a" }}>
           Searching...
         </div>
       ) : results.length === 0 ? (
-        <div style={{ padding: "12px 16px", fontSize: "14px", color: "#888888", fontFamily: "'Space Grotesk', sans-serif", background: "#1a1a1a" }}>
+        <div role="status" style={{ padding: "12px 16px", fontSize: "14px", color: "#888888", fontFamily: "'Space Grotesk', sans-serif", background: "#1a1a1a" }}>
           No results found
         </div>
       ) : results.map((r, i) => (
         <div
           key={r.symbol}
+          role="option"
+          id={`ticker-option-${i}`}
+          aria-selected={i === activeIndex}
+          tabIndex={-1}
           onMouseDown={e => { e.preventDefault(); selectItem(r.symbol); }}
           onMouseEnter={() => setActiveIndex(i)}
           style={{
@@ -206,6 +214,12 @@ export function TickerSearch({
     <div ref={containerRef} style={{ position: "relative", width: "100%", flex: 1, minWidth: 0 }}>
       <input
         type="text"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={showDropdown}
+        aria-controls={listboxId}
+        aria-activedescendant={activeIndex >= 0 ? `ticker-option-${activeIndex}` : undefined}
+        aria-label="Search by company name or ticker symbol"
         value={value}
         onChange={e => onChange(e.target.value.toUpperCase())}
         onKeyDown={handleKeyDown}
@@ -222,6 +236,9 @@ export function TickerSearch({
         autoFocus={autoFocus}
         style={inputStyle}
       />
+      <div className="sr-only" aria-live="polite">
+        {showDropdown && !isLoading && results.length > 0 ? `${results.length} results available` : ""}
+      </div>
       {dropdown}
     </div>
   );

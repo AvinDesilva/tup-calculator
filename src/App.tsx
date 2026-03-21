@@ -293,7 +293,12 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text1, fontFamily: C.body, boxSizing: "border-box" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Barlow+Condensed:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
 
-      <div className="rsp-container" style={{ margin: "0 auto", padding: "0 24px" }}>
+      <main id="main-content" className="rsp-container" style={{ margin: "0 auto", padding: "0 24px" }}>
+        <div className="sr-only" aria-live="polite">
+          {loading ? "Loading stock data..." : ""}
+          {error ? `Error: ${error}` : ""}
+          {result && company ? `${company}: ${result.payback || "30+"} year payback` : ""}
+        </div>
 
         <Masthead
           company={company}
@@ -452,8 +457,8 @@ export default function App() {
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#C4A06E", fontSize: "14px", letterSpacing: "0.05em", fontWeight: 700 }}>04</span>
-                <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888" }}>Year-by-Year Breakdown</span>
-                <button onClick={() => setInp(p => ({ ...p, vdrEnabled: !p.vdrEnabled }))} style={{
+                <h3 style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888", margin: 0 }}>Year-by-Year Breakdown</h3>
+                <button aria-pressed={inp.vdrEnabled} aria-label="Toggle value decay rate" onClick={() => setInp(p => ({ ...p, vdrEnabled: !p.vdrEnabled }))} style={{
                   fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
                   letterSpacing: "0.05em", padding: "2px 6px",
                   background: inp.vdrEnabled ? "rgba(196,160,110,0.2)" : "transparent",
@@ -482,7 +487,7 @@ export default function App() {
         </footer>
         </>)}
 
-      </div>
+      </main>
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

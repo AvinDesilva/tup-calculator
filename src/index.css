@@ -52,3 +52,51 @@ input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/* Screen-reader-only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip-to-content link */
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  z-index: 100000;
+  padding: 12px 24px;
+  background: #C4A06E;
+  color: #080808;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  letter-spacing: 0.05em;
+}
+.skip-to-main:focus {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  width: auto;
+  height: auto;
+}
+
+/* Accessible focus indicator — overrides inline outline:"none" */
+*:focus-visible {
+  outline: 2px solid #C4A06E !important;
+  outline-offset: 2px !important;
+}
+input:focus-visible,
+select:focus-visible {
+  outline-offset: 0 !important;
+}
