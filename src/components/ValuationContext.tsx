@@ -1,4 +1,4 @@
-import type { IndustryGrowthData } from "../lib/api.ts";
+import type { IndustryGrowthData, IndustryPeer } from "../lib/api.ts";
 
 interface ValuationContextProps {
   strongBuyPrice: number | null;
@@ -8,6 +8,7 @@ interface ValuationContextProps {
   industryGrowth: IndustryGrowthData | null;
   industryGrowthLoading: boolean;
   companyBlendedGrowth: number | null;
+  onPeerSelect?: (ticker: string) => void;
 }
 
 interface PanelData {
@@ -40,7 +41,48 @@ function Panel({ p, mono }: { p: PanelData; mono: string }) {
   );
 }
 
-export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, industryGrowth, industryGrowthLoading, companyBlendedGrowth }: ValuationContextProps) {
+function PeerCard({ peer, mono, onSelect }: { peer: IndustryPeer; mono: string; onSelect?: (ticker: string) => void }) {
+  const pb = peer.payback;
+  const color = pb <= 10 ? "#10d97e" : pb <= 15 ? "#f5a020" : "#FF4D00";
+  return (
+    <button
+      onClick={() => onSelect?.(peer.symbol)}
+      aria-label={`Load ${peer.symbol} — ${pb} year payback`}
+      style={{
+        padding: "4px 4px 4px 10px",
+        background: "transparent",
+        border: "1px solid #C4A06E",
+        cursor: "pointer",
+        textAlign: "center",
+        height: "100%",
+        boxSizing: "border-box",
+        fontFamily: "'Space Grotesk', sans-serif",
+        fontWeight: 700,
+        letterSpacing: "0.12em",
+        textTransform: "uppercase" as const,
+        color: "#C4A06E",
+        transition: "opacity 0.15s",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "6px",
+      }}
+    >
+      <span style={{ fontFamily: mono, fontSize: "11px", letterSpacing: "0.08em", color: "#888" }}>
+        {peer.symbol}
+      </span>
+      <span style={{ fontSize: "11px", color: "#555" }}>→</span>
+      <div style={{ display: "flex", alignItems: "baseline", gap: "2px" }}>
+        <span style={{ fontFamily: mono, fontSize: "16px", fontWeight: 600, color, letterSpacing: "-0.02em" }}>
+          {pb}
+        </span>
+        <span style={{ fontSize: "9px", color: "#666", fontWeight: 400 }}>yr</span>
+      </div>
+    </button>
+  );
+}
+
+export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, industryGrowth, industryGrowthLoading, companyBlendedGrowth, onPeerSelect }: ValuationContextProps) {
   const mono = "'JetBrains Mono', monospace";
 
   const hasStrongBuy = strongBuyPrice != null && strongBuyPrice > 0 && currentPrice > 0;
@@ -55,12 +97,10 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
   const buyBelow = hasBuy && currentPrice <= (buyPrice as number);
   const buyColor = buyBelow ? "#10d97e" : "#f5a020";
 
-  // DCF delta vs current price
+  // DCF color based on delta vs current price
   const dcfDelta    = hasDCF ? (((dcf as number) - currentPrice) / currentPrice) * 100 : 0;
-  const undervalued = dcfDelta > 0;
-  const dcfLabel    = undervalued ? "Undervalued per DCF" : "Premium to DCF";
   const absDelta    = Math.abs(dcfDelta);
-  const dcfColor    = undervalued
+  const dcfColor    = dcfDelta > 0
     ? (absDelta > 25 ? "#10d97e" : absDelta > 10 ? "#5aad82" : "#8abfa8")
     : (absDelta > 25 ? "#FF4D00" : absDelta > 10 ? "#cc5533" : "#a07060");
 
@@ -112,7 +152,7 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
   const dcfPanel: PanelData = hasDCF ? {
     key: "dcf", title: "DCF Fair Value",
     value: `$${Number(dcf).toFixed(2)}`,
-    icon: null, color: dcfColor, sub: dcfLabel,
+    icon: null, color: dcfColor, sub: "",
   } : {
     key: "dcf", title: "DCF Fair Value",
     value: "N/A",
@@ -125,13 +165,17 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
     icon: null, color: industryColor, sub: industryLabel,
   } : null;
 
-  const topRow = [sbPanel, buyPanel].filter((p): p is PanelData => p != null);
-  const bottomRow = [dcfPanel, industryPanel].filter((p): p is PanelData => p != null);
+  const topRow = [sbPanel, buyPanel, dcfPanel].filter((p): p is PanelData => p != null);
+  const peers: IndustryPeer[] = hasIndustry && industryGrowth!.peers ? industryGrowth!.peers.slice(0, 3) : [];
+  const showBottomRow = industryPanel != null || peers.length > 0;
 
-  if (topRow.length === 0 && bottomRow.length === 0) return null;
+  if (topRow.length === 0 && !showBottomRow) return null;
 
   const divider = <div style={{ background: "rgba(255,255,255,0.06)", width: "1px" }} />;
   const hDivider = <div style={{ background: "rgba(255,255,255,0.06)", height: "1px", gridColumn: "1 / -1" }} />;
+
+  // Build grid template for a row of N panels with dividers between them
+  const rowTemplate = (n: number) => Array.from({ length: n }, (_, i) => i < n - 1 ? "1fr 1px" : "1fr").join(" ");
 
   return (
     <div style={{ paddingTop: "8px" }}>
@@ -139,34 +183,41 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
         Valuation Context
       </div>
 
-      {/* Top row: Strong Buy + Patient Buy */}
+      {/* Row 1: Strong Buy + Patient Buy + DCF */}
       {topRow.length > 0 && (
-        <div className="rsp-valuation-grid" style={{ display: "grid", gridTemplateColumns: topRow.length === 2 ? "1fr 1px 1fr" : "1fr", gap: "0", paddingBottom: "14px" }}>
-          <Panel p={topRow[0]} mono={mono} />
-          {topRow.length === 2 && divider}
-          {topRow.length === 2 && (
-            <div style={{ paddingLeft: "14px" }}>
-              <Panel p={topRow[1]} mono={mono} />
+        <div className="rsp-valuation-grid" style={{ display: "grid", gridTemplateColumns: rowTemplate(topRow.length), gap: "0", paddingBottom: "14px" }}>
+          {topRow.map((p, i) => (
+            <div key={p.key} style={{ display: "contents" }}>
+              {i > 0 && divider}
+              <div style={i > 0 ? { paddingLeft: "14px" } : undefined}>
+                <Panel p={p} mono={mono} />
+              </div>
             </div>
-          )}
+          ))}
         </div>
       )}
 
-      {/* Horizontal divider between rows */}
-      {topRow.length > 0 && bottomRow.length > 0 && hDivider}
+      {/* Horizontal divider */}
+      {topRow.length > 0 && showBottomRow && hDivider}
 
-      {/* Bottom row: DCF + Industry Growth */}
-      {bottomRow.length > 0 && (
-        <div className="rsp-valuation-grid" style={{ display: "grid", gridTemplateColumns: bottomRow.length === 2 ? "1fr 1px 1fr" : "1fr", gap: "0", paddingTop: "14px" }}>
-          <Panel p={bottomRow[0]} mono={mono} />
-          {bottomRow.length === 2 && divider}
-          {bottomRow.length === 2 && (
-            <div style={{ paddingLeft: "14px" }}>
-              <Panel p={bottomRow[1]} mono={mono} />
+      {/* Row 2: Industry Growth + up to 3 peer companies */}
+      {showBottomRow && (() => {
+        const totalCols = (industryPanel ? 1 : 0) + peers.length;
+        if (totalCols === 0) return null;
+        return (
+          <div style={{ display: "flex", alignItems: "stretch", gap: "0", paddingTop: "14px" }}>
+            {industryPanel && <>
+              <div style={{ paddingRight: "3px" }}><Panel p={industryPanel} mono={mono} /></div>
+              {divider}
+            </>}
+            <div style={{ display: "flex", gap: "9px", paddingLeft: "4px", flex: 1, justifyContent: "center" }}>
+              {peers.map((peer) => (
+                <PeerCard key={peer.symbol} peer={peer} mono={mono} onSelect={onPeerSelect} />
+              ))}
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

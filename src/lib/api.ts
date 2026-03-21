@@ -11,6 +11,12 @@ import type {
 
 // ─── Industry Growth ──────────────────────────────────────────────────────────
 
+export interface IndustryPeer {
+  symbol: string;
+  companyName: string;
+  payback: number;
+}
+
 export interface IndustryGrowthData {
   industry: string;
   median: number;
@@ -18,6 +24,7 @@ export interface IndustryGrowthData {
   p75: number;
   count: number;
   constituents: string[];
+  peers: IndustryPeer[];
   error?: string;
 }
 

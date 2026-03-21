@@ -39,6 +39,11 @@ export const DEV_VALUATION = {
     p75: 16.8,
     count: 18,
     constituents: ["SONY", "MSFT", "DELL", "HPQ", "LG"],
+    peers: [
+      { symbol: "SONY", companyName: "Sony Group Corporation", payback: 14 },
+      { symbol: "DELL", companyName: "Dell Technologies Inc.", payback: 9 },
+      { symbol: "HPQ", companyName: "HP Inc.", payback: 11 },
+    ],
   },
   industryGrowthLoading: false,
 };

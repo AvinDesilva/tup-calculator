@@ -290,7 +290,20 @@ app.get("/industry-growth", async (req, res) => {
           // Sanity check — skip extreme outliers
           if (!isFinite(blended) || Math.abs(blended) > 2) return null;
 
-          return { symbol: sym, blended };
+          // Simplified TUP payback (price-based, no debt/cash adjustment)
+          const price = quoteData?.[0]?.price || company.price || 0;
+          const eps = quoteData?.[0]?.eps || 0;
+          let payback = null;
+          if (eps > 0 && price > 0 && blended > 0) {
+            let cum = 0, epsY = eps;
+            for (let y = 1; y <= 30; y++) {
+              epsY *= (1 + blended);
+              cum += epsY;
+              if (cum >= price) { payback = y; break; }
+            }
+          }
+
+          return { symbol: sym, companyName: company.companyName || sym, blended, payback };
         } catch {
           return null;
         }
@@ -314,6 +327,12 @@ app.get("/industry-growth", async (req, res) => {
     const p25 = rates[p25idx];
     const p75 = rates[Math.min(p75idx, rates.length - 1)];
 
+    // Top 3 peers with valid payback, sorted by market cap (already in order from screener)
+    const peers = valid
+      .filter(r => r.payback != null && r.payback > 0)
+      .slice(0, 3)
+      .map(r => ({ symbol: r.symbol, companyName: r.companyName, payback: r.payback }));
+
     const result = {
       industry,
       median: parseFloat(median.toFixed(1)),
@@ -321,6 +340,7 @@ app.get("/industry-growth", async (req, res) => {
       p75: parseFloat(p75.toFixed(1)),
       count: valid.length,
       constituents: valid.map(r => r.symbol),
+      peers,
     };
 
     industryCacheSet(cacheKey, result);
