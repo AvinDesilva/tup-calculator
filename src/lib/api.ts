@@ -9,6 +9,28 @@ import type {
   FMPEarningSurprise, FMPCashFlow, EpsGrowthPoint,
 } from "./types.ts";
 
+// ─── Industry Growth ──────────────────────────────────────────────────────────
+
+export interface IndustryGrowthData {
+  industry: string;
+  median: number;
+  p25: number;
+  p75: number;
+  count: number;
+  constituents: string[];
+  error?: string;
+}
+
+export async function fetchIndustryGrowth(industry: string, exclude?: string): Promise<IndustryGrowthData | null> {
+  try {
+    const params = new URLSearchParams({ industry });
+    if (exclude) params.set("exclude", exclude);
+    const res = await fetch(`/api/industry-growth?${params}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
 // ─── Ticker Search ────────────────────────────────────────────────────────────
 
 export interface SearchResult {
@@ -692,31 +714,11 @@ export async function lookupTicker(
     : null;
   const dcfValue        = dcfData?.[0]?.dcf ?? null;
 
-  // Altman Z-Score
+  // Piotroski F-Score
   const bs0 = bs;
   const bs1: FMPBalanceSheet = balanceSheet?.[1] ?? ({} as FMPBalanceSheet);
-  const ta0 = bs0.totalAssets || 0;
-  let altmanZ: number | null = null;
-  if (ta0 > 0) {
-    const wc0     = (bs0.totalCurrentAssets || 0) - (bs0.totalCurrentLiabilities || 0);
-    const re0     = bs0.retainedEarnings || 0;
-    const ebit0   = inc[0]?.operatingIncome || 0;
-    const tl0     = bs0.totalLiabilities || 0;
-    const rawRev0 = inc[0]?.revenue || 0;
-    const tlConverted = tl0 * fxRate;
-    if (tlConverted > 0) {
-      altmanZ = parseFloat((
-        1.2 * (wc0 / ta0)               +
-        1.4 * (re0 / ta0)               +
-        3.3 * (ebit0 / ta0)             +
-        0.6 * (mktCapVal / tlConverted) +
-        1.0 * (rawRev0 / ta0)
-      ).toFixed(2));
-    }
-  }
-
-  // Piotroski F-Score
   let piotroski: number | null = null;
+  const ta0 = bs0.totalAssets || 0;
   const ta1  = bs1.totalAssets || 0;
   const inc0 = inc[0] ?? {};
   const inc1 = inc[1] ?? {};
@@ -824,7 +826,6 @@ export async function lookupTicker(
     divNote,
     peterLynchRatio: peterLynchRatio != null ? parseFloat(Number(peterLynchRatio).toFixed(2)) : null,
     dcfValue: dcfValue != null ? parseFloat(Number(dcfValue).toFixed(2)) : null,
-    altmanZ,
     piotroski,
     isConverted,
     currencyNote,

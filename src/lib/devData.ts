@@ -30,7 +30,18 @@ export const DEV_INP: InputState = {
   vdrEnabled: true,
 };
 
-export const DEV_VALUATION = { dcf: 248, altmanZ: 8.2 };
+export const DEV_VALUATION = {
+  dcf: 248,
+  industryGrowth: {
+    industry: "Consumer Electronics",
+    median: 12.4,
+    p25: 7.5,
+    p75: 16.8,
+    count: 18,
+    constituents: ["SONY", "MSFT", "DELL", "HPQ", "LG"],
+  },
+  industryGrowthLoading: false,
+};
 
 export const DEV_EARNINGS: FMPEarningSurprise[] = [
   { actualEps: 1.64, estimatedEps: 1.58, date: "2025-09-30" },

@@ -207,7 +207,6 @@ export interface TickerData {
   divNote: string;
   peterLynchRatio: number | null;
   dcfValue: number | null;
-  altmanZ: number | null;
   piotroski: number | null;
   isConverted: boolean;
   currencyNote: string;

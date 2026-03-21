@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 
 import { calcTUP } from "./lib/calcTUP.ts";
-import { lookupTicker, lookupTickerQuick, fetchFilteredPool } from "./lib/api.ts";
+import { lookupTicker, lookupTickerQuick, fetchFilteredPool, fetchIndustryGrowth } from "./lib/api.ts";
+import type { IndustryGrowthData } from "./lib/api.ts";
 import { C } from "./lib/theme.ts";
 import type { InputState, Mode, TUPResult, GrowthScenario, RollFilters, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement } from "./lib/types.ts";
 
@@ -22,7 +23,8 @@ import * as dev from "./lib/devData.ts";
 
 interface ValuationState {
   dcf: number | null;
-  altmanZ: number | null;
+  industryGrowth: IndustryGrowthData | null;
+  industryGrowthLoading: boolean;
 }
 
 interface ScorecardState {
@@ -59,7 +61,7 @@ export default function App() {
   const [isConverted, setIsConverted] = useState(false);
   const [currencyNote, setCurrencyNote] = useState("");
   const [currencyMismatchWarning, setCurrencyMismatchWarning] = useState("");
-  const [valuation, setValuation] = useState<ValuationState>({ dcf: null, altmanZ: null });
+  const [valuation, setValuation] = useState<ValuationState>({ dcf: null, industryGrowth: null, industryGrowthLoading: false });
   const [scorecard, setScorecard] = useState<ScorecardState>({ earnings: [], cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "", exchange: "" });
 
   const [hasSearched, setHasSearched] = useState(false);
@@ -157,7 +159,7 @@ export default function App() {
   const doFetch = async (tickerOverride?: string) => {
     const t = (tickerOverride || ticker).trim().toUpperCase();
     if (!t) { setError("Enter a ticker symbol."); return; }
-    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, altmanZ: null }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "", exchange: "" }); setStrongBuyPrice(null); setBuyPrice(null); setHasSearched(true);
+    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, industryGrowth: null, industryGrowthLoading: false }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "", exchange: "" }); setStrongBuyPrice(null); setBuyPrice(null); setHasSearched(true);
     window.scrollTo(0, 0);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
@@ -169,7 +171,15 @@ export default function App() {
       setIsConverted(data.isConverted || false);
       setCurrencyNote(data.currencyNote || "");
       setCurrencyMismatchWarning(data.currencyMismatchWarning || "");
-      setValuation({ dcf: data.dcfValue, altmanZ: data.altmanZ });
+      setValuation(prev => ({ ...prev, dcf: data.dcfValue }));
+
+      // Fire industry growth fetch asynchronously (non-blocking)
+      if (data.industry) {
+        setValuation(prev => ({ ...prev, industryGrowthLoading: true }));
+        fetchIndustryGrowth(data.industry, t).then(ig => {
+          setValuation(prev => ({ ...prev, industryGrowth: ig, industryGrowthLoading: false }));
+        });
+      }
       setScorecard({ earnings: data.earningsSurprises, cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory, epsGrowthHistory: data.epsGrowthHistory, description: data.description, exchange: data.exchange });
 
       setGrowthValues({ g5: data.historicalGrowth5yr, g10: data.historicalGrowth });
@@ -437,7 +447,9 @@ export default function App() {
               buyPrice={buyPrice}
               dcf={valuation.dcf}
               currentPrice={inp.currentPrice}
-              altmanZ={valuation.altmanZ}
+              industryGrowth={valuation.industryGrowth}
+              industryGrowthLoading={valuation.industryGrowthLoading}
+              companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
             />
             {company && (
               <CompanyScorecard

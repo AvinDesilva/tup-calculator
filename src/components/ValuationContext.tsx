@@ -1,9 +1,13 @@
+import type { IndustryGrowthData } from "../lib/api.ts";
+
 interface ValuationContextProps {
   strongBuyPrice: number | null;
   buyPrice: number | null;
   dcf: number | null;
   currentPrice: number;
-  altmanZ: number | null;
+  industryGrowth: IndustryGrowthData | null;
+  industryGrowthLoading: boolean;
+  companyBlendedGrowth: number | null;
 }
 
 interface PanelData {
@@ -36,14 +40,16 @@ function Panel({ p, mono }: { p: PanelData; mono: string }) {
   );
 }
 
-export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, altmanZ }: ValuationContextProps) {
+export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, industryGrowth, industryGrowthLoading, companyBlendedGrowth }: ValuationContextProps) {
   const mono = "'JetBrains Mono', monospace";
 
   const hasStrongBuy = strongBuyPrice != null && strongBuyPrice > 0 && currentPrice > 0;
   const hasBuy       = buyPrice != null && buyPrice > 0 && currentPrice > 0;
   const hasDCF       = dcf != null && dcf > 0 && currentPrice > 0;
-  const hasAltman    = altmanZ != null && isFinite(altmanZ);
-  if (!hasStrongBuy && !hasBuy && !hasDCF && !hasAltman) return null;
+  const hasIndustry  = industryGrowth != null && !industryGrowth.error && industryGrowth.median != null;
+  const showIndustrySlot = hasIndustry || industryGrowthLoading;
+
+  if (!hasStrongBuy && !hasBuy && !hasDCF && !showIndustrySlot) return null;
 
   // Buy price (10y threshold)
   const buyBelow = hasBuy && currentPrice <= (buyPrice as number);
@@ -58,13 +64,33 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
     ? (absDelta > 25 ? "#10d97e" : absDelta > 10 ? "#5aad82" : "#8abfa8")
     : (absDelta > 25 ? "#FF4D00" : absDelta > 10 ? "#cc5533" : "#a07060");
 
-  // Altman Z zones
-  const altmanColor = hasAltman
-    ? ((altmanZ as number) > 2.99 ? "#10d97e" : (altmanZ as number) >= 1.81 ? "#f5a020" : "#FF4D00")
-    : "#888";
-  const altmanLabel = hasAltman
-    ? ((altmanZ as number) > 2.99 ? "Safe Zone" : (altmanZ as number) >= 1.81 ? "Grey Zone" : "Distress Zone")
-    : "";
+  // Industry Growth comparison
+  let industryColor = "#888";
+  let industryLabel = "";
+  let industryValue = "...";
+  if (industryGrowthLoading) {
+    industryColor = "#888";
+    industryLabel = "Loading";
+    industryValue = "...";
+  } else if (hasIndustry) {
+    const median = industryGrowth!.median;
+    industryValue = `${median.toFixed(1)}%`;
+    if (companyBlendedGrowth != null) {
+      const diff = companyBlendedGrowth - median;
+      if (diff > 2) {
+        industryColor = "#10d97e";
+        industryLabel = "Above Industry";
+      } else if (diff < -2) {
+        industryColor = "#FF4D00";
+        industryLabel = "Below Industry";
+      } else {
+        industryColor = "#f5a020";
+        industryLabel = industryGrowth!.industry;
+      }
+    } else {
+      industryLabel = `n=${industryGrowth!.count}`;
+    }
+  }
 
   // Strong Buy target
   const sbBelow   = hasStrongBuy && currentPrice > (strongBuyPrice as number);
@@ -89,14 +115,14 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
     icon: null, color: dcfColor, sub: dcfLabel,
   } : null;
 
-  const altmanPanel: PanelData | null = hasAltman ? {
-    key: "altman", title: "Altman Z-Score",
-    value: Number(altmanZ).toFixed(2),
-    icon: null, color: altmanColor, sub: altmanLabel,
+  const industryPanel: PanelData | null = showIndustrySlot ? {
+    key: "industry", title: "Industry Growth",
+    value: industryValue,
+    icon: null, color: industryColor, sub: industryLabel,
   } : null;
 
   const topRow = [sbPanel, buyPanel].filter((p): p is PanelData => p != null);
-  const bottomRow = [dcfPanel, altmanPanel].filter((p): p is PanelData => p != null);
+  const bottomRow = [dcfPanel, industryPanel].filter((p): p is PanelData => p != null);
 
   if (topRow.length === 0 && bottomRow.length === 0) return null;
 
@@ -125,7 +151,7 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
       {/* Horizontal divider between rows */}
       {topRow.length > 0 && bottomRow.length > 0 && hDivider}
 
-      {/* Bottom row: DCF + Altman Z */}
+      {/* Bottom row: DCF + Industry Growth */}
       {bottomRow.length > 0 && (
         <div className="rsp-valuation-grid" style={{ display: "grid", gridTemplateColumns: bottomRow.length === 2 ? "1fr 1px 1fr" : "1fr", gap: "0", paddingTop: "14px" }}>
           <Panel p={bottomRow[0]} mono={mono} />
