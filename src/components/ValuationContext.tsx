@@ -55,7 +55,7 @@ function PeerCard({ peer, mono, onSelect }: { peer: IndustryPeer; mono: string; 
         cursor: "pointer",
         textAlign: "center",
         height: "100%",
-        flex: "1 1 0",
+        flex: "0 1 auto",
         minWidth: 0,
         boxSizing: "border-box",
         fontFamily: "'Space Grotesk', sans-serif",
