@@ -197,19 +197,13 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
         </div>
       )}
 
-      {/* Horizontal divider */}
-      {topRow.length > 0 && showBottomRow && hDivider}
-
       {/* Row 2: Industry Growth + up to 3 peer companies */}
       {showBottomRow && (() => {
         const totalCols = (industryPanel ? 1 : 0) + peers.length;
         if (totalCols === 0) return null;
         return (
           <div style={{ display: "flex", alignItems: "stretch", gap: "0", paddingTop: "14px" }}>
-            {industryPanel && <>
-              <div style={{ paddingRight: "3px" }}><Panel p={industryPanel} mono={mono} /></div>
-              {divider}
-            </>}
+            {industryPanel && <div style={{ paddingRight: "3px" }}><Panel p={industryPanel} mono={mono} /></div>}
             <div style={{ display: "flex", gap: "9px", paddingLeft: "4px", flex: 1, justifyContent: "center" }}>
               {peers.map((peer) => (
                 <PeerCard key={peer.symbol} peer={peer} mono={mono} onSelect={onPeerSelect} />
