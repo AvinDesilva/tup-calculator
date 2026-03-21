@@ -323,11 +323,25 @@ app.get("/industry-growth", async (req, res) => {
           const cash = bs.cashAndCashEquivalents || bs.cashAndShortTermInvestments || 0;
           const adjPrice = shares > 0 ? (mktCap + debt - cash) / shares : 0;
 
+          // VDR: decay growth after hold period (simplified — matches vdr.ts logic)
+          // Hold period 3yr (conservative default), floor 5%, min VDR 2pp/yr
+          const VDR_FLOOR = 0.05;
+          const VDR_MIN = 0.02;
+          const VDR_HOLD = 3;
+          const vdrFactor = blended >= 0.40 ? 0.20 : blended >= 0.20 ? 0.15 : 0.10;
+          const vdrRate = Math.max(VDR_MIN, blended * vdrFactor);
+
           let payback = null;
           if (epsBase > 0 && adjPrice > 0 && blended > 0) {
             let cum = 0, epsY = epsBase;
             for (let y = 1; y <= 30; y++) {
-              epsY *= (1 + blended);
+              let yearGr;
+              if (y <= VDR_HOLD) {
+                yearGr = blended;
+              } else {
+                yearGr = Math.max(blended - (y - VDR_HOLD) * vdrRate, VDR_FLOOR);
+              }
+              epsY *= (1 + yearGr);
               cum += epsY;
               if (cum >= adjPrice) { payback = y; break; }
             }
