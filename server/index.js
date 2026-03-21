@@ -238,7 +238,8 @@ app.get("/industry-growth", async (req, res) => {
           const estimatesData = estimatesRes.status === "fulfilled" ? estimatesRes.value : [];
           const quoteData = quoteRes.status === "fulfilled" ? quoteRes.value : [];
 
-          // Historical EPS growth — geometric mean CAGR, filtering outliers |g| >= 10
+          // Historical EPS growth — median of YoY rates (matches frontend approach),
+          // filtering outliers |g| >= 10
           const growthArr = Array.isArray(growthData) ? growthData : [];
           const epsGrowthRates = growthArr
             .map(g => g.epsgrowth || g.epsGrowth || 0)
@@ -246,12 +247,12 @@ app.get("/industry-growth", async (req, res) => {
 
           if (epsGrowthRates.length === 0) return null;
 
-          // Geometric mean via product of (1+g)
-          let product = 1;
-          for (const g of epsGrowthRates) product *= (1 + g);
-          const historicalGrowth = product > 0
-            ? Math.pow(product, 1 / epsGrowthRates.length) - 1
-            : 0;
+          // Median (robust to negative/volatile growth years)
+          const sortedRates = [...epsGrowthRates].sort((a, b) => a - b);
+          const mid = Math.floor(sortedRates.length / 2);
+          const historicalGrowth = sortedRates.length % 2 !== 0
+            ? sortedRates[mid]
+            : (sortedRates[mid - 1] + sortedRates[mid]) / 2;
 
           // Forward CAGR from analyst estimates
           let fwdCAGR = null;
