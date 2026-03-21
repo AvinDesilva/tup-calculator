@@ -371,10 +371,9 @@ app.get("/industry-growth", async (req, res) => {
     const p25 = rates[p25idx];
     const p75 = rates[Math.min(p75idx, rates.length - 1)];
 
-    // Top 3 peers with valid payback, sorted by market cap (already in order from screener)
+    // All peers with valid payback, sorted by market cap (already in order from screener)
     const peers = valid
       .filter(r => r.payback != null && r.payback > 0)
-      .slice(0, 3)
       .map(r => ({ symbol: r.symbol, companyName: r.companyName, payback: r.payback }));
 
     const result = {

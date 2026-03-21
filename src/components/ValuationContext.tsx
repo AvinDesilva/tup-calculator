@@ -9,6 +9,7 @@ interface ValuationContextProps {
   industryGrowthLoading: boolean;
   companyBlendedGrowth: number | null;
   onPeerSelect?: (ticker: string) => void;
+  excludePeers?: string[];
 }
 
 interface PanelData {
@@ -82,7 +83,7 @@ function PeerCard({ peer, mono, onSelect }: { peer: IndustryPeer; mono: string; 
   );
 }
 
-export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, industryGrowth, industryGrowthLoading, companyBlendedGrowth, onPeerSelect }: ValuationContextProps) {
+export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, industryGrowth, industryGrowthLoading, companyBlendedGrowth, onPeerSelect, excludePeers = [] }: ValuationContextProps) {
   const mono = "'JetBrains Mono', monospace";
 
   const hasStrongBuy = strongBuyPrice != null && strongBuyPrice > 0 && currentPrice > 0;
@@ -166,7 +167,12 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
   } : null;
 
   const topRow = [sbPanel, buyPanel, dcfPanel].filter((p): p is PanelData => p != null);
-  const peers: IndustryPeer[] = hasIndustry && industryGrowth!.peers ? industryGrowth!.peers.slice(0, 3) : [];
+  const allPeers = hasIndustry && industryGrowth!.peers ? industryGrowth!.peers : [];
+  const excludeSet = new Set(excludePeers.map(t => t.toUpperCase()));
+  const freshPeers = allPeers.filter(p => !excludeSet.has(p.symbol.toUpperCase()));
+  const peers: IndustryPeer[] = freshPeers.length >= 3
+    ? freshPeers.slice(0, 3)
+    : [...freshPeers, ...allPeers.filter(p => !freshPeers.includes(p))].slice(0, 3);
   const showBottomRow = industryPanel != null || peers.length > 0;
 
   if (topRow.length === 0 && !showBottomRow) return null;
