@@ -109,11 +109,15 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
     icon: buyBelow ? "▲" : null, color: buyColor, sub: "",
   } : null;
 
-  const dcfPanel: PanelData | null = hasDCF ? {
+  const dcfPanel: PanelData = hasDCF ? {
     key: "dcf", title: "DCF Fair Value",
     value: `$${Number(dcf).toFixed(2)}`,
     icon: null, color: dcfColor, sub: dcfLabel,
-  } : null;
+  } : {
+    key: "dcf", title: "DCF Fair Value",
+    value: "N/A",
+    icon: null, color: "#555", sub: "Insufficient cash flow data",
+  };
 
   const industryPanel: PanelData | null = showIndustrySlot ? {
     key: "industry", title: "Industry Growth",
