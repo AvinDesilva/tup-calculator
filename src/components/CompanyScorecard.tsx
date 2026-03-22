@@ -74,6 +74,7 @@ function PeerCard({ peer, mono, onSelect }: { peer: IndustryPeer; mono: string; 
   const color = pb <= 10 ? "#10d97e" : pb <= 15 ? "#f5a020" : "#FF4D00";
   return (
     <button
+      className="rsp-peer-card"
       onClick={() => onSelect?.(peer.symbol)}
       aria-label={`Load ${peer.symbol} — ${pb} year payback`}
       style={{
@@ -101,7 +102,7 @@ function PeerCard({ peer, mono, onSelect }: { peer: IndustryPeer; mono: string; 
       <span style={{ fontFamily: mono, fontSize: "clamp(8px, 2.2vw, 11px)", letterSpacing: "0.06em", color: "#888", whiteSpace: "nowrap" }}>
         {peer.symbol}
       </span>
-      <span style={{ fontSize: "clamp(8px, 2.2vw, 11px)", color: "#555" }}>→</span>
+      <span className="rsp-peer-arrow" style={{ fontSize: "clamp(8px, 2.2vw, 11px)", color: "#555" }}>→</span>
       <div style={{ display: "flex", alignItems: "baseline", gap: "1px" }}>
         <span style={{ fontFamily: mono, fontSize: "clamp(12px, 3.5vw, 16px)", fontWeight: 600, color, letterSpacing: "-0.02em" }}>
           {pb}
@@ -431,14 +432,12 @@ export function CompanyScorecard({ earnings, incomeHistory, description, exchang
             const diff = companyBlendedGrowth - median;
             if (diff > 2) {
               igColor = "#10d97e";
-              igLabel = "Above Industry";
             } else if (diff < -2) {
               igColor = "#FF4D00";
-              igLabel = "Below Industry";
             } else {
               igColor = "#f5a020";
-              igLabel = industryGrowth!.industry;
             }
+            igLabel = industryGrowth!.industry;
           } else {
             igLabel = `n=${industryGrowth!.count}`;
           }

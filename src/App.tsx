@@ -562,6 +562,12 @@ export default function App() {
             flex-wrap: wrap;
           }
           .rsp-methodology-btn { order: 0 !important; }
+          .rsp-peer-card {
+            flex-direction: column !important;
+            gap: 0 !important;
+            padding: 4px 8px !important;
+          }
+          .rsp-peer-arrow { display: none !important; }
           .rsp-api-bar {
             grid-template-columns: 1fr !important;
             gap: 14px !important;
