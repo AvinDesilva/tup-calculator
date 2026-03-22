@@ -119,9 +119,10 @@ export function TickerSearch({
       e.preventDefault();
       if (activeIndex >= 0 && activeIndex < results.length) {
         selectItem(results[activeIndex].symbol);
-      } else {
-        onSubmit();
       }
+      setIsOpen(false);
+      setResults([]);
+      onSubmit();
     } else if (e.key === "Escape") {
       setIsOpen(false);
     }
