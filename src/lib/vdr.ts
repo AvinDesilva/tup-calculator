@@ -59,12 +59,15 @@ function profitabilityModifier(ttmEPS: number): number {
 }
 
 /**
- * Dynamic floor: base 5% + half the dividend yield, capped at 8%.
- * Dividend payers' total return fades less aggressively.
+ * Dynamic floor: the company's dividend yield (as a decimal) is the floor
+ * for decay when available, otherwise fall back to the base 5% floor.
+ * A 6% dividend payer floors at 6%, reflecting that even as EPS growth
+ * stalls, the total return to shareholders includes persistent cash
+ * distributions.
  */
 function dynamicFloor(dividendYield: number): number {
-  const bonus = (dividendYield / 100) / 2;  // half the yield as decimal
-  return Math.min(BASE_FADE_FLOOR + bonus, 0.08);
+  const yieldDecimal = dividendYield / 100;
+  return Math.max(yieldDecimal, BASE_FADE_FLOOR);
 }
 
 /**

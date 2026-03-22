@@ -327,8 +327,9 @@ app.get("/industry-growth", async (req, res) => {
           const adjPrice = shares > 0 ? (mktCap + debt - cash) / shares : 0;
 
           // VDR: decay growth after hold period (simplified — matches vdr.ts logic)
-          // Hold period 3yr (conservative default), floor 5%, min VDR 2pp/yr
-          const VDR_FLOOR = 0.05;
+          // Hold period 3yr (conservative default), min VDR 2pp/yr
+          // Floor = max(dividendYield, 5%) — dividend yield is the decay floor
+          const VDR_FLOOR = Math.max(dividendYield, 0.05);
           const VDR_MIN = 0.02;
           const VDR_HOLD = 3;
           const vdrFactor = blended >= 0.40 ? 0.20 : blended >= 0.20 ? 0.15 : 0.10;
