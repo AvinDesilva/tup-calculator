@@ -183,8 +183,7 @@ app.get("/industry-growth", async (req, res) => {
     return res.status(400).json({ error: "Missing 'industry' parameter." });
   }
   const exclude = (req.query.exclude || "").toString().trim().toUpperCase();
-  const exchange = (req.query.exchange || "").toString().trim().toUpperCase();
-  const cacheKey = `${industry.toLowerCase()}|${exchange}`;
+  const cacheKey = industry.toLowerCase();
 
   const cached = industryCacheGet(cacheKey);
   if (cached !== undefined) {
@@ -208,11 +207,10 @@ app.get("/industry-growth", async (req, res) => {
       return res.json({ industry, error: "Insufficient data", count: 0 });
     }
 
-    // 2. Sort by market cap desc, take top 25 (excluding the target company, filtering by exchange)
+    // 2. Sort by market cap desc, take top 25 (excluding the target company)
     const sorted = screenerData
       .filter(c => {
         if (!c.symbol || c.symbol.toUpperCase() === exclude) return false;
-        if (exchange && (c.exchangeShortName || "").toUpperCase() !== exchange) return false;
         return true;
       })
       .sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0))

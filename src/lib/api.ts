@@ -28,11 +28,10 @@ export interface IndustryGrowthData {
   error?: string;
 }
 
-export async function fetchIndustryGrowth(industry: string, exclude?: string, exchange?: string): Promise<IndustryGrowthData | null> {
+export async function fetchIndustryGrowth(industry: string, exclude?: string): Promise<IndustryGrowthData | null> {
   try {
     const params = new URLSearchParams({ industry });
     if (exclude) params.set("exclude", exclude);
-    if (exchange) params.set("exchange", exchange);
     const res = await fetch(`/api/industry-growth?${params}`);
     if (!res.ok) return null;
     return await res.json();
