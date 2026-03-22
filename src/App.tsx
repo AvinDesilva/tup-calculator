@@ -447,10 +447,6 @@ export default function App() {
               buyPrice={buyPrice}
               dcf={valuation.dcf}
               currentPrice={inp.currentPrice}
-              industryGrowth={valuation.industryGrowth}
-              industryGrowthLoading={valuation.industryGrowthLoading}
-              companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
-              onPeerSelect={(t) => { setTicker(t); doFetch(t); }}
             />
             {company && (
               <CompanyScorecard
@@ -461,6 +457,10 @@ export default function App() {
                 exchange={scorecard.exchange}
                 lifecycleOnly
                 dividendYield={inp.dividendYield}
+                industryGrowth={valuation.industryGrowth}
+                industryGrowthLoading={valuation.industryGrowthLoading}
+                companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
+                onPeerSelect={(t) => { setTicker(t); doFetch(t); }}
               />
             )}
           </div>
