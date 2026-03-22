@@ -50,7 +50,7 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
           onSubmit={onFetch}
           placeholder="Search..."
           inputStyle={{
-            flex: 1,
+            width: "100%",
             background: "transparent",
             border: "none",
             padding: "16px 20px",
