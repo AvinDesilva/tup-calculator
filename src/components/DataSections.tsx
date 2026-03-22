@@ -86,7 +86,6 @@ export function DataSections({
                   { key: "5yr", label: `${growthYears.short}yr` },
                   ...(showLong ? [{ key: "10yr" as const, label: `${growthYears.long}yr` }] : []),
                 ];
-                const totalCount = buttons.length + (showViz ? 1 : 0);
                 const periodButtons = buttons.map((b, i) => (
                   <button key={b.key} aria-pressed={growthPeriod === b.key} onClick={() => onGrowthPeriodChange(b.key)} style={{
                     fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
@@ -95,7 +94,7 @@ export function DataSections({
                     border: `1px solid ${growthPeriod === b.key ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
                     color: growthPeriod === b.key ? "#C4A06E" : "#666",
                     cursor: "pointer",
-                    borderRadius: totalCount === 1 ? "3px" : i === 0 ? "3px 0 0 3px" : "0",
+                    borderRadius: buttons.length === 1 ? "3px" : i === 0 ? "3px 0 0 3px" : i === buttons.length - 1 ? "0 3px 3px 0" : "0",
                     marginLeft: i > 0 ? "-1px" : 0,
                   }}>{b.label}</button>
                 ));
@@ -113,8 +112,8 @@ export function DataSections({
                         border: `1px solid ${chartExpanded ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
                         color: chartExpanded ? "#C4A06E" : "#666",
                         cursor: "pointer",
-                        borderRadius: "0 3px 3px 0",
-                        marginLeft: "-1px",
+                        borderRadius: "3px",
+                        marginLeft: "6px",
                       }}
                     >visualize</button>
                   )}
