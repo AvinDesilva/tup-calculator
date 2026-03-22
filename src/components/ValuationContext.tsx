@@ -1,8 +1,13 @@
+import type { IndustryGrowthData } from "../lib/api.ts";
+
 interface ValuationContextProps {
   strongBuyPrice: number | null;
   buyPrice: number | null;
   dcf: number | null;
   currentPrice: number;
+  industryGrowth?: IndustryGrowthData | null;
+  industryGrowthLoading?: boolean;
+  companyBlendedGrowth?: number | null;
 }
 
 interface PanelData {
@@ -35,30 +40,55 @@ function Panel({ p, mono }: { p: PanelData; mono: string }) {
   );
 }
 
-export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice }: ValuationContextProps) {
+export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, industryGrowth, industryGrowthLoading = false, companyBlendedGrowth }: ValuationContextProps) {
   const mono = "'JetBrains Mono', monospace";
 
   const hasStrongBuy = strongBuyPrice != null && strongBuyPrice > 0 && currentPrice > 0;
   const hasBuy       = buyPrice != null && buyPrice > 0 && currentPrice > 0;
   const hasDCF       = dcf != null && dcf > 0 && currentPrice > 0;
-  if (!hasStrongBuy && !hasBuy && !hasDCF) return null;
+  const hasIndustry  = industryGrowth != null && !industryGrowth.error && industryGrowth.median != null;
+  const showIndustry = hasIndustry || industryGrowthLoading;
+
+  if (!hasStrongBuy && !hasBuy && !hasDCF && !showIndustry) return null;
+
+  // Strong Buy price
+  const sbBelow = hasStrongBuy && currentPrice > (strongBuyPrice as number);
+  const sbColor = sbBelow ? "#10d97e" : "#f5a020";
 
   // Buy price (10y threshold)
   const buyBelow = hasBuy && currentPrice <= (buyPrice as number);
   const buyColor = buyBelow ? "#10d97e" : "#f5a020";
 
   // DCF color based on delta vs current price
-  const dcfDelta    = hasDCF ? (((dcf as number) - currentPrice) / currentPrice) * 100 : 0;
-  const absDelta    = Math.abs(dcfDelta);
-  const dcfColor    = dcfDelta > 0
+  const dcfDelta = hasDCF ? (((dcf as number) - currentPrice) / currentPrice) * 100 : 0;
+  const absDelta = Math.abs(dcfDelta);
+  const dcfColor = dcfDelta > 0
     ? (absDelta > 25 ? "#10d97e" : absDelta > 10 ? "#5aad82" : "#8abfa8")
     : (absDelta > 25 ? "#FF4D00" : absDelta > 10 ? "#cc5533" : "#a07060");
 
-  // Strong Buy target
-  const sbBelow   = hasStrongBuy && currentPrice > (strongBuyPrice as number);
-  const sbColor   = sbBelow ? "#10d97e" : "#f5a020";
+  // Industry growth color
+  let igColor = "#888";
+  let igValue = "...";
+  let igSub = "";
+  if (industryGrowthLoading) {
+    igColor = "#888";
+    igValue = "...";
+    igSub = "Loading";
+  } else if (hasIndustry) {
+    const median = industryGrowth!.median;
+    igValue = `${median.toFixed(1)}%`;
+    if (companyBlendedGrowth != null) {
+      const diff = companyBlendedGrowth - median;
+      if (diff > 2) igColor = "#10d97e";
+      else if (diff < -2) igColor = "#FF4D00";
+      else igColor = "#f5a020";
+      igSub = industryGrowth!.industry;
+    } else {
+      igSub = `n=${industryGrowth!.count}`;
+    }
+  }
 
-  // Build panel data
+  // Build panels
   const sbPanel: PanelData | null = hasStrongBuy ? {
     key: "strongbuy", title: "Strong Buy Below",
     value: `$${(strongBuyPrice as number).toFixed(2)}`,
@@ -71,24 +101,24 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice }
     icon: buyBelow ? "▲" : null, color: buyColor, sub: "",
   } : null;
 
-  const dcfPanel: PanelData = hasDCF ? {
+  const dcfPanel: PanelData | null = hasDCF ? {
     key: "dcf", title: "DCF Fair Value",
     value: `$${Number(dcf).toFixed(2)}`,
     icon: null, color: dcfColor, sub: "",
-  } : {
-    key: "dcf", title: "DCF Fair Value",
-    value: "N/A",
-    icon: null, color: "#555", sub: "Insufficient cash flow data",
-  };
+  } : null;
 
-  const topRow = [sbPanel, buyPanel, dcfPanel].filter((p): p is PanelData => p != null);
+  const igPanel: PanelData | null = showIndustry ? {
+    key: "industry", title: "Industry Growth",
+    value: igValue, icon: null, color: igColor, sub: igSub,
+  } : null;
 
-  if (topRow.length === 0) return null;
+  const topRow = [sbPanel, buyPanel].filter((p): p is PanelData => p != null);
+  const bottomRow = [dcfPanel, igPanel].filter((p): p is PanelData => p != null);
 
-  const divider = <div style={{ background: "rgba(255,255,255,0.06)", width: "1px" }} />;
+  if (topRow.length === 0 && bottomRow.length === 0) return null;
 
-  // Build grid template for a row of N panels with dividers between them
-  const rowTemplate = (n: number) => Array.from({ length: n }, (_, i) => i < n - 1 ? "1fr 1px" : "1fr").join(" ");
+  const dividerV = <div style={{ background: "rgba(255,255,255,0.06)", width: "1px" }} />;
+  const dividerH = <div style={{ background: "rgba(255,255,255,0.06)", height: "1px", gridColumn: "1 / -1" }} />;
 
   return (
     <div style={{ paddingTop: "8px" }}>
@@ -96,20 +126,40 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice }
         Valuation Context
       </div>
 
-      {/* Row 1: Strong Buy + Patient Buy + DCF */}
-      {topRow.length > 0 && (
-        <div className="rsp-valuation-grid" style={{ display: "grid", gridTemplateColumns: rowTemplate(topRow.length), gap: "0", paddingBottom: "14px" }}>
-          {topRow.map((p, i) => (
-            <div key={p.key} style={{ display: "contents" }}>
-              {i > 0 && divider}
-              <div style={i > 0 ? { paddingLeft: "14px" } : undefined}>
-                <Panel p={p} mono={mono} />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="rsp-valuation-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", gap: "0" }}>
+        {/* Top row */}
+        {topRow.length === 2 ? (<>
+          <div style={{ paddingBottom: "14px" }}>
+            <Panel p={topRow[0]} mono={mono} />
+          </div>
+          {dividerV}
+          <div style={{ paddingLeft: "14px", paddingBottom: "14px" }}>
+            <Panel p={topRow[1]} mono={mono} />
+          </div>
+        </>) : topRow.length === 1 ? (<>
+          <div style={{ paddingBottom: "14px", gridColumn: "1 / -1" }}>
+            <Panel p={topRow[0]} mono={mono} />
+          </div>
+        </>) : null}
 
+        {/* Horizontal divider between rows */}
+        {topRow.length > 0 && bottomRow.length > 0 && dividerH}
+
+        {/* Bottom row */}
+        {bottomRow.length === 2 ? (<>
+          <div style={{ paddingTop: "14px" }}>
+            <Panel p={bottomRow[0]} mono={mono} />
+          </div>
+          {dividerV}
+          <div style={{ paddingLeft: "14px", paddingTop: "14px" }}>
+            <Panel p={bottomRow[1]} mono={mono} />
+          </div>
+        </>) : bottomRow.length === 1 ? (<>
+          <div style={{ paddingTop: "14px", gridColumn: "1 / -1" }}>
+            <Panel p={bottomRow[0]} mono={mono} />
+          </div>
+        </>) : null}
+      </div>
     </div>
   );
 }

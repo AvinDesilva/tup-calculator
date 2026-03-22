@@ -220,7 +220,7 @@ app.get("/industry-growth", async (req, res) => {
       return res.json({ industry, error: "Insufficient data", count: sorted.length });
     }
 
-    // 3. Fetch growth data for each constituent in batches of 10
+    // 3. Fetch growth data for each constituent (growth + estimates + quote only)
     const BATCH_SIZE = 10;
     const BATCH_DELAY = 100;
     const constituentResults = [];
@@ -231,22 +231,17 @@ app.get("/industry-growth", async (req, res) => {
       const batchPromises = batch.map(async (company) => {
         const sym = company.symbol;
         try {
-          const [growthRes, estimatesRes, quoteRes, incomeRes, bsRes] = await Promise.allSettled([
+          const [growthRes, estimatesRes, quoteRes] = await Promise.allSettled([
             fetch(`${FMP_BASE}/financial-growth?symbol=${encodeURIComponent(sym)}&limit=10&apikey=${API_KEY}`).then(r => r.ok ? r.json() : []),
             fetch(`${FMP_BASE}/analyst-estimates?symbol=${encodeURIComponent(sym)}&period=annual&limit=5&apikey=${API_KEY}`).then(r => r.ok ? r.json() : []),
             fetch(`${FMP_BASE}/quote?symbol=${encodeURIComponent(sym)}&apikey=${API_KEY}`).then(r => r.ok ? r.json() : []),
-            fetch(`${FMP_BASE}/income-statement?symbol=${encodeURIComponent(sym)}&limit=1&apikey=${API_KEY}`).then(r => r.ok ? r.json() : []),
-            fetch(`${FMP_BASE}/balance-sheet-statement?symbol=${encodeURIComponent(sym)}&limit=1&apikey=${API_KEY}`).then(r => r.ok ? r.json() : []),
           ]);
 
           const growthData = growthRes.status === "fulfilled" ? growthRes.value : [];
           const estimatesData = estimatesRes.status === "fulfilled" ? estimatesRes.value : [];
           const quoteData = quoteRes.status === "fulfilled" ? quoteRes.value : [];
-          const incomeData = incomeRes.status === "fulfilled" ? incomeRes.value : [];
-          const bsData = bsRes.status === "fulfilled" ? bsRes.value : [];
 
-          // Historical EPS growth — median of YoY rates (matches frontend approach),
-          // filtering outliers |g| >= 10
+          // Historical EPS growth — median of YoY rates, filtering outliers |g| >= 10
           const growthArr = Array.isArray(growthData) ? growthData : [];
           const epsGrowthRates = growthArr
             .map(g => g.epsgrowth || g.epsGrowth || 0)
@@ -254,7 +249,6 @@ app.get("/industry-growth", async (req, res) => {
 
           if (epsGrowthRates.length === 0) return null;
 
-          // Median (robust to negative/volatile growth years)
           const sortedRates = [...epsGrowthRates].sort((a, b) => a - b);
           const mid = Math.floor(sortedRates.length / 2);
           const historicalGrowth = sortedRates.length % 2 !== 0
@@ -265,18 +259,14 @@ app.get("/industry-growth", async (req, res) => {
           let fwdCAGR = null;
           const estimates = Array.isArray(estimatesData) ? estimatesData : [];
           if (estimates.length >= 1) {
-            // Sort by date ascending
             const sorted = [...estimates].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
             const baseEPS = quoteData?.[0]?.eps;
             if (baseEPS && baseEPS > 0) {
               if (sorted.length >= 3 && sorted[2].epsAvg && sorted[2].epsAvg > 0) {
-                // 3-year CAGR: (EPS_T+2 / EPS_T)^(1/3) - 1
                 fwdCAGR = Math.pow(sorted[2].epsAvg / baseEPS, 1 / 3) - 1;
               } else if (sorted.length >= 2 && sorted[1].epsAvg && sorted[1].epsAvg > 0) {
-                // 2-year fallback: sqrt(EPS_T+1 / EPS_T) - 1
                 fwdCAGR = Math.sqrt(sorted[1].epsAvg / baseEPS) - 1;
               } else if (sorted[0].epsAvg && sorted[0].epsAvg > 0) {
-                // 1-year fallback
                 fwdCAGR = (sorted[0].epsAvg / baseEPS) - 1;
               }
             }
@@ -294,64 +284,9 @@ app.get("/industry-growth", async (req, res) => {
             ? (historicalGrowth + fwdCAGR) / 2 + dividendYield
             : historicalGrowth + dividendYield;
 
-          // Sanity check — skip extreme outliers
           if (!isFinite(blended) || Math.abs(blended) > 2) return null;
 
-          // TUP payback — matches calcTUP: adjusted price + blended EPS base
-          const mktCap = quoteData?.[0]?.marketCap || company.marketCap || 0;
-          const shares = quoteData?.[0]?.sharesOutstanding
-            || (Array.isArray(incomeData) && incomeData[0]
-              ? (incomeData[0].weightedAverageShsOutDil || incomeData[0].weightedAverageShsOut || 0)
-              : 0);
-
-          // TTM EPS: quote → income statement fallback
-          let ttmEPS = quoteData?.[0]?.eps || 0;
-          if (!ttmEPS && Array.isArray(incomeData) && incomeData[0]) {
-            const ni = incomeData[0].netIncome || 0;
-            const sh = incomeData[0].weightedAverageShsOutDil || incomeData[0].weightedAverageShsOut || 0;
-            if (sh > 0) ttmEPS = ni / sh;
-          }
-
-          // Forward EPS from analyst estimates (first year epsAvg)
-          const fwdEPS = (Array.isArray(estimatesData) && estimatesData.length > 0)
-            ? [...estimatesData].sort((a, b) => (a.date || "").localeCompare(b.date || ""))[0]?.epsAvg || 0
-            : 0;
-
-          // Blended EPS base: (TTM + forward) / 2, fallback to TTM only
-          const epsBase = (ttmEPS > 0 && fwdEPS > 0) ? (ttmEPS + fwdEPS) / 2 : ttmEPS;
-
-          // Adjusted price (enterprise value per share): (mktCap + debt - cash) / shares
-          const bs = Array.isArray(bsData) && bsData[0] ? bsData[0] : {};
-          const debt = bs.totalDebt || 0;
-          const cash = bs.cashAndCashEquivalents || bs.cashAndShortTermInvestments || 0;
-          const adjPrice = shares > 0 ? (mktCap + debt - cash) / shares : 0;
-
-          // VDR: decay growth after hold period (simplified — matches vdr.ts logic)
-          // Hold period 3yr (conservative default), min VDR 2pp/yr
-          // Floor = max(dividendYield, 5%) — dividend yield is the decay floor
-          const VDR_FLOOR = Math.max(dividendYield, 0.05);
-          const VDR_MIN = 0.02;
-          const VDR_HOLD = 3;
-          const vdrFactor = blended >= 0.40 ? 0.20 : blended >= 0.20 ? 0.15 : 0.10;
-          const vdrRate = Math.max(VDR_MIN, blended * vdrFactor);
-
-          let payback = null;
-          if (epsBase > 0 && adjPrice > 0 && blended > 0) {
-            let cum = 0, epsY = epsBase;
-            for (let y = 1; y <= 30; y++) {
-              let yearGr;
-              if (y <= VDR_HOLD) {
-                yearGr = blended;
-              } else {
-                yearGr = Math.max(blended - (y - VDR_HOLD) * vdrRate, VDR_FLOOR);
-              }
-              epsY *= (1 + yearGr);
-              cum += epsY;
-              if (cum >= adjPrice) { payback = y; break; }
-            }
-          }
-
-          return { symbol: sym, companyName: company.companyName || sym, blended, payback };
+          return { symbol: sym, blended };
         } catch {
           return null;
         }
@@ -375,12 +310,6 @@ app.get("/industry-growth", async (req, res) => {
     const p25 = rates[p25idx];
     const p75 = rates[Math.min(p75idx, rates.length - 1)];
 
-    // Top 3 peers with valid payback, sorted by market cap (already in order from screener)
-    const peers = valid
-      .filter(r => r.payback != null && r.payback > 0)
-      .slice(0, 3)
-      .map(r => ({ symbol: r.symbol, companyName: r.companyName, payback: r.payback }));
-
     const result = {
       industry,
       median: parseFloat(median.toFixed(1)),
@@ -388,7 +317,6 @@ app.get("/industry-growth", async (req, res) => {
       p75: parseFloat(p75.toFixed(1)),
       count: valid.length,
       constituents: valid.map(r => r.symbol),
-      peers,
     };
 
     industryCacheSet(cacheKey, result);

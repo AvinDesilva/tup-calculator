@@ -2,7 +2,6 @@ import { useState } from "react";
 import { LC_CURVE, LC_ZONES, STAGE_META } from "../lib/constants.ts";
 import { classifyLifecycle, lifecycleDotX, lifecycleRevGrowth } from "../lib/lifecycle.ts";
 import type { FMPEarningSurprise, FMPIncomeStatement, FMPCashFlow } from "../lib/types.ts";
-import type { IndustryGrowthData, IndustryPeer } from "../lib/api.ts";
 
 
 // ─── Catmull-Rom spline helpers ───────────────────────────────────────────────
@@ -42,76 +41,6 @@ function findTForX(pts: [number, number][], targetX: number): number {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-// ─── Industry Growth helpers ──────────────────────────────────────────────────
-
-interface IGPanelData {
-  title: string;
-  value: string;
-  color: string;
-  sub: string;
-}
-
-function IGPanel({ p, mono }: { p: IGPanelData; mono: string }) {
-  return (
-    <div style={{ padding: "0" }}>
-      <div style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#888", marginBottom: "6px" }}>
-        {p.title}
-      </div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
-        <span style={{ fontFamily: mono, fontSize: "20px", fontWeight: 600, color: p.color, letterSpacing: "-0.02em" }}>
-          {p.value}
-        </span>
-      </div>
-      <div style={{ fontSize: "11px", color: "#888", marginTop: "4px", letterSpacing: "0.06em" }}>
-        {p.sub}
-      </div>
-    </div>
-  );
-}
-
-function PeerCard({ peer, mono, onSelect }: { peer: IndustryPeer; mono: string; onSelect?: (ticker: string) => void }) {
-  const pb = peer.payback;
-  const color = pb <= 10 ? "#10d97e" : pb <= 15 ? "#f5a020" : "#FF4D00";
-  return (
-    <button
-      className="rsp-peer-card"
-      onClick={() => onSelect?.(peer.symbol)}
-      aria-label={`Load ${peer.symbol} — ${pb} year payback`}
-      style={{
-        padding: "clamp(2px, 1vw, 4px) clamp(2px, 1vw, 4px) clamp(2px, 1vw, 4px) clamp(4px, 2vw, 10px)",
-        background: "transparent",
-        border: "1px solid #C4A06E",
-        cursor: "pointer",
-        textAlign: "center",
-        height: "100%",
-        flex: "0 1 auto",
-        minWidth: 0,
-        boxSizing: "border-box",
-        fontFamily: "'Space Grotesk', sans-serif",
-        fontWeight: 700,
-        letterSpacing: "0.08em",
-        textTransform: "uppercase" as const,
-        color: "#C4A06E",
-        transition: "opacity 0.15s",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "clamp(2px, 1vw, 6px)",
-      }}
-    >
-      <span style={{ fontFamily: mono, fontSize: "clamp(8px, 2.2vw, 11px)", letterSpacing: "0.06em", color: "#888", whiteSpace: "nowrap" }}>
-        {peer.symbol}
-      </span>
-      <span className="rsp-peer-arrow" style={{ fontSize: "clamp(8px, 2.2vw, 11px)", color: "#555" }}>→</span>
-      <div style={{ display: "flex", alignItems: "baseline", gap: "1px" }}>
-        <span style={{ fontFamily: mono, fontSize: "clamp(12px, 3.5vw, 16px)", fontWeight: 600, color, letterSpacing: "-0.02em" }}>
-          {pb}
-        </span>
-        <span style={{ fontSize: "clamp(7px, 1.8vw, 9px)", color: "#666", fontWeight: 400 }}>yr</span>
-      </div>
-    </button>
-  );
-}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -123,10 +52,6 @@ interface CompanyScorecardProps {
   exchange?: string;
   lifecycleOnly?: boolean;
   dividendYield?: number;
-  industryGrowth?: IndustryGrowthData | null;
-  industryGrowthLoading?: boolean;
-  companyBlendedGrowth?: number | null;
-  onPeerSelect?: (ticker: string) => void;
 }
 
 interface ProcessedQuarter {
@@ -135,7 +60,7 @@ interface ProcessedQuarter {
   date: string | undefined;
 }
 
-export function CompanyScorecard({ earnings, incomeHistory, description, exchange, lifecycleOnly, dividendYield, industryGrowth, industryGrowthLoading = false, companyBlendedGrowth, onPeerSelect }: CompanyScorecardProps) {
+export function CompanyScorecard({ earnings, incomeHistory, description, exchange, lifecycleOnly, dividendYield }: CompanyScorecardProps) {
   const [descExpanded, setDescExpanded] = useState(false);
   const body  = "'Space Grotesk', sans-serif";
   const mono  = "'JetBrains Mono', monospace";
@@ -412,53 +337,6 @@ export function CompanyScorecard({ earnings, incomeHistory, description, exchang
         </div>
       )}
 
-      {/* Industry Growth + Peer Cards */}
-      {(() => {
-        const hasIndustry = industryGrowth != null && !industryGrowth.error && industryGrowth.median != null;
-        const showSlot = hasIndustry || industryGrowthLoading;
-        if (!showSlot) return null;
-
-        let igColor = "#888";
-        let igLabel = "";
-        let igValue = "...";
-        if (industryGrowthLoading) {
-          igColor = "#888";
-          igLabel = "Loading";
-          igValue = "...";
-        } else if (hasIndustry) {
-          const median = industryGrowth!.median;
-          igValue = `${median.toFixed(1)}%`;
-          if (companyBlendedGrowth != null) {
-            const diff = companyBlendedGrowth - median;
-            if (diff > 2) {
-              igColor = "#10d97e";
-            } else if (diff < -2) {
-              igColor = "#FF4D00";
-            } else {
-              igColor = "#f5a020";
-            }
-            igLabel = industryGrowth!.industry;
-          } else {
-            igLabel = `n=${industryGrowth!.count}`;
-          }
-        }
-
-        const igPanel: IGPanelData = { title: "Industry Growth", value: igValue, color: igColor, sub: igLabel };
-        const peers: IndustryPeer[] = hasIndustry && industryGrowth!.peers ? industryGrowth!.peers.slice(0, 3) : [];
-
-        return (
-          <div style={{ display: "flex", alignItems: "stretch", gap: "0", marginTop: "20px", paddingTop: "14px", paddingLeft: "4.6%", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-            <div style={{ paddingRight: "3px" }}><IGPanel p={igPanel} mono={mono} /></div>
-            {peers.length > 0 && (
-              <div style={{ display: "flex", gap: "clamp(4px, 1.5vw, 20px)", paddingLeft: "4px", flex: 1, justifyContent: "center", minWidth: 0 }}>
-                {peers.map((peer) => (
-                  <PeerCard key={peer.symbol} peer={peer} mono={mono} onSelect={onPeerSelect} />
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })()}
     </div>
   );
 }

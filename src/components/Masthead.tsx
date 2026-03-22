@@ -88,7 +88,7 @@ export function Masthead({ company, meta, isConverted, currencyNote, onShowMetho
         >
           <span style={{ fontFamily: C.display, fontSize: "20px", fontWeight: 700, color: C.text1, letterSpacing: "0.04em", textTransform: "uppercase" }}>{company}</span>
           {meta.sector && (
-            <span style={{ fontSize: "10px", color: C.text2, letterSpacing: "0.05em" }}>{meta.sector} · {meta.industry}</span>
+            <span style={{ fontSize: "10px", color: C.text2, letterSpacing: "0.05em" }}>{meta.sector}</span>
           )}
           {isConverted && (
             <span title={currencyNote} style={{

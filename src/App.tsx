@@ -446,6 +446,9 @@ export default function App() {
               buyPrice={buyPrice}
               dcf={valuation.dcf}
               currentPrice={inp.currentPrice}
+              industryGrowth={valuation.industryGrowth}
+              industryGrowthLoading={valuation.industryGrowthLoading}
+              companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
             />
             {company && (
               <CompanyScorecard
@@ -456,10 +459,6 @@ export default function App() {
                 exchange={scorecard.exchange}
                 lifecycleOnly
                 dividendYield={inp.dividendYield}
-                industryGrowth={valuation.industryGrowth}
-                industryGrowthLoading={valuation.industryGrowthLoading}
-                companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
-                onPeerSelect={(t) => { setTicker(t); doFetch(t); }}
               />
             )}
           </div>
@@ -561,13 +560,7 @@ export default function App() {
             flex-wrap: wrap;
           }
           .rsp-methodology-btn { order: 0 !important; }
-          .rsp-peer-card {
-            flex-direction: column !important;
-            gap: 0 !important;
-            padding: 4px 8px !important;
-          }
-          .rsp-peer-arrow { display: none !important; }
-          .rsp-api-bar {
+.rsp-api-bar {
             grid-template-columns: 1fr !important;
             gap: 14px !important;
           }
