@@ -214,21 +214,12 @@ export default function App() {
       setGrowthPeriod(finalGrowthPeriod);
       setInp(finalInp);
 
-      // Compute fixed target prices using conservative 30%-capped growth
+      // Compute target prices from calcTUP rows (consistent with VDR + Y1/Y2 growth)
       const origResult = calcTUP(origInp, "standard");
-      if (origResult && origResult.epsBase > 0 && origResult.gr > 0) {
+      if (origResult && origResult.epsBase > 0 && origResult.gr > 0 && origResult.rows.length >= 10) {
         const netDebt = (data.debt - data.cash) / data.shares;
-        const cappedGr = Math.min(origResult.gr, 0.30);
-        const cumAt = (years: number) => {
-          let cum = 0, eps = origResult.epsBase;
-          for (let y = 1; y <= years; y++) {
-            eps *= (1 + cappedGr);
-            cum += eps;
-          }
-          return cum - netDebt;
-        };
-        const sb = cumAt(7);
-        const bp = cumAt(10);
+        const sb = origResult.rows[6].cum - netDebt;
+        const bp = origResult.rows[9].cum - netDebt;
         setStrongBuyPrice(sb > 0 ? sb : null);
         setBuyPrice(bp > 0 ? bp : null);
       }
@@ -267,16 +258,12 @@ export default function App() {
       });
       setHasSearched(true);
       const origResult = calcTUP(dev.DEV_INP, "standard");
-      if (origResult && origResult.epsBase > 0 && origResult.gr > 0) {
+      if (origResult && origResult.epsBase > 0 && origResult.gr > 0 && origResult.rows.length >= 10) {
         const netDebt = (dev.DEV_INP.debt - dev.DEV_INP.cash) / dev.DEV_INP.shares;
-        const cappedGr = Math.min(origResult.gr, 0.30);
-        const cumAt = (years: number) => {
-          let cum = 0, eps = origResult.epsBase;
-          for (let y = 1; y <= years; y++) { eps *= (1 + cappedGr); cum += eps; }
-          return cum - netDebt;
-        };
-        setStrongBuyPrice(cumAt(7) > 0 ? cumAt(7) : null);
-        setBuyPrice(cumAt(10) > 0 ? cumAt(10) : null);
+        const sb = origResult.rows[6].cum - netDebt;
+        const bp = origResult.rows[9].cum - netDebt;
+        setStrongBuyPrice(sb > 0 ? sb : null);
+        setBuyPrice(bp > 0 ? bp : null);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -446,6 +433,7 @@ export default function App() {
               buyPrice={buyPrice}
               dcf={valuation.dcf}
               currentPrice={inp.currentPrice}
+              adjPrice={result?.adjPrice}
               industryGrowth={valuation.industryGrowth}
               industryGrowthLoading={valuation.industryGrowthLoading}
               companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}

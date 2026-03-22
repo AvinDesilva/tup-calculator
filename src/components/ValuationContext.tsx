@@ -5,6 +5,7 @@ interface ValuationContextProps {
   buyPrice: number | null;
   dcf: number | null;
   currentPrice: number;
+  adjPrice?: number | null;
   industryGrowth?: IndustryGrowthData | null;
   industryGrowthLoading?: boolean;
   companyBlendedGrowth?: number | null;
@@ -40,7 +41,7 @@ function Panel({ p, mono }: { p: PanelData; mono: string }) {
   );
 }
 
-export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, industryGrowth, industryGrowthLoading = false, companyBlendedGrowth }: ValuationContextProps) {
+export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, adjPrice, industryGrowth, industryGrowthLoading = false, companyBlendedGrowth }: ValuationContextProps) {
   const mono = "'JetBrains Mono', monospace";
 
   const hasStrongBuy = strongBuyPrice != null && strongBuyPrice > 0 && currentPrice > 0;
@@ -88,23 +89,33 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
     }
   }
 
+  // Sub text: % diff vs adjusted price for buy targets, vs current price for DCF
+  const hasAdj = adjPrice != null && adjPrice > 0;
+  const sbDiffPct = hasStrongBuy && hasAdj ? (((strongBuyPrice as number) - adjPrice) / adjPrice) * 100 : null;
+  const buyDiffPct = hasBuy && hasAdj ? (((buyPrice as number) - adjPrice) / adjPrice) * 100 : null;
+
+  const fmtDiff = (pct: number) => `${pct > 0 ? "+" : ""}${pct.toFixed(1)}% vs adj. price`;
+
   // Build panels
   const sbPanel: PanelData | null = hasStrongBuy ? {
     key: "strongbuy", title: "Strong Buy Below",
     value: `$${(strongBuyPrice as number).toFixed(2)}`,
-    icon: sbBelow ? "▲▲" : null, color: sbColor, sub: "",
+    icon: sbBelow ? "▲▲" : null, color: sbColor,
+    sub: sbDiffPct != null ? fmtDiff(sbDiffPct) : "",
   } : null;
 
   const buyPanel: PanelData | null = hasBuy ? {
     key: "buy", title: "Patient Buy Below",
     value: `$${(buyPrice as number).toFixed(2)}`,
-    icon: buyBelow ? "▲" : null, color: buyColor, sub: "",
+    icon: buyBelow ? "▲" : null, color: buyColor,
+    sub: buyDiffPct != null ? fmtDiff(buyDiffPct) : "",
   } : null;
 
   const dcfPanel: PanelData | null = hasDCF ? {
     key: "dcf", title: "DCF Fair Value",
     value: `$${Number(dcf).toFixed(2)}`,
-    icon: null, color: dcfColor, sub: "",
+    icon: null, color: dcfColor,
+    sub: `${dcfDelta > 0 ? "+" : ""}${dcfDelta.toFixed(1)}% vs price`,
   } : null;
 
   const igPanel: PanelData | null = showIndustry ? {
