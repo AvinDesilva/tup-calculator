@@ -533,6 +533,9 @@ export default function App() {
 
         /* ── Mobile (< 768px) ─────────────────────────────────────────────── */
         @media (max-width: 767px) {
+          .rsp-growth-row {
+            flex-wrap: wrap !important;
+          }
           .rsp-container {
             padding-left: 16px !important;
             padding-right: 16px !important;

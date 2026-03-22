@@ -77,16 +77,18 @@ export function DataSections({
       <div style={{ marginBottom: "32px" }}>
         <SectionLabel num="02" title="Growth Assumptions" />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="rsp-growth-row" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888" }}>Historical EPS Growth</span>
             <div style={{ display: "flex", gap: "0px" }}>
               {(() => {
                 const showLong = growthYears.long > growthYears.short;
+                const showViz = epsGrowthHistory.length > 0;
                 const buttons: { key: "5yr" | "10yr"; label: string }[] = [
                   { key: "5yr", label: `${growthYears.short}yr` },
                   ...(showLong ? [{ key: "10yr" as const, label: `${growthYears.long}yr` }] : []),
                 ];
-                return buttons.map((b, i) => (
+                const totalCount = buttons.length + (showViz ? 1 : 0);
+                const periodButtons = buttons.map((b, i) => (
                   <button key={b.key} aria-pressed={growthPeriod === b.key} onClick={() => onGrowthPeriodChange(b.key)} style={{
                     fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
                     letterSpacing: "0.05em", padding: "2px 6px",
@@ -94,29 +96,32 @@ export function DataSections({
                     border: `1px solid ${growthPeriod === b.key ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
                     color: growthPeriod === b.key ? "#C4A06E" : "#666",
                     cursor: "pointer",
-                    borderRadius: buttons.length === 1 ? "3px" : i === 0 ? "3px 0 0 3px" : "0 3px 3px 0",
+                    borderRadius: totalCount === 1 ? "3px" : i === 0 ? "3px 0 0 3px" : "0",
                     marginLeft: i > 0 ? "-1px" : 0,
                   }}>{b.label}</button>
                 ));
+                return <>
+                  {periodButtons}
+                  {showViz && (
+                    <button
+                      onClick={() => setChartExpanded(v => !v)}
+                      aria-expanded={chartExpanded}
+                      aria-label="Toggle EPS growth chart"
+                      style={{
+                        fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                        letterSpacing: "0.05em", padding: "2px 6px",
+                        background: chartExpanded ? "rgba(196,160,110,0.2)" : "transparent",
+                        border: `1px solid ${chartExpanded ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+                        color: chartExpanded ? "#C4A06E" : "#666",
+                        cursor: "pointer",
+                        borderRadius: "0 3px 3px 0",
+                        marginLeft: "-1px",
+                      }}
+                    >visualize</button>
+                  )}
+                </>;
               })()}
             </div>
-            {epsGrowthHistory.length > 0 && (
-              <button
-                onClick={() => setChartExpanded(v => !v)}
-                aria-expanded={chartExpanded}
-                aria-label="Toggle EPS growth chart"
-                style={{
-                  fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
-                  letterSpacing: "0.05em", padding: "2px 6px",
-                  background: chartExpanded ? "rgba(196,160,110,0.2)" : "transparent",
-                  border: `1px solid ${chartExpanded ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
-                  color: chartExpanded ? "#C4A06E" : "#666",
-                  cursor: "pointer",
-                  borderRadius: "3px",
-                  marginLeft: "4px",
-                }}
-              >visualize</button>
-            )}
           </div>
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#00BFA5" }}>
             {inp.historicalGrowth.toFixed(1)}%
