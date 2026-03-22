@@ -528,6 +528,7 @@ export default function App() {
 
         /* Desktop: noise filter first, methodology second */
         .rsp-methodology-btn { order: 1; }
+        .rsp-methodology-mobile { display: none; }
 
         /* ── Mobile (< 768px) ─────────────────────────────────────────────── */
         @media (max-width: 767px) {
@@ -555,11 +556,9 @@ export default function App() {
             gap: 12px;
           }
           .rsp-header-toggles {
-            flex-shrink: unset;
-            padding-top: 0;
-            flex-wrap: wrap;
+            display: none !important;
           }
-          .rsp-methodology-btn { order: 0 !important; }
+          .rsp-methodology-mobile { display: inline-flex !important; }
 .rsp-api-bar {
             grid-template-columns: 1fr !important;
             gap: 14px !important;

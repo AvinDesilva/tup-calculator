@@ -90,6 +90,9 @@ export function Masthead({ company, meta, isConverted, currencyNote, onShowMetho
           {meta.sector && (
             <span style={{ fontSize: "10px", color: C.text2, letterSpacing: "0.05em" }}>{meta.sector}</span>
           )}
+          <button className="rsp-methodology-mobile" onClick={onShowMethodology} style={toggleBtn(false)}>
+            Read Methodology →
+          </button>
           {isConverted && (
             <span title={currencyNote} style={{
               fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase",
