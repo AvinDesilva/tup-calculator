@@ -114,35 +114,49 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
 
         {/* 02 Historical EPS Growth */}
         <section style={{ padding: "40px 0", borderBottom: `1px solid ${M.borderWeak}` }}>
-          <SectionNum n="02" title="Historical EPS Growth" sub="CAGR + Absolute Delta" />
+          <SectionNum n="02" title="Historical EPS Growth" sub="Endpoint CAGR with Anchor Shifting" />
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             Derived from diluted EPS on the income statement (net income ÷ shares). TUP uses a{" "}
-            <strong style={{ color: M.text1 }}>two-path approach</strong> depending on whether the
-            starting EPS was positive or negative.
+            <strong style={{ color: M.text1 }}>three-tier cascade</strong> to compute both
+            5-year and 10-year historical growth rates, handling extreme values at each level.
           </p>
 
-          <SubHead>Path A — Standard CAGR (Base EPS &gt; 0)</SubHead>
+          <SubHead>Tier 1 — Endpoint CAGR</SubHead>
           <FormulaBlock>
-            Growth = [(EPS<sub>end</sub> / EPS<sub>begin</sub>)<sup style={{ fontSize: "11px" }}>1/n</sup> − 1] × 100
+            CAGR = [(EPS<sub>end</sub> / EPS<sub>start</sub>)<sup style={{ fontSize: "11px" }}>1/n</sup> − 1] × 100
           </FormulaBlock>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
+            Uses only the start and end EPS values — naturally smooths over mid-period spikes and
+            collapses because intermediate years don&apos;t affect the result. Only valid when both
+            endpoints are positive and the resulting rate is ≤ ±100%.
+          </p>
 
-          <SubHead>Path B — Absolute Delta (Base EPS ≤ 0)</SubHead>
+          <SubHead>Tier 2 — Anchor Shifting</SubHead>
+          <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
+            When the full-window CAGR exceeds ±100% (typically because the start-year EPS is near-zero
+            after a bad year) or is undefined (negative start EPS), TUP walks the start year inward
+            toward the present, looking for the nearest positive-EPS anchor that yields a CAGR ≤ ±100%.
+            A minimum of 2 compounding periods is required.
+          </p>
+
+          <SubHead>Tier 3 — Winsorized Median (Final Fallback)</SubHead>
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 16px" }}>
-            The standard CAGR breaks when the starting EPS is zero or negative. For turnaround companies
-            that transitioned from losses to profitability, TUP uses the Absolute Delta method instead:
+            When no positive anchor produces a reasonable CAGR — common for turnaround companies with
+            mostly negative historical EPS — TUP falls back to the median of year-over-year EPS growth
+            rates, with each rate <strong style={{ color: M.text1 }}>winsorized to ±100%</strong>.
+            Extreme years (turnarounds, collapses, low-base spikes) still contribute directional drag
+            without dominating the result.
           </p>
           <FormulaBlock>
-            Growth<sub>mod</sub> = (EPS<sub>end</sub> − EPS<sub>begin</sub>) / (|EPS<sub>begin</sub>| × n) × 100
+            YoY<sub>i</sub> = clamp((EPS<sub>i</sub> − EPS<sub>i−1</sub>) / |EPS<sub>i−1</sub>|, −1, +1)<br />
+            Fallback = median(YoY<sub>1</sub>, …, YoY<sub>n</sub>) × 100
           </FormulaBlock>
-          <p style={{ fontSize: "14px", color: M.text3, lineHeight: 1.7, margin: "0 0 24px", fontStyle: "italic" }}>
-            If |EPS<sub>begin</sub>| is exactly 0, a floor of $0.01 is used to prevent division by zero.
-          </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "24px" }}>
             {[
               ["EPS_end",   "Most recent fiscal year diluted EPS"],
-              ["EPS_begin", "Farthest available year (up to 5 or 10 years back)"],
-              ["n",         "Number of years between those two points"],
+              ["EPS_start", "Farthest available year, or nearest positive-EPS anchor after shifting"],
+              ["n",         "Number of years between the chosen anchor and the most recent year"],
             ].map(([term, def]) => (
               <div key={term} style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "16px", fontSize: "14px", lineHeight: 1.7 }}>
                 <span style={{ fontFamily: M.mono, color: "#00BFA5" }}>{term}</span>
@@ -151,17 +165,21 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
             ))}
           </div>
 
-          <CalloutBlock label="Why Two Paths?">
-            A company like HIMS with EPS going from −$0.50 to +$1.50 over 3 years has genuine
-            compounding momentum, but the standard CAGR formula returns NaN for a negative base.
-            The Absolute Delta method normalizes the total swing against the starting magnitude, giving
-            a meaningful growth rate that feeds correctly into the lifecycle fade model.
+          <CalloutBlock label="Why Anchor Shifting?">
+            A company like APP with EPS going from $0.10 (near-zero after a bad year) to $6.67 in 5 years
+            produces a raw CAGR of 131% — massively inflated by the low-base anchor, not reflective of
+            sustainable growth. Shifting the anchor to the nearest reasonable year ($0.45, 4 years back)
+            yields 96% — still high, but grounded in a meaningful starting point. For turnaround companies
+            like HIMS where most historical EPS is negative, no anchor works at all, so the winsorized
+            median captures directional momentum without the distortion.
           </CalloutBlock>
 
-          <CalloutBlock label="No Hard Cap">
-            Historical growth is <em>not</em> capped at a fixed ceiling. Instead, the{" "}
-            <strong style={{ color: M.text1 }}>Variable Decay Rate</strong> in Step 05 ensures that
-            hyper-growth rates are reduced more aggressively over time — making a hard cap redundant.
+          <CalloutBlock label="±100% CAGR Threshold">
+            A 100% CAGR means EPS doubled every year for the entire window — almost always an artifact of
+            a near-zero starting EPS rather than sustainable growth. The{" "}
+            <strong style={{ color: M.text1 }}>Variable Decay Rate</strong> in Step 05 further ensures that
+            even high but legitimate growth rates are reduced aggressively over time, so the threshold
+            and the fade model work together to prevent compounding runaway.
           </CalloutBlock>
         </section>
 
