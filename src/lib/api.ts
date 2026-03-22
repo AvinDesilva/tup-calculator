@@ -446,9 +446,7 @@ export async function lookupTicker(
   // ── Analyst estimates ─────────────────────────────────────────────────────
   const today     = new Date();
   const sortedEst = [...(estimates || [])].sort((a, b) => new Date(a.date ?? "").getTime() - new Date(b.date ?? "").getTime());
-  const pastEst   = sortedEst.filter(e => new Date(e.date ?? "").getTime() <= today.getTime());
   const futureEst = sortedEst.filter(e => new Date(e.date ?? "").getTime() >  today.getTime());
-  const estTTM    = pastEst[pastEst.length - 1] ?? null;
   const estFwd    = futureEst[0]    ?? null;   // EPS_T   (current fiscal year)
   const estFwd2   = futureEst[1]    ?? null;   // EPS_T+1 (next fiscal year)
   const estFwd3   = futureEst[2]    ?? null;   // EPS_T+2 (year after next)
@@ -561,7 +559,6 @@ export async function lookupTicker(
   //   G1 = (EPS_T+1 - EPS_T) / EPS_T
   //   G2 = (EPS_T+2 - EPS_T+1) / EPS_T+1
   //   analystGrowth = G1  (used in TUP blend: (G_hist + G1) / 2)
-  const ttmEstEps    = epsOf(estTTM);
   const epsT         = epsOf(estFwd);     // EPS_T   (current year)
   const epsTp1       = epsOf(estFwd2);    // EPS_T+1 (next year)
   const epsTp2       = epsOf(estFwd3);    // EPS_T+2 (year after)
@@ -580,12 +577,8 @@ export async function lookupTicker(
     }
   }
 
-  // Forward EPS: analyst consensus for current year, normalized to current shares.
-  const fwdEstEps  = epsT;    // kept for forwardEPS derivation below
-  const fwd2EstEps = epsTp1;  // kept for compatibility
-
   // ── Forward growth components for variable rate sequence ─────────────────
-  let fwdGrowthY1 = analystGrowth; // G1: (EPS_T+1 / EPS_T) - 1
+  const fwdGrowthY1 = analystGrowth; // G1: (EPS_T+1 / EPS_T) - 1
   let fwdGrowthY2: number | null = null;
   let fwdCAGRValue: number | null = null;
 

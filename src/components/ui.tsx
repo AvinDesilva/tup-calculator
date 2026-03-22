@@ -3,11 +3,12 @@ import type React from "react";
 
 // ─── Hold-to-repeat hook ─────────────────────────────────────────────────────
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useHoldRepeat(callback: () => void, delay = 400, interval = 80) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const iv    = useRef<ReturnType<typeof setInterval> | null>(null);
   const cbRef = useRef(callback);
-  cbRef.current = callback;
+  useEffect(() => { cbRef.current = callback; });
 
   const stop = useCallback(() => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null; }
@@ -189,6 +190,7 @@ export function ErrorDisplay({ error, style }: { error: string; style?: React.CS
   const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!isRateLimit) { setCountdown(5); return; }
     setCountdown(5);
     const iv = setInterval(() => {

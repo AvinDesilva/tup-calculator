@@ -23,9 +23,9 @@ export const inputShared: React.CSSProperties = {
   borderBottom: `1px solid ${C.borderWeak}`,
   color: C.text1,
   fontFamily: C.mono,
-  fontSize: "13px",
+  fontSize: "16px",
   width: "100%",
-  paddingBottom: "6px",
+  paddingBottom: "8px",
   boxSizing: "border-box",
 };
 

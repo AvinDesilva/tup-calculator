@@ -8,14 +8,13 @@ interface DataSectionsProps {
   company: string;
   currencyMismatchWarning: string;
   growthPeriod: "5yr" | "10yr";
-  growthValues: { g5: number; g10: number };
   growthYears: { short: number; long: number };
   epsGrowthHistory: EpsGrowthPoint[];
   onGrowthPeriodChange: (period: "5yr" | "10yr") => void;
 }
 
 export function DataSections({
-  inp, company, currencyMismatchWarning, growthPeriod, growthValues, growthYears,
+  inp, company, currencyMismatchWarning, growthPeriod, growthYears,
   epsGrowthHistory, onGrowthPeriodChange,
 }: DataSectionsProps) {
   const [chartExpanded, setChartExpanded] = useState(false);

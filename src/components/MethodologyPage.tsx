@@ -3,44 +3,44 @@ interface MethodologyPageProps {
   onBack: () => void;
 }
 
+const M = {
+  bg: "#080808", text1: "#e8e4dc", text2: "#888888", text3: "#505050",
+  borderWeak: "rgba(255,255,255,0.06)",
+  mono: "'JetBrains Mono', monospace",
+  display: "'Barlow Condensed', sans-serif",
+  serif: "'DM Serif Display', serif",
+  body: "'Space Grotesk', system-ui, sans-serif",
+};
+
+const SubHead = ({ children }: { children: React.ReactNode }) => (
+  <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: M.text3, marginBottom: "12px" }}>{children}</div>
+);
+
+const FormulaBlock = ({ label, children }: { label?: string; children: React.ReactNode }) => (
+  <div style={{ padding: "16px 20px", borderLeft: "2px solid rgba(196,160,110,0.4)", marginBottom: "20px" }}>
+    {label && <SubHead>{label}</SubHead>}
+    <div style={{ fontFamily: M.mono, fontSize: "14px", color: M.text1, lineHeight: 2.2 }}>{children}</div>
+  </div>
+);
+
+const CalloutBlock = ({ label, children }: { label?: string; children: React.ReactNode }) => (
+  <div style={{ padding: "16px 20px", background: "rgba(255,255,255,0.02)", borderLeft: "2px solid rgba(255,255,255,0.06)", marginBottom: "20px" }}>
+    {label && <SubHead>{label}</SubHead>}
+    <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: 0 }}>{children}</p>
+  </div>
+);
+
+const SectionNum = ({ n, title, sub }: { n: string; title: string; sub?: string }) => (
+  <div style={{ display: "flex", alignItems: "baseline", gap: "20px", marginBottom: "28px" }}>
+    <span style={{ fontFamily: M.serif, fontWeight: 400, fontSize: "clamp(3rem, 8vw, 5rem)", lineHeight: 1, color: "#C4A06E", letterSpacing: "-0.03em", flexShrink: 0 }}>{n}</span>
+    <div>
+      <h2 style={{ fontFamily: M.display, fontWeight: 700, fontSize: "clamp(1.3rem, 3vw, 2rem)", color: M.text1, margin: 0, letterSpacing: "0.02em", textTransform: "uppercase" }}>{title}</h2>
+      {sub && <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: M.text3, marginTop: "4px" }}>{sub}</div>}
+    </div>
+  </div>
+);
+
 export function MethodologyPage({ onBack }: MethodologyPageProps) {
-  const M = {
-    bg: "#080808", text1: "#e8e4dc", text2: "#888888", text3: "#505050",
-    borderWeak: "rgba(255,255,255,0.06)",
-    mono: "'JetBrains Mono', monospace",
-    display: "'Barlow Condensed', sans-serif",
-    serif: "'DM Serif Display', serif",
-    body: "'Space Grotesk', system-ui, sans-serif",
-  };
-
-  const SubHead = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: M.text3, marginBottom: "12px" }}>{children}</div>
-  );
-
-  const FormulaBlock = ({ label, children }: { label?: string; children: React.ReactNode }) => (
-    <div style={{ padding: "16px 20px", borderLeft: "2px solid rgba(196,160,110,0.4)", marginBottom: "20px" }}>
-      {label && <SubHead>{label}</SubHead>}
-      <div style={{ fontFamily: M.mono, fontSize: "14px", color: M.text1, lineHeight: 2.2 }}>{children}</div>
-    </div>
-  );
-
-  const CalloutBlock = ({ label, children }: { label?: string; children: React.ReactNode }) => (
-    <div style={{ padding: "16px 20px", background: "rgba(255,255,255,0.02)", borderLeft: "2px solid rgba(255,255,255,0.06)", marginBottom: "20px" }}>
-      {label && <SubHead>{label}</SubHead>}
-      <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: 0 }}>{children}</p>
-    </div>
-  );
-
-  const SectionNum = ({ n, title, sub }: { n: string; title: string; sub?: string }) => (
-    <div style={{ display: "flex", alignItems: "baseline", gap: "20px", marginBottom: "28px" }}>
-      <span style={{ fontFamily: M.serif, fontWeight: 400, fontSize: "clamp(3rem, 8vw, 5rem)", lineHeight: 1, color: "#C4A06E", letterSpacing: "-0.03em", flexShrink: 0 }}>{n}</span>
-      <div>
-        <h2 style={{ fontFamily: M.display, fontWeight: 700, fontSize: "clamp(1.3rem, 3vw, 2rem)", color: M.text1, margin: 0, letterSpacing: "0.02em", textTransform: "uppercase" }}>{title}</h2>
-        {sub && <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: M.text3, marginTop: "4px" }}>{sub}</div>}
-      </div>
-    </div>
-  );
-
   return (
     <div style={{ minHeight: "100vh", background: M.bg, color: M.text1, fontFamily: M.body }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Barlow+Condensed:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -516,7 +516,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
           <SubHead>Key Guardrails</SubHead>
           {[
             ["Dividend Yield Adder", "The yield is added post-blend, not averaged in. This correctly preserves the growth signal: a 4.9% yield on a 17.5% grower produces 22.4% total compounding, not a misleadingly inflated 18% average."],
-            ["Dynamic Floor", "The VDR decay floor starts at 5% (GDP + inflation) and rises by half the dividend yield, capped at 8%. A 3% dividend payer floors at 6.5%, reflecting that even as EPS growth stalls, the total return to shareholders includes persistent cash distributions."],
+            ["Dynamic Floor", "The VDR decay floor is the greater of 5% (GDP + inflation) and the company's dividend yield. A 6% dividend payer floors at 6%, reflecting that even as EPS growth stalls, the total return to shareholders includes persistent cash distributions."],
             ["Margin & Profitability Modifiers", "All modifiers default to neutral (1.0×) when data is unavailable. This ensures the VDR gracefully degrades to the base single-factor model rather than producing distorted results for companies with missing data."],
             ["Consistency Check", "If historical growth is 50% but analysts expect 5%, the business model may be broken or the industry is maturing rapidly. In these cases, lean more heavily on the lower number."],
           ].map(([title, bodyText]) => (

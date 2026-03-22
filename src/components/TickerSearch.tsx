@@ -47,6 +47,7 @@ export function TickerSearch({
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (suppressRef.current) { suppressRef.current = false; return; }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (value.trim().length < 2) { setResults([]); setIsOpen(false); setIsLoading(false); return; }
     if (value.trim() === lastSearchedRef.current) return;
 
@@ -233,6 +234,7 @@ export function TickerSearch({
           onBlur?.(e);
         }}
         placeholder={placeholder}
+        // eslint-disable-next-line jsx-a11y/no-autofocus
         autoFocus={autoFocus}
         style={inputStyle}
       />

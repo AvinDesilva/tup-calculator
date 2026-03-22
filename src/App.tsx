@@ -241,7 +241,6 @@ export default function App() {
   };
 
   // Read URL params on mount → auto-fetch if ticker present
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const t = params.get("t");
@@ -280,6 +279,7 @@ export default function App() {
         setBuyPrice(cumAt(10) > 0 ? cumAt(10) : null);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Keep URL in sync with current ticker + growth overrides
@@ -422,7 +422,6 @@ export default function App() {
               company={company}
               currencyMismatchWarning={currencyMismatchWarning}
               growthPeriod={growthPeriod}
-              growthValues={growthValues}
               growthYears={growthYears}
               epsGrowthHistory={scorecard.epsGrowthHistory}
               onGrowthPeriodChange={p => {

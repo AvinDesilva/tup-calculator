@@ -10,13 +10,13 @@ interface TableProps {
 }
 
 export function Table({ result, growthOverrides, onGrowthChange }: TableProps) {
+  const [editingYear, setEditingYear] = useState<number | null>(null);
+  const [editVal, setEditVal] = useState("");
+
   if (!result?.rows) return null;
   const hitColor = VERDICT[result.verdict]?.color || "#00BFA5";
   const show = result.rows.filter((_, i) => i < Math.max(15, (result.payback || 15) + 2));
   const mono = "'JetBrains Mono', monospace";
-
-  const [editingYear, setEditingYear] = useState<number | null>(null);
-  const [editVal, setEditVal] = useState("");
 
   const thStyle = (align: "left" | "right"): React.CSSProperties => ({
     padding: "8px 12px",
@@ -59,6 +59,7 @@ export function Table({ result, growthOverrides, onGrowthChange }: TableProps) {
                 <td style={{ padding: "8px 6px", textAlign: "right", fontFamily: mono }}>
                   {isEditing ? (
                     <input
+                      // eslint-disable-next-line jsx-a11y/no-autofocus
                       autoFocus
                       aria-label={`Edit growth rate for year ${r.year}`}
                       value={editVal}

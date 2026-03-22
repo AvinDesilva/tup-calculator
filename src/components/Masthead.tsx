@@ -81,7 +81,7 @@ export function Masthead({ company, meta, isConverted, currencyNote, onShowMetho
 
       {company && (
         <div
-          tabIndex={0}
+          role="group"
           aria-label={`${company}${meta.sector ? `, ${meta.sector}, ${meta.industry}` : ""}`}
           className="rsp-company-info"
           style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", animation: "fadeInUp 0.3s ease both", width: "100%" }}

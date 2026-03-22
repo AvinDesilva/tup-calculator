@@ -16,12 +16,14 @@ interface VerdictCardProps {
 }
 
 export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, currentPrice, growthScenario, onScenarioChange, hasScenarioData }: VerdictCardProps) {
+  const holdDown = useHoldRepeat(() => onGrowthStep(-1));
+  const holdUp   = useHoldRepeat(() => onGrowthStep(1));
+  const [editingGrowth, setEditingGrowth] = useState(false);
+  const [editGrowthVal, setEditGrowthVal] = useState("");
+
   if (!result) return null;
   const v   = VERDICT[result.verdict];
   const paybackPct = Math.min(100, ((result.payback || 30) / 30) * 100);
-
-  const holdDown = useHoldRepeat(() => onGrowthStep(-1));
-  const holdUp   = useHoldRepeat(() => onGrowthStep(1));
 
   const labelStyle = {
     fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em",
@@ -33,9 +35,6 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
   };
 
   const grPct = result.gr * 100;
-
-  const [editingGrowth, setEditingGrowth] = useState(false);
-  const [editGrowthVal, setEditGrowthVal] = useState("");
 
   const stepBtnBase: React.CSSProperties = {
     flex: 1,
@@ -128,6 +127,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
             <div style={labelStyle}>Growth</div>
             {editingGrowth ? (
               <input
+                // eslint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
                 aria-label="Edit growth rate"
                 value={editGrowthVal}
