@@ -8,31 +8,47 @@ Automating my favorite way of evaluating growth stocks: calculating the time unt
 
 ## System Architecture
 
-TUP Calculator is a single-page React 19 application built with TypeScript and Vite. The frontend communicates with Financial Modeling Prep via an Express proxy server running on EC2.
+TUP Calculator is a single-page React 19 application built with TypeScript and Vite. The static frontend is served from an EC2 instance via Nginx, which also reverse-proxies API requests to an Express server that handles FMP communication and server-side computations. All TUP payback calculations happen client-side in the browser.
 
 ```
 +-------------------------------------------------------------+
-|  Browser (tupcalculator.org)                                |
+|  Browser                                                    |
 |                                                             |
-|  React 19 SPA                                               |
+|  React 19 SPA (tupcalculator.org)                           |
 |  +-------------+  +----------------+  +------------------+  |
 |  | HeroSearch  |->| lookupTicker   |->| calcTUP(inp,mode)|  |
 |  | DiceRoll    |  | (api.ts)       |  | (calcTUP.ts)     |  |
 |  +-------------+  +-------+--------+  +--------+---------+  |
 |                           |                    |            |
-|                 +---------+----------+  +------+----------+ |
-|                 | 9 parallel FMP     |  | VerdictCard     | |
-|                 | API fetches        |  | ValuationContext| |
-|                 +---------+----------+  | CompanyScorecard| |
-|                           |             | Table           | |
-|                           v             +-----------------+ |
-|                 Express Proxy (:3001)                       |
-+---------------------------+---------------------------------+
+|                 9 parallel        +------+----------+       |
+|                 /api/fmp/* reqs   | VerdictCard     |       |
+|                           |       | ValuationContext|       |
++---------------------------|-------| CompanyScorecard|-------+
+                            |       | Table           |
+                            v       +-----------------+
++-------------------------------------------------------------+
+|  EC2 Instance (Ubuntu)                                      |
+|                                                             |
+|  Nginx                                                      |
+|  ├─ Serves static dist/ files (HTML, JS, CSS)               |
+|  └─ Reverse-proxies /api/* → Express :3001                  |
+|                                                             |
+|  Express Proxy (:3001)                                      |
+|  ├─ /fmp/:endpoint  — FMP API proxy (hides key, caches)     |
+|  ├─ /search          — Ticker search with dedup             |
+|  └─ /industry-growth — Peer blended growth median (server)  |
+|                           |                                 |
++---------------------------|─────────────────────────────────+
                             |
                             v
                  Financial Modeling Prep API
-                 (financialmodelingprep.com)
+                 (financialmodelingprep.com/stable)
 ```
+
+**What runs where:**
+- **Browser** — All TUP payback calculations (`calcTUP`), lifecycle classification, VDR fade, UI rendering
+- **EC2 (Express)** — FMP API proxying (key hiding + response caching), ticker search dedup, industry peer growth computation
+- **FMP** — Raw financial data (prices, EPS, balance sheets, analyst estimates)
 
 ### Source Layout
 
@@ -60,8 +76,12 @@ src/
 │   ├── Table.tsx             # Year-by-year EPS compounding breakdown
 │   ├── MethodologyPage.tsx   # Full methodology explanation
 │   └── ui.tsx                # Shared primitives (Field, DataRow, SectionLabel)
-└── server/
-    └── index.js              # Express proxy (EC2, port 3001)
+
+server/
+└── index.js                  # Express proxy (EC2, port 3001)
+                              #   /fmp/:endpoint — FMP API proxy + cache
+                              #   /search — ticker search with dedup
+                              #   /industry-growth — peer blended growth median
 ```
 
 ### Data Pipeline
@@ -105,33 +125,38 @@ Adjusted Price = (Market Cap + Total Debt − Cash) / Shares Outstanding
 
 ---
 
-### 02. Historical EPS Growth (CAGR + Absolute Delta)
+### 02. Historical EPS Growth (Endpoint CAGR with Anchor Shifting)
 
-Derived from diluted EPS on the income statement (net income ÷ shares). TUP uses a two-path approach depending on whether the starting EPS was positive or negative.
+Derived from diluted EPS on the income statement (net income ÷ shares). TUP uses a three-tier cascade to compute both 5-year and 10-year historical growth rates, handling extreme values at each level.
 
-**Path A — Standard CAGR (Base EPS > 0):**
-
-```
-Growth = [(EPS_end / EPS_begin)^(1/n) − 1] × 100
-```
-
-**Path B — Absolute Delta (Base EPS ≤ 0):**
-
-The standard CAGR breaks when the starting EPS is zero or negative. For turnaround companies that transitioned from losses to profitability, TUP uses the Absolute Delta method instead:
+**Tier 1 — Endpoint CAGR:**
 
 ```
-Growth_mod = (EPS_end − EPS_begin) / (|EPS_begin| × n) × 100
+CAGR = [(EPS_end / EPS_start)^(1/n) − 1] × 100
 ```
 
-If |EPS_begin| is exactly 0, a floor of $0.01 is used to prevent division by zero.
+Uses only the start and end EPS values — naturally smooths over mid-period spikes and collapses because intermediate years don't affect the result. Only valid when both endpoints are positive and the resulting rate is ≤ ±100%.
+
+**Tier 2 — Anchor Shifting:**
+
+When the full-window CAGR exceeds ±100% (typically because the start-year EPS is near-zero after a bad year) or is undefined (negative start EPS), TUP walks the start year inward toward the present, looking for the nearest positive-EPS anchor that yields a CAGR ≤ ±100%. A minimum of 2 compounding periods is required.
+
+**Tier 3 — Winsorized Median (Final Fallback):**
+
+When no positive anchor produces a reasonable CAGR — common for turnaround companies with mostly negative historical EPS — TUP falls back to the median of year-over-year EPS growth rates, with each rate winsorized (clamped) to ±100%. Extreme years still contribute directional drag without dominating the result.
+
+```
+YoY_i = clamp((EPS_i − EPS_i-1) / |EPS_i-1|, −1, +1)
+Fallback = median(YoY_1, …, YoY_n) × 100
+```
 
 - **EPS_end** — Most recent fiscal year diluted EPS
-- **EPS_begin** — Farthest available year (up to 5 or 10 years back)
-- **n** — Number of years between those two points
+- **EPS_start** — Farthest available year, or nearest positive-EPS anchor after shifting
+- **n** — Number of years between the chosen anchor and the most recent year
 
-**Why two paths?** A company like HIMS with EPS going from −$0.50 to +$1.50 over 3 years has genuine compounding momentum, but the standard CAGR formula returns NaN for a negative base. The Absolute Delta method normalizes the total swing against the starting magnitude, giving a meaningful growth rate that feeds correctly into the lifecycle fade model.
+**Why anchor shifting?** A company like APP with EPS going from $0.10 (near-zero after a bad year) to $6.67 in 5 years produces a raw CAGR of 131% — massively inflated by the low-base anchor. Shifting to the nearest reasonable anchor ($0.45, 4 years back) yields 96% — still high, but grounded in a meaningful starting point. For turnaround companies like HIMS where most historical EPS is negative, the winsorized median captures directional momentum without the distortion.
 
-**No hard cap:** Historical growth is not capped at a fixed ceiling. Instead, the Variable Decay Rate (Step 05) ensures that hyper-growth rates are reduced more aggressively over time — making a hard cap redundant.
+**±100% CAGR threshold:** A 100% CAGR means EPS doubled every year for the entire window — almost always an artifact of a near-zero starting EPS rather than sustainable growth. The Variable Decay Rate (Step 05) further ensures that even high but legitimate growth rates are reduced aggressively over time, so the threshold and the fade model work together to prevent compounding runaway.
 
 ---
 
