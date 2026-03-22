@@ -20,12 +20,16 @@ TUP Calculator is a single-page React 19 application built with TypeScript and V
 |  | DiceRoll    |  | (api.ts)       |  | (calcTUP.ts)     |  |
 |  +-------------+  +-------+--------+  +--------+---------+  |
 |                           |                    |            |
-|                 9 parallel        +------+----------+       |
-|                 /api/fmp/* reqs   | VerdictCard     |       |
-|                           |       | ValuationContext|       |
-+---------------------------|-------| CompanyScorecard|-------+
-                            |       | Table           |
-                            v       +-----------------+
+|                 9 parallel        +------+-----------+      |
+|                 /api/fmp/* reqs   | VerdictCard      |      |
+|                           |       | ValuationContext |      |
+|                           |       | CompanyScorecard |      |
+|                           |       | Table            |      |
+|                           |       +------------------+      |
+|                           |                                 |
++---------------------------|---------------------------------+
+                            |       
+                            v       
 +-------------------------------------------------------------+
 |  EC2 Instance (Ubuntu)                                      |
 |                                                             |
