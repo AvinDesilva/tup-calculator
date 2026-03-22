@@ -206,10 +206,13 @@ async function fetchConstituentGrowth(symbol) {
   const estimatesData = estimatesRes.status === "fulfilled" ? estimatesRes.value : [];
   const quoteData     = quoteRes.status     === "fulfilled" ? quoteRes.value     : [];
 
-  // Historical EPS growth — median of YoY rates, filtering outliers |g| >= 10
+  // Historical EPS growth — median of YoY rates, winsorized to ±100%
+  // so extreme years (turnarounds, low-base spikes) contribute directional
+  // drag without dominating the average
   const epsGrowthRates = (Array.isArray(growthData) ? growthData : [])
     .map(g => g.epsgrowth || g.epsGrowth || 0)
-    .filter(g => typeof g === "number" && isFinite(g) && Math.abs(g) < 10);
+    .filter(g => typeof g === "number" && isFinite(g))
+    .map(g => Math.max(-1, Math.min(1, g)));
 
   if (epsGrowthRates.length === 0) return null;
 

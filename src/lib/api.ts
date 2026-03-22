@@ -478,7 +478,9 @@ export async function lookupTicker(
       if (isFinite(gr)) {
         const yr = inc[i]?.calendarYear ?? inc[i]?.fiscalYear ?? (inc[i]?.date ? new Date(inc[i].date!).getFullYear() : null);
         epsGrowthHistory.push({ year: yr != null ? String(yr) : `Y${i}`, growth: gr });
-        if (Math.abs(gr) < 10) epsGrowthRates.push(gr);
+        // Winsorize: clamp each YoY rate to ±100% so extreme years contribute
+        // directional drag without dominating the average
+        epsGrowthRates.push(Math.max(-1, Math.min(1, gr)));
       }
     }
   }
@@ -490,22 +492,52 @@ export async function lookupTicker(
       : (sortedGrVals[grMid - 1] + sortedGrVals[grMid]) / 2;
   const fallbackHistGrowth = grMedian != null ? grMedian * 100 : 10;
 
-  // ── CAGR helper — standard CAGR (positive-to-positive only) ──────────
+  // ── CAGR helper — endpoint CAGR (positive-to-positive only) ──────────
+  // Formula: (EPS_end / EPS_start)^(1/n) - 1
+  // Returns null when either endpoint is ≤ 0 (CAGR is undefined).
   const growthCAGR = (end: number, begin: number, n: number): number | null => {
     if (n <= 0 || end <= 0 || begin <= 0) return null;
     return (Math.pow(end / begin, 1 / n) - 1) * 100;
   };
 
-  // ── Window-specific median YoY EPS growth — for turnaround fallback ────
-  // When starting EPS is negative, CAGR is meaningless. Use the median of
-  // profitable year-over-year growth rates within the window instead.
-  const windowMedianGrowth = (maxIdx: number): number => {
+  // ── Anchored CAGR — shifts the start year when the full-window CAGR is
+  // extreme (|rate| > 100%) due to a near-zero or negative anchor EPS.
+  // Walks inward from the oldest year toward the most recent, looking for
+  // the nearest positive-EPS anchor that yields |CAGR| ≤ 100%.
+  // Requires at least 2 compounding periods to be meaningful.
+  const CAGR_CAP = 100; // % — beyond this, the anchor is likely a low-base outlier
+  const anchoredCAGR = (targetIdx: number): { rate: number; span: number } | null => {
+    const end = epsHistory[0];
+    if (end <= 0) return null;
+    // Try the full window first
+    const fullRate = growthCAGR(end, epsHistory[targetIdx], targetIdx);
+    if (fullRate !== null && Math.abs(fullRate) <= CAGR_CAP) {
+      return { rate: fullRate, span: targetIdx };
+    }
+    // Walk inward: try progressively shorter windows (min 2 periods)
+    for (let i = targetIdx - 1; i >= 2; i--) {
+      const rate = growthCAGR(end, epsHistory[i], i);
+      if (rate !== null && Math.abs(rate) <= CAGR_CAP) {
+        return { rate, span: i };
+      }
+    }
+    return null;
+  };
+
+  // ── Winsorized median YoY EPS growth — final fallback ─────────────────
+  // When endpoint CAGR is undefined (negative/zero endpoints) or no anchor
+  // shift produces a reasonable rate, fall back to the median of YoY growth
+  // rates winsorized to ±100%. Extreme years (turnarounds, collapses) still
+  // contribute directional drag without dominating the result.
+  const winsorizedMedianGrowth = (maxIdx: number): number => {
     const rates: number[] = [];
     for (let i = 0; i < maxIdx && i < epsHistory.length - 1; i++) {
       const cur = epsHistory[i], prev = epsHistory[i + 1];
       if (prev !== 0) {
         const gr = (cur - prev) / Math.abs(prev);
-        if (isFinite(gr) && Math.abs(gr) < 10) rates.push(gr);
+        if (isFinite(gr)) {
+          rates.push(Math.max(-1, Math.min(1, gr)));
+        }
       }
     }
     if (rates.length === 0) return fallbackHistGrowth;
@@ -515,15 +547,15 @@ export async function lookupTicker(
   };
 
   // ── 10-year EPS CAGR ─────────────────────────────────────────────────
+  // Cascade: endpoint CAGR (full window) → shifted-anchor CAGR → winsorized median
   let avgHistGrowth = fallbackHistGrowth;
   const maxIdx10 = epsHistory.length - 1;  // use full available span
   if (maxIdx10 >= 1) {
-    if (epsHistory[0] > 0) {
-      const rate = growthCAGR(epsHistory[0], epsHistory[maxIdx10], maxIdx10);
-      avgHistGrowth = rate !== null ? rate : windowMedianGrowth(maxIdx10);
+    const anchored = anchoredCAGR(maxIdx10);
+    if (anchored) {
+      avgHistGrowth = anchored.rate;
     } else {
-      // Current EPS negative — CAGR meaningless, use median YoY growth
-      avgHistGrowth = windowMedianGrowth(maxIdx10);
+      avgHistGrowth = winsorizedMedianGrowth(maxIdx10);
     }
   }
 
@@ -531,17 +563,18 @@ export async function lookupTicker(
   let avgHistGrowth5yr = avgHistGrowth;  // fallback to 10yr if not enough data
   const maxIdx5 = Math.min(epsHistory.length - 1, 5);
   if (maxIdx5 >= 1 && maxIdx5 !== maxIdx10) {
-    // Only compute separately when we have more data than the 5yr window
-    if (epsHistory[0] > 0) {
-      const rate = growthCAGR(epsHistory[0], epsHistory[maxIdx5], maxIdx5);
-      avgHistGrowth5yr = rate !== null ? rate : windowMedianGrowth(maxIdx5);
+    const anchored = anchoredCAGR(maxIdx5);
+    if (anchored) {
+      avgHistGrowth5yr = anchored.rate;
     } else {
-      avgHistGrowth5yr = windowMedianGrowth(maxIdx5);
+      avgHistGrowth5yr = winsorizedMedianGrowth(maxIdx5);
     }
   }
 
   if (import.meta.env.DEV) {
-    console.log(`[TUP CAGR] ${t} | maxIdx10=${maxIdx10} maxIdx5=${maxIdx5} | 10yr=${avgHistGrowth.toFixed(2)}% 5yr=${avgHistGrowth5yr.toFixed(2)}%`);
+    const anch10 = anchoredCAGR(maxIdx10);
+    const anch5  = anchoredCAGR(maxIdx5);
+    console.log(`[TUP CAGR] ${t} | maxIdx10=${maxIdx10} maxIdx5=${maxIdx5} | 10yr=${avgHistGrowth.toFixed(2)}%${anch10 && anch10.span < maxIdx10 ? ` (shifted→${anch10.span}yr)` : anch10 ? '' : ' (winsorized median)'} 5yr=${avgHistGrowth5yr.toFixed(2)}%${anch5 && anch5.span < maxIdx5 ? ` (shifted→${anch5.span}yr)` : anch5 ? '' : ' (winsorized median)'}`);
   }
 
   // ── Forward growth — estimate-to-estimate ratios ────────────────────────
