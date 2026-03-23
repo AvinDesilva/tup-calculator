@@ -143,7 +143,8 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 16px" }}>
             When no positive anchor produces a reasonable CAGR — common for turnaround companies with
             mostly negative historical EPS — TUP falls back to the median of year-over-year EPS growth
-            rates, with each rate <strong style={{ color: M.text1 }}>winsorized to ±100%</strong>.
+            rates, with each rate <strong style={{ color: M.text1 }}>winsorized to ±100%</strong> (i.e. clamped
+            so that no single year-over-year change exceeds +100% or falls below −100%).
             Extreme years (turnarounds, collapses, low-base spikes) still contribute directional drag
             without dominating the result.
           </p>
@@ -206,7 +207,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
 
           <SubHead>Forward Growth Components: Y1, Y2, and Terminal Rate</SubHead>
           <p style={{ fontSize: "15px", color: M.text2, lineHeight: 1.85, margin: "0 0 20px" }}>
-            When analyst estimates are available for multiple years, TUP derives three distinct forward growth
+            When analyst estimates are available for two years, TUP derives two distinct forward growth
             rates that feed into the year-by-year payback table. This produces a more realistic trajectory than
             applying a single flat rate — growth typically decelerates as a company scales.
           </p>
