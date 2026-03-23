@@ -25,68 +25,6 @@ export function useHoldRepeat(callback: () => void, delay = 400, interval = 80) 
   return { onPointerDown: start, onPointerUp: stop, onPointerLeave: stop };
 }
 
-// ─── Hold Button — single arrow with hold-to-repeat ─────────────────────────
-
-export function HoldButton({ onStep, children, style, ...rest }: {
-  onStep: () => void;
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const hold = useHoldRepeat(onStep);
-  return (
-    <button
-      {...hold}
-      {...rest}
-      onClick={e => e.preventDefault()}
-      style={{
-        userSelect: "none",
-        WebkitTouchCallout: "none",
-        WebkitTapHighlightColor: "transparent",
-        ...style,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-// ─── Stepper Row — ▼ value ▲ for editable numeric fields ────────────────────
-
-export function StepperRow({ label, value, onStep, badge, stepSize = 1, suffix = "%" }: {
-  label: string;
-  value: number;
-  onStep: (delta: number) => void;
-  badge?: React.ReactNode;
-  stepSize?: number;
-  suffix?: string;
-}) {
-  const btnStyle: React.CSSProperties = {
-    width: "22px", height: "22px",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    background: "transparent", border: "1px solid rgba(255,255,255,0.12)",
-    color: "#e8e4dc", cursor: "pointer", fontSize: "10px",
-    fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, lineHeight: 1,
-    userSelect: "none",
-    WebkitTouchCallout: "none",
-    WebkitTapHighlightColor: "transparent",
-  };
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <span style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888" }}>{label}</span>
-        {badge}
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-        <HoldButton onStep={() => onStep(-stepSize)} style={btnStyle} aria-label={`Decrease ${label}`}>▼</HoldButton>
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#00BFA5", minWidth: "52px", textAlign: "center" }}>
-          {value.toFixed(1)}{suffix}
-        </span>
-        <HoldButton onStep={() => onStep(stepSize)} style={btnStyle} aria-label={`Increase ${label}`}>▲</HoldButton>
-      </div>
-    </div>
-  );
-}
-
 // ─── Shared UI primitives ─────────────────────────────────────────────────────
 
 interface SectionLabelProps {
@@ -100,55 +38,6 @@ export function SectionLabel({ num, title }: SectionLabelProps) {
       <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#C4A06E", fontSize: "14px", letterSpacing: "0.05em", fontWeight: 700 }}>{num}</span>
       <h3 style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888", margin: 0 }}>{title}</h3>
       <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.06)" }} aria-hidden="true" />
-    </div>
-  );
-}
-
-interface FieldProps {
-  label: string;
-  value: number | string;
-  onChange: (v: number) => void;
-  suffix?: string;
-  prefix?: string;
-  tip?: string;
-}
-
-export function Field({ label, value, onChange, suffix, prefix, tip }: FieldProps) {
-  const inputId = `field-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-  return (
-    <div>
-      <label htmlFor={inputId} style={{ display: "block", fontSize: "9px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888", marginBottom: "6px" }}>
-        {label}{tip && <span style={{ marginLeft: "4px", cursor: "help" }} title={tip}>ⓘ</span>}
-      </label>
-      <div style={{ position: "relative" }}>
-        {prefix && (
-          <span style={{ position: "absolute", left: "0", top: "50%", transform: "translateY(-50%)", color: "#888888", fontSize: "12px", fontFamily: "'JetBrains Mono', monospace" }}>{prefix}</span>
-        )}
-        <input
-          id={inputId}
-          type="number" step="any" value={value}
-          onChange={e => onChange(Number(e.target.value))}
-          style={{
-            width: "100%",
-            background: "transparent",
-            border: "none",
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
-            paddingBottom: "6px",
-            paddingLeft: prefix ? "14px" : "0",
-            paddingRight: suffix ? "24px" : "0",
-            fontSize: "13px",
-            color: "#e8e4dc",
-            fontFamily: "'JetBrains Mono', monospace",
-            boxSizing: "border-box",
-            transition: "border-color 0.15s",
-          }}
-          onFocus={e => (e.target.style.borderBottomColor = "#FF4D00")}
-          onBlur={e => (e.target.style.borderBottomColor = "rgba(255,255,255,0.07)")}
-        />
-        {suffix && (
-          <span style={{ position: "absolute", right: "0", top: "50%", transform: "translateY(-50%)", color: "#888888", fontSize: "10px", fontFamily: "'JetBrains Mono', monospace" }}>{suffix}</span>
-        )}
-      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { f, fB } from "../lib/utils.ts";
-import { SectionLabel, DataRow, DerivedStat } from "./ui.tsx";
+import { SectionLabel, DataRow, DerivedStat } from "./primitives.tsx";
 import type { InputState, EpsGrowthPoint } from "../lib/types.ts";
 
 interface DataSectionsProps {

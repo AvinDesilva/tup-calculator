@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { VERDICT } from "../lib/constants.ts";
 import { f } from "../lib/utils.ts";
-import { useHoldRepeat } from "./ui.tsx";
+import { useHoldRepeat } from "./primitives.tsx";
 import type { TUPResult, GrowthScenario } from "../lib/types.ts";
 
 interface VerdictCardProps {

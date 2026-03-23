@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { C, inputShared } from "../lib/theme.ts";
 import { TickerSearch } from "./TickerSearch.tsx";
-import { ErrorDisplay } from "./ui.tsx";
+import { ErrorDisplay } from "./primitives.tsx";
 import { DiceFilterBar } from "./DiceFilterBar.tsx";
 import type { RollFilters } from "../lib/types.ts";
 
