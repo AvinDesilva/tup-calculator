@@ -4,7 +4,7 @@ import { C } from "../lib/theme.ts";
 import { GICS_SECTORS } from "../lib/constants.ts";
 import type { RollFilters, MarketCapTier, ExchangeFilter } from "../lib/types.ts";
 
-const DEFAULT_FILTERS: RollFilters = { marketCap: "All", sector: "", exchange: "All", indexEtf: "" };
+const DEFAULT_FILTERS: RollFilters = { marketCap: [], sector: "", exchange: [], indexEtf: "" };
 
 interface DiceFilterBarProps {
   isOpen: boolean;
@@ -14,8 +14,8 @@ interface DiceFilterBarProps {
   variant?: "hero" | "compact";
 }
 
-const CAPS: MarketCapTier[] = ["All", "Micro", "Small", "Mid", "Large"];
-const EXCHANGES: ExchangeFilter[] = ["All", "NYSE", "NASDAQ", "OTC", "LSE", "TSX"];
+const CAPS: MarketCapTier[] = ["Micro", "Small", "Mid", "Large"];
+const EXCHANGES: ExchangeFilter[] = ["NYSE", "NASDAQ", "LSE", "TSX"];
 const SECTOR_OPTIONS = ["", ...GICS_SECTORS] as const;
 
 function SectorDropdown({ value, onChange, large }: { value: string; onChange: (v: string) => void; large?: boolean }) {
@@ -121,15 +121,15 @@ function SectorDropdown({ value, onChange, large }: { value: string; onChange: (
           borderBottom: `1px solid ${open ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
           color: value ? "#C4A06E" : "#666",
           fontFamily: C.mono,
-          fontSize: large ? "18px" : "10px",
-          padding: large ? "6px 0" : "3px 0",
+          fontSize: large ? "18px" : "12.5px",
+          padding: large ? "6px 0" : "4px 0",
           cursor: "pointer",
           textAlign: "left",
           whiteSpace: "nowrap",
           transition: "border-color 0.15s",
         }}
       >
-        {value || "All"} <span style={{ fontSize: large ? "12px" : "7px", marginLeft: "2px", opacity: 0.5 }}>▼</span>
+        {value || "All"} <span style={{ fontSize: large ? "12px" : "9px", marginLeft: "2px", opacity: 0.5 }}>▼</span>
       </button>
       {dropdown}
     </>
@@ -137,7 +137,7 @@ function SectorDropdown({ value, onChange, large }: { value: string; onChange: (
 }
 
 function filtersEqual(a: RollFilters, b: RollFilters): boolean {
-  return a.marketCap === b.marketCap && a.sector === b.sector && a.exchange === b.exchange && a.indexEtf === b.indexEtf;
+  return a.marketCap.length === b.marketCap.length && a.marketCap.every(c => b.marketCap.includes(c)) && a.sector === b.sector && a.exchange.length === b.exchange.length && a.exchange.every(e => b.exchange.includes(e)) && a.indexEtf === b.indexEtf;
 }
 
 function isDefault(f: RollFilters): boolean {
@@ -167,66 +167,105 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
     onReset();
   };
 
-  // Size multipliers for hero variant (2x) — clamp for mobile scaling
-  const labelSize = hero ? "clamp(10px, 3.5vw, 16px)" : "8px";
-  const btnFontSize = hero ? "clamp(11px, 3.8vw, 18px)" : "9px";
-  const btnPadding = hero ? "clamp(4px, 1.5vw, 8px) clamp(6px, 2vw, 16px)" : "3px 7px";
-  const etfInputSize = hero ? "18px" : "10px";
-  const etfInputWidth = hero ? "100px" : "50px";
-  const etfInputPadding = hero ? "6px 0" : "3px 0";
-  const applyFontSize = hero ? "18px" : "9px";
-  const applyPadding = hero ? "8px 20px" : "4px 10px";
-  const resetFontSize = hero ? "18px" : "9px";
+  // Compact is ~62.5% of hero (50% base + 25% increase)
+  const labelSize = hero ? "clamp(10px, 3.5vw, 16px)" : "clamp(9px, 2.5vw, 11px)";
+  const btnFontSize = hero ? "clamp(11px, 3.8vw, 18px)" : "clamp(10px, 2.5vw, 12.5px)";
+  const btnPadding = hero ? "clamp(4px, 1.5vw, 8px) clamp(6px, 2vw, 16px)" : "clamp(4px, 1vw, 6px) clamp(6px, 1.5vw, 11px)";
+  const etfInputSize = hero ? "clamp(12px, 3.8vw, 18px)" : "clamp(10px, 2.5vw, 12.5px)";
+  const etfInputWidth = hero ? "clamp(60px, 12vw, 100px)" : "clamp(50px, 10vw, 75px)";
+  const etfInputPadding = hero ? "6px 0" : "4px 0";
+  const applyFontSize = hero ? "clamp(12px, 3.8vw, 18px)" : "clamp(10px, 2.5vw, 12.5px)";
+  const applyPadding = hero ? "clamp(5px, 1.5vw, 8px) clamp(12px, 3vw, 20px)" : "clamp(4px, 1vw, 6px) clamp(10px, 2.25vw, 15px)";
+  const resetFontSize = hero ? "clamp(12px, 3.8vw, 18px)" : "clamp(10px, 2.5vw, 12.5px)";
 
   const heroRowStyle: React.CSSProperties = hero ? { width: "100%", maxWidth: "100%", padding: "0 12px", boxSizing: "border-box" } : {};
 
+  const allCapLabels = ["All", ...CAPS] as const;
+
+  const toggleCap = (cap: MarketCapTier) => {
+    setPending(p => {
+      if (p.marketCap.includes(cap)) {
+        return { ...p, marketCap: p.marketCap.filter(c => c !== cap) };
+      }
+      return { ...p, marketCap: [...p.marketCap, cap] };
+    });
+  };
+
+  const isCapSelected = (label: string) => label === "All" ? pending.marketCap.length === 0 : pending.marketCap.includes(label as MarketCapTier);
+
   const capButtons = (
-    <div style={heroRowStyle} role="group" aria-label="Market cap filter">
-      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px", textAlign: hero ? "center" : undefined }}>Cap</div>
+    <div className="rsp-dice-btn-group" style={heroRowStyle} role="group" aria-label="Market cap filter">
+      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px", textAlign: hero ? "center" : "left", marginLeft: hero ? undefined : "4px" }}>Cap</div>
       <div style={{ display: "flex", justifyContent: hero ? "center" : undefined }}>
-        {CAPS.map((cap, i) => (
-          <button key={cap} aria-pressed={pending.marketCap === cap} onClick={() => setPending(p => ({ ...p, marketCap: cap }))} style={{
-            fontSize: btnFontSize,
-            fontWeight: 700,
-            fontFamily: C.mono,
-            letterSpacing: "0.05em",
-            padding: btnPadding,
-            ...(hero ? { flex: "1 1 0", minWidth: 0 } : {}),
-            background: pending.marketCap === cap ? "rgba(196,160,110,0.2)" : "transparent",
-            border: `1px solid ${pending.marketCap === cap ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
-            color: pending.marketCap === cap ? "#C4A06E" : "#666",
-            cursor: "pointer",
-            borderRadius: i === 0 ? "3px 0 0 3px" : i === CAPS.length - 1 ? "0 3px 3px 0" : "0",
-            marginLeft: i > 0 ? "-1px" : "0",
-          }}>{cap}</button>
-        ))}
+        {allCapLabels.map((cap, i) => {
+          const active = isCapSelected(cap);
+          return (
+            <button key={cap} aria-pressed={active} onClick={() => cap === "All" ? setPending(p => ({ ...p, marketCap: [] })) : toggleCap(cap as MarketCapTier)} style={{
+              fontSize: btnFontSize,
+              fontWeight: 700,
+              fontFamily: C.mono,
+              letterSpacing: "0.05em",
+              padding: btnPadding,
+              ...(hero ? { flex: "1 1 0", minWidth: 0 } : {}),
+              background: active ? "rgba(196,160,110,0.2)" : "transparent",
+              border: `1px solid ${active ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+              color: active ? "#C4A06E" : "#666",
+              cursor: "pointer",
+              borderRadius: i === 0 ? "3px 0 0 3px" : i === allCapLabels.length - 1 ? "0 3px 3px 0" : "0",
+              marginLeft: i > 0 ? "-1px" : "0",
+            }}>{cap}</button>
+          );
+        })}
       </div>
     </div>
   );
 
   // Wider labels get more flex share so "NASDAQ" doesn't overflow
-  const exchangeFlex: Record<string, string> = { All: "1.4 1 0", NYSE: "1.4 1 0", NASDAQ: "1.8 1 0", OTC: "1 1 0", LSE: "1 1 0", TSX: "1 1 0" };
+  const exchangeFlex: Record<string, string> = { All: "1.4 1 0", NYSE: "1.4 1 0", NASDAQ: "1.8 1 0", LSE: "1 1 0", TSX: "1 1 0" };
+  const allExLabels = ["All", ...EXCHANGES] as const;
+
+  const toggleExchange = (ex: ExchangeFilter) => {
+    setPending(p => {
+      // NYSE and NASDAQ can be multi-selected together
+      if (ex === "NYSE" || ex === "NASDAQ") {
+        if (p.exchange.includes(ex)) {
+          return { ...p, exchange: p.exchange.filter(e => e !== ex) };
+        }
+        return { ...p, exchange: [...p.exchange.filter(e => e === "NYSE" || e === "NASDAQ"), ex] };
+      }
+      // LSE/TSX: single-select toggle
+      if (p.exchange.length === 1 && p.exchange[0] === ex) {
+        return { ...p, exchange: [] };
+      }
+      return { ...p, exchange: [ex] };
+    });
+  };
+
+  const isExSelected = (label: string) => label === "All" ? pending.exchange.length === 0 : pending.exchange.includes(label as ExchangeFilter);
 
   const exchangeButtons = (
-    <div style={heroRowStyle} role="group" aria-label="Exchange filter">
-      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px", textAlign: hero ? "center" : undefined }}>Exchange</div>
-      <div style={{ display: "flex", justifyContent: hero ? "center" : undefined }}>
-        {EXCHANGES.map((ex, i) => (
-          <button key={ex} aria-pressed={pending.exchange === ex} onClick={() => setPending(p => ({ ...p, exchange: ex }))} style={{
-            fontSize: btnFontSize,
-            fontWeight: 700,
-            fontFamily: C.mono,
-            letterSpacing: "0.05em",
-            padding: btnPadding,
-            ...(hero ? { flex: exchangeFlex[ex] || "1 1 0", minWidth: 0 } : {}),
-            background: pending.exchange === ex ? "rgba(196,160,110,0.2)" : "transparent",
-            border: `1px solid ${pending.exchange === ex ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
-            color: pending.exchange === ex ? "#C4A06E" : "#666",
-            cursor: "pointer",
-            borderRadius: i === 0 ? "3px 0 0 3px" : i === EXCHANGES.length - 1 ? "0 3px 3px 0" : "0",
-            marginLeft: i > 0 ? "-1px" : "0",
-          }}>{ex}</button>
-        ))}
+    <div className="rsp-dice-btn-group" style={heroRowStyle} role="group" aria-label="Exchange filter">
+      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px", textAlign: hero ? "center" : "left", marginLeft: hero ? undefined : "4px" }}>Exchange</div>
+      <div style={{ display: "flex", justifyContent: hero ? "center" : "flex-end" }}>
+        {allExLabels.map((ex, i) => {
+          const active = isExSelected(ex);
+          return (
+            <button key={ex} aria-pressed={active} onClick={() => ex === "All" ? setPending(p => ({ ...p, exchange: [] })) : toggleExchange(ex as ExchangeFilter)} style={{
+              fontSize: btnFontSize,
+              fontWeight: 700,
+              fontFamily: C.mono,
+              letterSpacing: "0.05em",
+              padding: btnPadding,
+              ...(hero ? { flex: exchangeFlex[ex] || "1 1 0", minWidth: 0 } : {}),
+              background: active ? "rgba(196,160,110,0.2)" : "transparent",
+              border: `1px solid ${active ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+              color: active ? "#C4A06E" : "#666",
+              cursor: "pointer",
+              borderRadius: i === 0 ? "3px 0 0 3px" : i === allExLabels.length - 1 ? "0 3px 3px 0" : "0",
+              marginLeft: i > 0 ? "-1px" : "0",
+            }}>{ex}</button>
+          );
+        })}
       </div>
     </div>
   );
@@ -240,7 +279,7 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
 
   const etfField = (
     <div>
-      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px" }}>ETF</div>
+      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px", textAlign: "right" }}>ETF</div>
       <input
         type="text"
         placeholder="VTI"
@@ -272,12 +311,13 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
         letterSpacing: "0.08em",
         padding: applyPadding,
         background: "transparent",
-        border: `1px solid ${applied ? "rgba(0,191,165,0.5)" : hasPendingChanges ? "rgba(0,191,165,0.5)" : "rgba(255,255,255,0.1)"}`,
+        border: `1px solid ${applied ? "rgba(0,191,165,0.5)" : hasPendingChanges ? "rgba(0,191,165,0.5)" : "transparent"}`,
         color: applied ? "#00BFA5" : hasPendingChanges ? "#00BFA5" : "#444",
         cursor: hasPendingChanges ? "pointer" : "default",
         textTransform: "uppercase",
         transition: "all 0.15s",
         borderRadius: "3px",
+        marginBottom: "3px",
       }}>
         {applied ? "Applied \u2713" : "Apply"}
       </button>
@@ -332,7 +372,7 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
   return (
     <div className={`rsp-dice-filter-wrap${isOpen ? " rsp-dice-filter-open" : ""}`} inert={!isOpen || undefined} style={{
       overflow: "hidden",
-      maxHeight: isOpen ? "120px" : "0",
+      maxHeight: isOpen ? "300px" : "0",
       transition: "max-height 0.25s ease",
     }}>
       <div className="rsp-dice-filter" style={{
@@ -344,11 +384,12 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
         alignItems: "flex-end",
         justifyContent: "flex-end",
       }}>
-        {capButtons}
-        {exchangeButtons}
-        {sectorField}
-        {etfField}
-        {applyResetButtons}
+        <div className="rsp-dice-row">{capButtons}{exchangeButtons}</div>
+        <div className="rsp-dice-row">
+          {sectorField}
+          {etfField}
+          <div style={{ marginLeft: "6px" }}>{applyResetButtons}</div>
+        </div>
       </div>
     </div>
   );

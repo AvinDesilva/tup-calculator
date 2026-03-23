@@ -12,6 +12,7 @@ interface HeroSearchProps {
   loading: boolean;
   error: string;
   onRollDice: () => void;
+  onCancelDice: () => void;
   rollingDice: boolean;
   dicePhrase: string;
   isFilterOpen: boolean;
@@ -22,7 +23,7 @@ interface HeroSearchProps {
   hasActiveFilters: boolean;
 }
 
-export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, onRollDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onApplyFilters, onResetFilters, hasActiveFilters }: HeroSearchProps) {
+export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, onRollDice, onCancelDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onApplyFilters, onResetFilters, hasActiveFilters }: HeroSearchProps) {
   return (
     <section className="rsp-hero-section" style={{ padding: "0 0 96px", display: "flex", flexDirection: "column", alignItems: "center", animation: "fadeInUp 0.5s 0.1s ease both" }}>
       <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.28em", textTransform: "uppercase", color: C.text3, marginBottom: "24px", marginTop: "24px" }}>
@@ -94,7 +95,24 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
       {error && <div style={{ marginTop: "12px", fontSize: "11px", textAlign: "center" }}><ErrorDisplay error={error} /></div>}
 
       <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "20px" }}>
-        <button onClick={onRollDice} disabled={rollingDice || loading} style={{
+        {rollingDice && (
+          <button onClick={onCancelDice} aria-label="Cancel dice roll" style={{
+            width: "clamp(32px, 8vw, 48px)", height: "clamp(32px, 8vw, 48px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "transparent",
+            border: "1px solid #FF4D00",
+            color: "#FF4D00",
+            cursor: "pointer",
+            transition: "all 0.15s",
+            flexShrink: 0,
+          }}>
+            <svg aria-hidden="true" width="clamp(14px, 4vw, 24px)" height="clamp(14px, 4vw, 24px)" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="6" y1="6" x2="18" y2="18" />
+              <line x1="18" y1="6" x2="6" y2="18" />
+            </svg>
+          </button>
+        )}
+        <button onClick={onRollDice} disabled={loading || rollingDice} style={{
           position: "relative",
           padding: "clamp(6px, 1.5vw, 12px) clamp(14px, 4vw, 32px)",
           background: "transparent",
@@ -104,13 +122,13 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
           fontWeight: 700,
           letterSpacing: "0.12em",
           textTransform: "uppercase",
-          cursor: (rollingDice || loading) ? "not-allowed" : "pointer",
+          cursor: (loading || rollingDice) ? "not-allowed" : "pointer",
           fontFamily: C.body,
-          opacity: (rollingDice || loading) ? 0.5 : 1,
-          transition: "opacity 0.15s",
+          opacity: loading ? 0.5 : 1,
+          transition: "all 0.15s",
         }}>
-          {hasActiveFilters && <span aria-hidden="true" style={{ position: "absolute", top: "-3px", right: "-3px", width: "6px", height: "6px", borderRadius: "50%", background: "#00BFA5", boxShadow: "0 0 4px rgba(0,191,165,0.6)" }} />}
-          {rollingDice ? dicePhrase : "Roll the TUP Dice"} <span style={rollingDice ? { display: "inline-block", animation: "spin 0.6s linear infinite" } : undefined}>🎲</span>
+          {hasActiveFilters && !rollingDice && <span aria-hidden="true" style={{ position: "absolute", top: "-3px", right: "-3px", width: "6px", height: "6px", borderRadius: "50%", background: "#00BFA5", boxShadow: "0 0 4px rgba(0,191,165,0.6)" }} />}
+          {rollingDice ? <>{dicePhrase} <span>🎲</span></> : <>Roll the TUP Dice <span>🎲</span></>}
         </button>
         <button onClick={onToggleFilter} aria-label="Dice roll filters" aria-expanded={isFilterOpen} aria-haspopup="true" style={{
           width: "clamp(32px, 8vw, 48px)", height: "clamp(32px, 8vw, 48px)",

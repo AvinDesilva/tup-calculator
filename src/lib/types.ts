@@ -37,14 +37,14 @@ export interface InputState {
 
 // ─── Roll Dice filters ───────────────────────────────────────────────────────
 
-export type MarketCapTier = "All" | "Micro" | "Small" | "Mid" | "Large";
+export type MarketCapTier = "Micro" | "Small" | "Mid" | "Large";
 
-export type ExchangeFilter = "All" | "NYSE" | "NASDAQ" | "OTC" | "LSE" | "TSX";
+export type ExchangeFilter = "NYSE" | "NASDAQ" | "LSE" | "TSX";
 
 export interface RollFilters {
-  marketCap: MarketCapTier;
+  marketCap: MarketCapTier[];  // empty = All
   sector: string;
-  exchange: ExchangeFilter;
+  exchange: ExchangeFilter[];  // empty = All
   indexEtf: string;
 }
 

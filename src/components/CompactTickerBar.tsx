@@ -14,6 +14,7 @@ interface CompactTickerBarProps {
   error: string;
   fetchLog: string[];
   onRollDice: () => void;
+  onCancelDice: () => void;
   rollingDice: boolean;
   dicePhrase: string;
   isFilterOpen: boolean;
@@ -24,7 +25,7 @@ interface CompactTickerBarProps {
   hasActiveFilters: boolean;
 }
 
-export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, fetchLog, onRollDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onApplyFilters, onResetFilters, hasActiveFilters }: CompactTickerBarProps) {
+export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, fetchLog, onRollDice, onCancelDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onApplyFilters, onResetFilters, hasActiveFilters }: CompactTickerBarProps) {
   const [hovered, setHovered] = useState(false);
   return (
     <section className="rsp-ticker-bar" style={{ position: "sticky", top: 0, zIndex: 100, background: C.bg, paddingTop: "20px", paddingBottom: "20px", marginBottom: "20px", borderBottom: `1px solid ${C.borderWeak}`, animation: "fadeInUp 0.4s ease both" }}>
@@ -46,32 +47,50 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
           />
         </div>
         <div className="rsp-api-bar-btn" style={{ display: "flex", gap: "8px" }}>
-          <button onClick={() => onFetch()} disabled={loading} style={{
-            padding: "8px 16px",
-            background: loading ? C.text3 : C.accent,
-            color: "#080808",
-            border: "none",
-            fontSize: "11px",
-            fontWeight: 700,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            cursor: loading ? "not-allowed" : "pointer",
-            fontFamily: C.body,
-            display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-            transition: "opacity 0.15s",
-            whiteSpace: "nowrap",
-          }}>
-            {loading ? (
-              <>
-                <svg aria-hidden="true" style={{ animation: "spin 1s linear infinite", width: "12px", height: "12px" }} viewBox="0 0 24 24">
-                  <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                  <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                </svg>
-                Fetching...
-              </>
-            ) : "Fetch Data →"}
-          </button>
-          <button onClick={onRollDice} disabled={rollingDice || loading} style={{
+          {rollingDice ? (
+            <button onClick={onCancelDice} aria-label="Cancel dice roll" style={{
+              width: "32px", height: "32px",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "transparent",
+              border: "1px solid #FF4D00",
+              color: "#FF4D00",
+              cursor: "pointer",
+              flexShrink: 0,
+              transition: "all 0.15s",
+            }}>
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="6" y1="6" x2="18" y2="18" />
+                <line x1="18" y1="6" x2="6" y2="18" />
+              </svg>
+            </button>
+          ) : (
+            <button onClick={() => onFetch()} disabled={loading} style={{
+              padding: "8px 16px",
+              background: loading ? C.text3 : C.accent,
+              color: "#080808",
+              border: "none",
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              cursor: loading ? "not-allowed" : "pointer",
+              fontFamily: C.body,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+              transition: "opacity 0.15s",
+              whiteSpace: "nowrap",
+            }}>
+              {loading ? (
+                <>
+                  <svg aria-hidden="true" style={{ animation: "spin 1s linear infinite", width: "12px", height: "12px" }} viewBox="0 0 24 24">
+                    <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                    <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  Fetching...
+                </>
+              ) : "Fetch Data →"}
+            </button>
+          )}
+          <button onClick={onRollDice} disabled={loading || rollingDice} style={{
             position: "relative",
             padding: "8px 16px",
             background: "transparent",
@@ -81,14 +100,14 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
             fontWeight: 700,
             letterSpacing: "0.1em",
             textTransform: "uppercase",
-            cursor: (rollingDice || loading) ? "not-allowed" : "pointer",
+            cursor: (loading || rollingDice) ? "not-allowed" : "pointer",
             fontFamily: C.body,
             whiteSpace: "nowrap",
-            transition: "opacity 0.15s",
-            opacity: (rollingDice || loading) ? 0.5 : 1,
+            transition: "all 0.15s",
+            opacity: loading ? 0.5 : 1,
           }}>
-            {hasActiveFilters && <span aria-hidden="true" style={{ position: "absolute", top: "-3px", right: "-3px", width: "6px", height: "6px", borderRadius: "50%", background: "#00BFA5", boxShadow: "0 0 4px rgba(0,191,165,0.6)" }} />}
-            {rollingDice ? dicePhrase : "Roll Dice"} <span style={rollingDice ? { display: "inline-block", animation: "spin 0.6s linear infinite" } : undefined}>🎲</span>
+            {hasActiveFilters && !rollingDice && <span aria-hidden="true" style={{ position: "absolute", top: "-3px", right: "-3px", width: "6px", height: "6px", borderRadius: "50%", background: "#00BFA5", boxShadow: "0 0 4px rgba(0,191,165,0.6)" }} />}
+            {rollingDice ? <>{dicePhrase} <span>🎲</span></> : <>Roll Dice <span>🎲</span></>}
           </button>
           <button onClick={onToggleFilter} aria-label="Dice roll filters" aria-expanded={isFilterOpen} aria-haspopup="true" style={{
             width: "32px", height: "32px",

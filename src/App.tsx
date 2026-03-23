@@ -27,6 +27,8 @@ interface ValuationState {
   industryGrowthLoading: boolean;
 }
 
+const DICE_PHRASES = ["Rolling...", "Scanning...", "Searching...", "Thinking...", "Casting...", "Praying..."];
+
 interface ScorecardState {
   earnings: FMPEarningSurprise[];
   cashFlows: FMPCashFlow[];
@@ -43,18 +45,11 @@ export default function App() {
   const [fetchLog, setFetchLog] = useState<string[]>([]);
   const mode: Mode = "standard";
   const [rollingDice, setRollingDice] = useState(false);
-  const DICE_PHRASES = ["Rolling...", "Shuffling...", "Mapping...", "Hoping...", "Pondering...", "Sifting...", "Summing...", "Casting...", "Manifesting..."];
+  const diceAbortRef = useRef(false);
   const [dicePhrase, setDicePhrase] = useState(DICE_PHRASES[0]);
-  useEffect(() => {
-    if (!rollingDice) { setDicePhrase(DICE_PHRASES[0]); return; }
-    let idx = 0;
-    const iv = setInterval(() => { idx = (idx + 1) % DICE_PHRASES.length; setDicePhrase(DICE_PHRASES[idx]); }, 2000);
-    return () => clearInterval(iv);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rollingDice]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [rollFilters, setRollFilters] = useState<RollFilters>({ marketCap: "All", sector: "", exchange: "All", indexEtf: "" });
-  const hasActiveFilters = rollFilters.marketCap !== "All" || rollFilters.sector !== "" || rollFilters.exchange !== "All" || rollFilters.indexEtf !== "";
+  const [rollFilters, setRollFilters] = useState<RollFilters>({ marketCap: [], sector: "", exchange: [], indexEtf: "" });
+  const hasActiveFilters = rollFilters.marketCap.length > 0 || rollFilters.sector !== "" || rollFilters.exchange.length > 0 || rollFilters.indexEtf !== "";
   const [showMethodology, setShowMethodology] = useState(false);
   const [company, setCompany] = useState("");
   const [meta, setMeta] = useState<{ sector: string; industry: string }>({ sector: "", industry: "" });
@@ -95,7 +90,17 @@ export default function App() {
     setInp(p => ({ ...p, fwdGrowthY1: v.y1, fwdGrowthY2: v.y2, fwdCAGR: v.cagr, growthOverrides: {} }));
   };
 
+  useEffect(() => {
+    if (!rollingDice) return;
+    let i = 0;
+    const id = setInterval(() => { i = (i + 1) % DICE_PHRASES.length; setDicePhrase(DICE_PHRASES[i]); }, 800);
+    return () => clearInterval(id);
+  }, [rollingDice]);
+
+  const cancelDice = () => { diceAbortRef.current = true; };
+
   const rollDice = async () => {
+    diceAbortRef.current = false;
     setRollingDice(true);
     setError("");
     const MAX_ATTEMPTS = 20;
@@ -105,6 +110,7 @@ export default function App() {
       // Pre-filter pool using FMP screener + ETF intersection (single API call)
       console.log("[rollDice] filters:", rollFilters);
       const pool = await fetchFilteredPool(rollFilters);
+      if (diceAbortRef.current) { setRollingDice(false); return; }
       console.log("[rollDice] pool size:", pool.length);
       if (pool.length === 0) {
         setError("No stocks match these filters — try widening your criteria.");
@@ -119,11 +125,14 @@ export default function App() {
       }
       const limit = Math.min(MAX_ATTEMPTS, shuffled.length);
       for (let attempt = 0; attempt < limit; attempt++) {
+        if (diceAbortRef.current) { setRollingDice(false); return; }
         if (attempt > 0) await wait(DELAY_MS);
+        if (diceAbortRef.current) { setRollingDice(false); return; }
         const t = shuffled[attempt];
         try {
           console.log(`[rollDice] attempt ${attempt + 1}/${limit}: ${t}`);
           const data = await lookupTickerQuick(t);
+          if (diceAbortRef.current) { setRollingDice(false); return; }
           const testInp: InputState = {
             marketCap: data.marketCap, debt: data.debt, cash: data.cash, shares: data.shares,
             ttmEPS: data.ttmEPS, forwardEPS: data.forwardEPS,
@@ -138,6 +147,7 @@ export default function App() {
           const pb = testResult?.payback;
           console.log(`[rollDice] ${t} payback=${pb}`);
           if (pb && pb > 4 && pb < 18) {
+            if (diceAbortRef.current) { setRollingDice(false); return; }
             console.log(`[rollDice] MATCH ${t} — running full fetch`);
             setTicker(t);
             setIsFilterOpen(false);
@@ -149,9 +159,9 @@ export default function App() {
           console.warn(`[rollDice] ${t} failed:`, err instanceof Error ? err.message : err);
         }
       }
-      setError("Could not find a suitable stock — try adjusting filters.");
+      if (!diceAbortRef.current) setError("Could not find a suitable stock — try adjusting filters.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to roll dice.");
+      if (!diceAbortRef.current) setError(e instanceof Error ? e.message : "Failed to roll dice.");
     }
     setRollingDice(false);
   };
@@ -322,13 +332,15 @@ export default function App() {
             loading={loading}
             error={error}
             onRollDice={rollDice}
+            onCancelDice={cancelDice}
             rollingDice={rollingDice}
             dicePhrase={dicePhrase}
+
             isFilterOpen={isFilterOpen}
             onToggleFilter={() => setIsFilterOpen(o => !o)}
             rollFilters={rollFilters}
             onApplyFilters={setRollFilters}
-            onResetFilters={() => setRollFilters({ marketCap: "All", sector: "", exchange: "All", indexEtf: "" })}
+            onResetFilters={() => setRollFilters({ marketCap: [], sector: "", exchange: [], indexEtf: "" })}
             hasActiveFilters={hasActiveFilters}
           />
         )}
@@ -343,13 +355,15 @@ export default function App() {
             error={error}
             fetchLog={fetchLog}
             onRollDice={rollDice}
+            onCancelDice={cancelDice}
             rollingDice={rollingDice}
             dicePhrase={dicePhrase}
+
             isFilterOpen={isFilterOpen}
             onToggleFilter={() => setIsFilterOpen(o => !o)}
             rollFilters={rollFilters}
             onApplyFilters={setRollFilters}
-            onResetFilters={() => setRollFilters({ marketCap: "All", sector: "", exchange: "All", indexEtf: "" })}
+            onResetFilters={() => setRollFilters({ marketCap: [], sector: "", exchange: [], indexEtf: "" })}
             hasActiveFilters={hasActiveFilters}
           />
         </>)}
@@ -499,6 +513,9 @@ export default function App() {
           50%       { box-shadow: 0 0 18px rgba(196,160,110,0.35), 0 0 40px rgba(196,160,110,0.12); border-color: #d4b882; }
         }
 
+        /* Desktop: dice filter row wrappers are invisible (flattened) */
+        .rsp-dice-row { display: contents; }
+
         /* ── Desktop grid placement for 2×2 layout ──────────────────── */
         .rsp-left-verdict { grid-column: 1; grid-row: 1; }
         .rsp-left-data    { grid-column: 1; grid-row: 3; }
@@ -613,13 +630,32 @@ export default function App() {
             grid-template-columns: 1fr !important;
           }
           .rsp-dice-filter-wrap.rsp-dice-filter-open {
-            max-height: 400px !important;
+            max-height: 500px !important;
           }
           .rsp-dice-filter {
             flex-direction: column !important;
             align-items: flex-end !important;
-            gap: 12px !important;
+            gap: 10px !important;
             padding-right: 8px !important;
+          }
+          .rsp-dice-row {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            align-items: flex-end !important;
+            justify-content: flex-end !important;
+            gap: 12px !important;
+            width: 100% !important;
+          }
+          .rsp-dice-btn-group {
+            width: 100% !important;
+          }
+          .rsp-dice-btn-group button {
+            flex: 1 1 0 !important;
+            min-width: 0 !important;
+          }
+          .rsp-dice-btn-group > div:first-child {
+            text-align: left !important;
+            margin-left: 4px !important;
           }
           .rsp-dice-filter > div > div:first-child {
             text-align: right !important;

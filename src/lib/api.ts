@@ -55,19 +55,22 @@ export async function searchTickers(query: string): Promise<SearchResult[]> {
 const _screenedCache: Record<string, string[]> = {};
 
 export async function fetchFilteredPool(filters: RollFilters): Promise<string[]> {
-  const cacheKey = `${filters.sector}|${filters.exchange}|${filters.marketCap}|${filters.indexEtf}`;
+  const cacheKey = `${filters.sector}|${filters.exchange.sort().join(",")}|${filters.marketCap.sort().join(",")}|${filters.indexEtf}`;
   if (_screenedCache[cacheKey]) return _screenedCache[cacheKey];
 
   // Build FMP company-screener query params (stable API replacement for legacy stock-screener)
   const params: string[] = ["isActivelyTrading=true", "limit=5000"];
   if (filters.sector) params.push(`sector=${encodeURIComponent(filters.sector)}`);
-  if (filters.marketCap !== "All") {
-    const range = MKTCAP_RANGES[filters.marketCap];
-    if (range.min > 0) params.push(`marketCapMoreThan=${range.min}`);
-    if (range.max < Infinity) params.push(`marketCapLowerThan=${range.max}`);
+  if (filters.marketCap.length > 0) {
+    // Compute widest range across selected tiers for the API query
+    const ranges = filters.marketCap.map(t => MKTCAP_RANGES[t]);
+    const minVal = Math.min(...ranges.map(r => r.min));
+    const maxVal = Math.max(...ranges.map(r => r.max));
+    if (minVal > 0) params.push(`marketCapMoreThan=${minVal}`);
+    if (maxVal < Infinity) params.push(`marketCapLowerThan=${maxVal}`);
   }
 
-  const results = await fetchFMP<Array<{ symbol: string; exchangeShortName?: string; isEtf?: boolean; isFund?: boolean }>>(
+  const results = await fetchFMP<Array<{ symbol: string; exchangeShortName?: string; marketCap?: number; isEtf?: boolean; isFund?: boolean }>>(
     `company-screener?${params.join("&")}`
   );
 
@@ -77,19 +80,27 @@ export async function fetchFilteredPool(filters: RollFilters): Promise<string[]>
       // Exclude ETFs and funds
       if (r.isEtf || r.isFund) return false;
       const ex = (r.exchangeShortName || "").toUpperCase();
-      // Exchange filter — default ("All") restricts to NYSE+NASDAQ (VTI-like universe)
-      if (filters.exchange === "All" || !filters.exchange) {
+      // Exchange filter — empty array = NYSE+NASDAQ default (VTI-like universe)
+      const sel = filters.exchange;
+      if (!sel.length) {
         if (ex !== "NYSE" && ex !== "NASDAQ" && ex !== "AMEX" && ex !== "NYSEAMERICAN") return false;
-      } else if (filters.exchange === "NYSE") {
-        if (ex !== "NYSE" && ex !== "AMEX" && ex !== "NYSEAMERICAN") return false;
-      } else if (filters.exchange === "NASDAQ") {
-        if (ex !== "NASDAQ") return false;
-      } else if (filters.exchange === "OTC") {
-        if (ex !== "OTC") return false;
-      } else if (filters.exchange === "LSE") {
-        if (ex !== "LSE") return false;
-      } else if (filters.exchange === "TSX") {
-        if (ex !== "TSX" && ex !== "TSXV") return false;
+      } else {
+        const match = sel.some(f => {
+          if (f === "NYSE") return ex === "NYSE" || ex === "AMEX" || ex === "NYSEAMERICAN";
+          if (f === "NASDAQ") return ex === "NASDAQ";
+          if (f === "LSE") return ex === "LSE";
+          if (f === "TSX") return ex === "TSX" || ex === "TSXV";
+          return false;
+        });
+        if (!match) return false;
+      }
+      // Market cap precise filter (handles non-contiguous multi-select like Micro+Large)
+      if (filters.marketCap.length > 1 && r.marketCap != null) {
+        const inTier = filters.marketCap.some(t => {
+          const rng = MKTCAP_RANGES[t];
+          return r.marketCap! >= rng.min && r.marketCap! < rng.max;
+        });
+        if (!inTier) return false;
       }
       return true;
     })
