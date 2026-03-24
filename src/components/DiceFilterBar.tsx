@@ -47,16 +47,15 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
     onReset();
   };
 
-  // Compact is ~62.5% of hero (50% base + 25% increase)
-  const labelSize = hero ? "clamp(10px, 3.5vw, 16px)" : "clamp(9px, 2.5vw, 11px)";
-  const btnFontSize = hero ? "clamp(11px, 3.8vw, 18px)" : "clamp(10px, 2.5vw, 12.5px)";
-  const btnPadding = hero ? "clamp(4px, 1.5vw, 8px) clamp(6px, 2vw, 16px)" : "clamp(4px, 1vw, 6px) clamp(6px, 1.5vw, 11px)";
-  const etfInputSize = hero ? "clamp(12px, 3.8vw, 18px)" : "clamp(10px, 2.5vw, 12.5px)";
-  const etfInputWidth = hero ? "clamp(60px, 12vw, 100px)" : "clamp(50px, 10vw, 75px)";
-  const etfInputPadding = hero ? "6px 0" : "4px 0";
-  const applyFontSize = hero ? "clamp(12px, 3.8vw, 18px)" : "clamp(10px, 2.5vw, 12.5px)";
-  const applyPadding = hero ? "clamp(5px, 1.5vw, 8px) clamp(12px, 3vw, 20px)" : "clamp(4px, 1vw, 6px) clamp(10px, 2.25vw, 15px)";
-  const resetFontSize = hero ? "clamp(12px, 3.8vw, 18px)" : "clamp(10px, 2.5vw, 12.5px)";
+  const labelSize = "clamp(9px, 2.5vw, 11px)";
+  const btnFontSize = "clamp(10px, 2.5vw, 12.5px)";
+  const btnPadding = "clamp(4px, 1vw, 6px) clamp(6px, 1.5vw, 11px)";
+  const etfInputSize = "clamp(10px, 2.5vw, 12.5px)";
+  const etfInputWidth = "clamp(50px, 10vw, 75px)";
+  const etfInputPadding = "4px 0";
+  const applyFontSize = "clamp(10px, 2.5vw, 12.5px)";
+  const applyPadding = "clamp(4px, 1vw, 6px) clamp(10px, 2.25vw, 15px)";
+  const resetFontSize = "clamp(10px, 2.5vw, 12.5px)";
 
   const heroRowStyle: React.CSSProperties = hero ? { width: "100%", maxWidth: "100%", padding: "0 12px", boxSizing: "border-box" } : {};
 
@@ -75,7 +74,7 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
 
   const capButtons = (
     <div className="rsp-dice-btn-group" style={heroRowStyle} role="group" aria-label="Market cap filter">
-      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px", textAlign: hero ? "center" : "left", marginLeft: hero ? undefined : "4px" }}>Cap</div>
+      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: "4px", textAlign: hero ? "center" : "left", marginLeft: hero ? undefined : "4px" }}>Cap</div>
       <div style={{ display: "flex", justifyContent: hero ? "center" : undefined }}>
         {allCapLabels.map((cap, i) => {
           const active = isCapSelected(cap);
@@ -125,7 +124,7 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
 
   const exchangeButtons = (
     <div className="rsp-dice-btn-group" style={heroRowStyle} role="group" aria-label="Exchange filter">
-      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px", textAlign: hero ? "center" : "left", marginLeft: hero ? undefined : "4px" }}>Exchange</div>
+      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: "4px", textAlign: hero ? "center" : "left", marginLeft: hero ? undefined : "4px" }}>Exchange</div>
       <div style={{ display: "flex", justifyContent: hero ? "center" : "flex-end" }}>
         {allExLabels.map((ex, i) => {
           const active = isExSelected(ex);
@@ -152,14 +151,14 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
 
   const sectorField = (
     <div>
-      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px" }}>Sector</div>
-      <SectorDropdown value={pending.sector} onChange={v => setPending(p => ({ ...p, sector: v }))} large={hero} />
+      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: "4px" }}>Sector</div>
+      <SectorDropdown value={pending.sector} onChange={v => setPending(p => ({ ...p, sector: v }))} />
     </div>
   );
 
   const etfField = (
     <div>
-      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: hero ? "8px" : "4px", textAlign: "right" }}>ETF</div>
+      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: "4px", textAlign: "right" }}>ETF</div>
       <input
         type="text"
         placeholder="VTI"
@@ -183,7 +182,7 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
   );
 
   const applyResetButtons = (
-    <div style={{ display: "flex", alignItems: "center", gap: hero ? "16px" : "10px" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
       <button onClick={handleApply} disabled={!hasPendingChanges && !applied} style={{
         fontSize: applyFontSize,
         fontWeight: 700,

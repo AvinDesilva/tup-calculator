@@ -17,7 +17,8 @@ export function SectorDropdown({ value, onChange, large }: { value: string; onCh
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const width = Math.max(rect.width, large ? 260 : 180);
-      setPos({ top: rect.bottom + window.scrollY, left: rect.right + window.scrollX - width, width });
+      const left = Math.max(8, rect.right + window.scrollX - width);
+      setPos({ top: rect.bottom + window.scrollY, left, width });
     }
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
