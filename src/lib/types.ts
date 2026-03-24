@@ -41,11 +41,14 @@ export type MarketCapTier = "Micro" | "Small" | "Mid" | "Large";
 
 export type ExchangeFilter = "NYSE" | "NASDAQ" | "LSE" | "TSX";
 
+export type TupRangeFilter = "≤5" | "≤10" | "≤15" | "≤20" | "20+";
+
 export interface RollFilters {
-  marketCap: MarketCapTier[];  // empty = All
+  marketCap: MarketCapTier[];    // empty = All
   sector: string;
-  exchange: ExchangeFilter[];  // empty = All
+  exchange: ExchangeFilter[];    // empty = All
   indexEtf: string;
+  tupRange: TupRangeFilter[];   // empty = default (pb > 4 && pb < 18)
 }
 
 // ─── calcTUP result ───────────────────────────────────────────────────────────

@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { C } from "../lib/theme.ts";
 import { SectorDropdown } from "./SectorDropdown.tsx";
-import type { RollFilters, MarketCapTier, ExchangeFilter } from "../lib/types.ts";
+import type { RollFilters, MarketCapTier, ExchangeFilter, TupRangeFilter } from "../lib/types.ts";
 
-const DEFAULT_FILTERS: RollFilters = { marketCap: [], sector: "", exchange: [], indexEtf: "" };
+const DEFAULT_FILTERS: RollFilters = { marketCap: [], sector: "", exchange: [], indexEtf: "", tupRange: [] };
 
 interface DiceFilterBarProps {
   isOpen: boolean;
@@ -15,9 +15,10 @@ interface DiceFilterBarProps {
 
 const CAPS: MarketCapTier[] = ["Micro", "Small", "Mid", "Large"];
 const EXCHANGES: ExchangeFilter[] = ["NYSE", "NASDAQ", "LSE", "TSX"];
+const TUP_RANGES: TupRangeFilter[] = ["≤5", "≤10", "≤15", "≤20", "20+"];
 
 function filtersEqual(a: RollFilters, b: RollFilters): boolean {
-  return a.marketCap.length === b.marketCap.length && a.marketCap.every(c => b.marketCap.includes(c)) && a.sector === b.sector && a.exchange.length === b.exchange.length && a.exchange.every(e => b.exchange.includes(e)) && a.indexEtf === b.indexEtf;
+  return a.marketCap.length === b.marketCap.length && a.marketCap.every(c => b.marketCap.includes(c)) && a.sector === b.sector && a.exchange.length === b.exchange.length && a.exchange.every(e => b.exchange.includes(e)) && a.indexEtf === b.indexEtf && a.tupRange.length === b.tupRange.length && a.tupRange.every(r => b.tupRange.includes(r));
 }
 
 function isDefault(f: RollFilters): boolean {
@@ -71,6 +72,46 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
   };
 
   const isCapSelected = (label: string) => label === "All" ? pending.marketCap.length === 0 : pending.marketCap.includes(label as MarketCapTier);
+
+  const toggleTupRange = (range: TupRangeFilter) => {
+    setPending(p => {
+      if (p.tupRange.includes(range)) {
+        return { ...p, tupRange: p.tupRange.filter(r => r !== range) };
+      }
+      return { ...p, tupRange: [...p.tupRange, range] };
+    });
+  };
+
+  const isTupSelected = (label: string) => label === "All" ? pending.tupRange.length === 0 : pending.tupRange.includes(label as TupRangeFilter);
+
+  const allTupLabels = ["All", ...TUP_RANGES] as const;
+
+  const tupRangeButtons = (
+    <div className="rsp-dice-btn-group" style={heroRowStyle} role="group" aria-label="TUP range filter">
+      <div style={{ fontSize: labelSize, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: "4px", textAlign: hero ? "center" : "left", marginLeft: hero ? undefined : "4px" }}>TUP Range</div>
+      <div style={{ display: "flex", justifyContent: hero ? "center" : undefined }}>
+        {allTupLabels.map((label, i) => {
+          const active = isTupSelected(label);
+          return (
+            <button key={label} aria-pressed={active} onClick={() => label === "All" ? setPending(p => ({ ...p, tupRange: [] })) : toggleTupRange(label as TupRangeFilter)} style={{
+              fontSize: btnFontSize,
+              fontWeight: 700,
+              fontFamily: C.mono,
+              letterSpacing: "0.05em",
+              padding: btnPadding,
+              ...(hero ? { flex: "1 1 0", minWidth: 0 } : {}),
+              background: active ? "rgba(196,160,110,0.2)" : "transparent",
+              border: `1px solid ${active ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+              color: active ? "#C4A06E" : "#666",
+              cursor: "pointer",
+              borderRadius: i === 0 ? "3px 0 0 3px" : i === allTupLabels.length - 1 ? "0 3px 3px 0" : "0",
+              marginLeft: i > 0 ? "-1px" : "0",
+            }}>{label}</button>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   const capButtons = (
     <div className="rsp-dice-btn-group" style={heroRowStyle} role="group" aria-label="Market cap filter">
@@ -222,7 +263,7 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
     return (
       <div className={`rsp-dice-filter-wrap${isOpen ? " rsp-dice-filter-open" : ""}`} inert={!isOpen || undefined} style={{
         overflow: "hidden",
-        maxHeight: isOpen ? "400px" : "0",
+        maxHeight: isOpen ? "480px" : "0",
         transition: "max-height 0.3s ease",
       }}>
         <div style={{
@@ -235,7 +276,9 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
         }}>
           {/* Row 1: Cap */}
           {capButtons}
-          {/* Row 2: Exchange */}
+          {/* Row 2: TUP Range */}
+          {tupRangeButtons}
+          {/* Row 3: Exchange */}
           {exchangeButtons}
           {/* Row 3: Sector + ETF + Apply */}
           <div style={{ display: "flex", alignItems: "flex-end", gap: "24px", flexWrap: "wrap", justifyContent: "center", padding: "0 12px" }}>
@@ -251,7 +294,7 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
   return (
     <div className={`rsp-dice-filter-wrap${isOpen ? " rsp-dice-filter-open" : ""}`} inert={!isOpen || undefined} style={{
       overflow: "hidden",
-      maxHeight: isOpen ? "300px" : "0",
+      maxHeight: isOpen ? "380px" : "0",
       transition: "max-height 0.25s ease",
     }}>
       <div className="rsp-dice-filter" style={{
@@ -264,6 +307,7 @@ export function DiceFilterBar({ isOpen, activeFilters, onApply, onReset, variant
         justifyContent: "flex-end",
       }}>
         <div className="rsp-dice-row">{capButtons}{exchangeButtons}</div>
+        <div className="rsp-dice-row">{tupRangeButtons}</div>
         <div className="rsp-dice-row">
           {sectorField}
           {etfField}
