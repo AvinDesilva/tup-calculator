@@ -10,9 +10,9 @@ npm run build     # Production build to dist/
 npm run preview   # Preview production build locally
 npm run lint      # Run ESLint on all .ts/.tsx files
 npm run typecheck # Run tsc --noEmit (TypeScript type checking)
+npm run test      # Run vitest unit tests (single run)
+npm run test:watch # Run vitest in watch mode
 ```
-
-No test runner is configured.
 
 ## Git Workflow
 

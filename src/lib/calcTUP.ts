@@ -11,7 +11,7 @@ import { fadedGrowth, type VDRContext } from "./vdr.ts";
 export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
   const {
     marketCap, debt, cash, shares, ttmEPS, forwardEPS,
-    historicalGrowth, analystGrowth, fwdGrowthY1, fwdGrowthY2, fwdCAGR,
+    historicalGrowth, analystGrowth, fwdGrowthY1, fwdGrowthY2,
     revenuePerShare, targetMargin,
     inceptionGrowth, breakEvenYear, currentPrice, sma200, dividendYield,
     operatingMargin, lifecycleStage, growthOverrides, vdrEnabled,
@@ -33,20 +33,26 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
     const histRate = historicalGrowth / 100;
     let fwd1Rate   = fwdGrowthY1 / 100;
     let fwd2Rate   = fwdGrowthY2 != null ? fwdGrowthY2 / 100 : fwd1Rate;
-    let fwdCagrRate: number | null = fwdCAGR != null ? fwdCAGR / 100 : null;
 
     // Fallback: if baselineEPS <= 0, default all forward components to histCAGR
     if (epsBase <= 0) {
-      fwd1Rate    = histRate;
-      fwd2Rate    = histRate;
-      fwdCagrRate = null;
+      fwd1Rate = histRate;
+      fwd2Rate = histRate;
     }
 
-    grY1       = fwd1Rate + divBonus;
-    grY2       = fwd2Rate + divBonus;
-    grTerminal = fwdCagrRate != null
-      ? (histRate + fwdCagrRate) / 2 + divBonus
-      : histRate + divBonus;
+    grY1 = fwd1Rate + divBonus;
+    grY2 = fwd2Rate + divBonus;
+
+    // Historical Blended: anchor past CAGR with Y1 forward outlook
+    const histBlended = (histRate + fwd1Rate) / 2;
+
+    // Forward Compound CAGR: geometric mean of Y1 and Y2 rates
+    const fwdProduct = (1 + fwd1Rate) * (1 + fwd2Rate);
+    const fwdCompoundCAGR = fwdProduct > 0
+      ? Math.sqrt(fwdProduct) - 1
+      : (fwd1Rate + fwd2Rate) / 2;  // fallback for extreme negatives
+
+    grTerminal = (histBlended + fwdCompoundCAGR) / 2 + divBonus;
   } else {
     epsBase    = revenuePerShare * (targetMargin / 100);
     threshold  = PP_THRESHOLD;
