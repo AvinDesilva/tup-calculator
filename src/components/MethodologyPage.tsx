@@ -195,13 +195,14 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
             company typically shows G2 &lt; G1. Requires a third year of estimates.
           </p>
 
-          <FormulaBlock label="Terminal Forward CAGR">
-            CAGR = (EPS<sub>T+2</sub> / EPS<sub>T</sub>)<sup style={{ fontSize: "11px" }}>1/3</sup> − 1
+          <FormulaBlock label="Forward Compound CAGR">
+            FC = &#x221A;&#x202F;((1 + G1) × (1 + G2)) − 1
           </FormulaBlock>
           <p style={{ fontSize: "14px", color: C.text3, lineHeight: 1.7, margin: "-8px 0 20px", fontStyle: "italic" }}>
-            The annualized growth rate across all available estimate years. This smooths G1 and G2 into a single
-            rate used for Year 3 onward, blended with historical growth, until the lifecycle fade model takes over.
-            Falls back to a 2-year span when only two years of estimates exist.
+            The geometric mean of Y1 and Y2 growth rates — the annualized compounding rate implied by
+            the two analyst estimates. This captures the deceleration (or acceleration) trajectory
+            between years without depending on absolute EPS levels. When only one year of estimates
+            exists, G2 = G1 and FC = G1.
           </p>
 
           <CalloutBlock label="Bear / Base / Bull Scenarios">
@@ -212,13 +213,15 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
             <span style={{ fontFamily: C.mono }}>epsAvg</span>, and{" "}
             <strong style={{ color: "#00897B" }}>bull</strong> uses{" "}
             <span style={{ fontFamily: C.mono }}>epsHigh</span>. Toggling between them swaps
-            the Y1, Y2, and CAGR values, which flows through the entire payback calculation automatically.
+            the Y1 and Y2 values, which flows through the entire payback calculation automatically.
           </CalloutBlock>
 
-          <CalloutBlock label="Why Blend Historical + Analyst?">
-            Historical growth shows what the company has actually achieved; analyst estimates show what the
-            market expects going forward. Averaging the two tempers over-optimistic projections while still
-            capturing forward momentum — especially useful for companies entering a new growth phase.
+          <CalloutBlock label="Why Two-Stage Blending?">
+            Historical growth shows what the company has actually achieved; analyst Y1 anchors that history
+            to the near-term outlook. The Forward Compound CAGR then captures the compounding trajectory
+            between Y1 and Y2 — whether growth is accelerating or decelerating. Blending these two signals
+            tempers over-optimistic projections while preserving momentum, especially for companies entering
+            a new growth phase or cycling out of a down year.
           </CalloutBlock>
         </section>
 
@@ -251,12 +254,15 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         <section style={{ padding: "40px 0" }}>
           <SectionNum n="05" title="TUP Combined Growth Rate" sub="Blended Assumption" />
           <p style={{ fontSize: "15px", color: C.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
-            Average the two inputs to produce a blended growth rate. If the company pays a dividend,
-            its yield is added on top — because shareholders receive that return regardless of EPS growth.
+            TUP uses a two-stage blend for the terminal rate (Y3+). First, the historical CAGR is
+            anchored to the Y1 forward outlook to produce a Historical Blended rate. Then the geometric
+            mean of Y1 and Y2 captures the compounding trajectory as a Forward Compound rate. The
+            terminal rate is the average of these two, with dividend yield added on top.
           </p>
           <FormulaBlock label="Formula">
-            Blended Growth = (Historical CAGR + Analyst Forward) / 2<br />
-            Total Compounding Rate = Blended Growth + Dividend Yield
+            Historical Blended = (Historical CAGR + Analyst Y1) / 2<br />
+            Forward Compound = &#x221A;&#x202F;((1 + Y1) × (1 + Y2)) − 1<br />
+            Terminal Rate = (Historical Blended + Forward Compound) / 2 + Dividend Yield
           </FormulaBlock>
 
           <div style={{ border: `1px solid ${C.borderWeak}`, marginBottom: "32px" }}>
@@ -264,11 +270,14 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
               <SubHead>Example — Dividend-Paying Company (e.g. NVO)</SubHead>
             </div>
             {[
-              ["Historical CAGR (10 yr)",   "20%",   false],
-              ["Analyst Forward Estimate",   "15%",   false],
-              ["Blended Growth",             "17.5%", false],
-              ["Dividend Yield",             "4.9%",  false],
-              ["Total Compounding Rate",     "22.4%", true],
+              ["Historical CAGR (10 yr)",   "20%",    false],
+              ["Analyst Y1",                "15%",    false],
+              ["Analyst Y2",                "12%",    false],
+              ["Historical Blended",        "17.5%",  false],
+              ["Forward Compound",          "13.49%", false],
+              ["Terminal Growth",           "15.50%", false],
+              ["Dividend Yield",            "4.9%",   false],
+              ["Total Compounding Rate",    "20.40%", true],
             ].map(([label, val, highlight]) => (
               <div key={label as string} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "baseline",
@@ -283,9 +292,10 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
             ))}
             <div style={{ padding: "16px 20px" }}>
               <p style={{ fontSize: "15px", color: C.text2, lineHeight: 1.85, margin: 0 }}>
-                The 22.4% Total Compounding Rate is applied year-over-year to project EPS until the
-                cumulative sum equals the Adjusted Price. The dividend yield is added <em>after</em> the
-                average — not inside it — so it doesn't distort the EPS growth signal.
+                Historical Blended = (20 + 15) / 2 = 17.5%. Forward Compound = √(1.15 × 1.12) − 1 = 13.49%.
+                Terminal Rate = (17.5 + 13.49) / 2 = 15.50%. Adding the 4.9% dividend yield gives
+                20.40% total compounding. The dividend is added <em>after</em> the blend — not inside it —
+                so it doesn't distort the EPS growth signal.
               </p>
             </div>
           </div>
@@ -499,7 +509,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
 
           <SubHead>Key Guardrails</SubHead>
           {[
-            ["Dividend Yield Adder", "The yield is added post-blend, not averaged in. This correctly preserves the growth signal: a 4.9% yield on a 17.5% grower produces 22.4% total compounding, not a misleadingly inflated 18% average."],
+            ["Dividend Yield Adder", "The yield is added post-blend, not averaged in. This correctly preserves the growth signal: a 4.9% yield on a 15.5% terminal rate produces 20.4% total compounding, not a misleadingly diluted average."],
             ["Dynamic Floor", "The VDR decay floor is the greater of 5% (GDP + inflation) and the company's dividend yield. A 6% dividend payer floors at 6%, reflecting that even as EPS growth stalls, the total return to shareholders includes persistent cash distributions."],
             ["Margin & Profitability Modifiers", "All modifiers default to neutral (1.0×) when data is unavailable. This ensures the VDR gracefully degrades to the base single-factor model rather than producing distorted results for companies with missing data."],
             ["Consistency Check", "If historical growth is 50% but analysts expect 5%, the business model may be broken or the industry is maturing rapidly. In these cases, lean more heavily on the lower number."],

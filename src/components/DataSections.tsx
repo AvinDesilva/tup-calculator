@@ -26,11 +26,18 @@ export function DataSections({
   const histRate = inp.historicalGrowth;
   const fwd1 = inp.fwdGrowthY1;
   const fwd2 = inp.fwdGrowthY2 ?? fwd1;
-  const fwdCagr = inp.fwdCAGR;
 
   const blendedY1 = fwd1;
   const blendedY2 = fwd2;
-  const blendedTerminal = fwdCagr != null ? (histRate + fwdCagr) / 2 : histRate;
+  // Historical Blended: (Hist CAGR + Y1) / 2
+  const histBlended = (histRate + fwd1) / 2;
+  // Forward Compound CAGR: geometric mean of Y1 and Y2 (in %)
+  const fwdProduct = (1 + fwd1 / 100) * (1 + fwd2 / 100);
+  const fwdCompoundCAGR = (fwdProduct > 0
+    ? Math.sqrt(fwdProduct) - 1
+    : (fwd1 / 100 + fwd2 / 100) / 2) * 100;
+  // Terminal: (Historical Blended + Forward Compound) / 2
+  const blendedTerminal = (histBlended + fwdCompoundCAGR) / 2;
 
   const labelSm: React.CSSProperties = {
     fontSize: "11px", fontWeight: 600, letterSpacing: "0.08em",
@@ -268,11 +275,19 @@ export function DataSections({
             </div>
             <div style={{ padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", ...valueSm }}>{f(blendedY2)}%</div>
 
+            {/* Historical Blended (intermediate) */}
+            <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontSize: "10px", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "#555" }}>Hist Blended</div>
+            <div style={{ padding: "6px 12px 6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "#444", textAlign: "right" }}>(Hist + Y1) / 2</div>
+            <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", fontWeight: 500, color: "#666", textAlign: "right" }}>{f(histBlended)}%</div>
+
+            {/* Forward Compound (intermediate) */}
+            <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontSize: "10px", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "#555" }}>Fwd Compound</div>
+            <div style={{ padding: "6px 12px 6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "#444", textAlign: "right" }}>GM(Y1, Y2)</div>
+            <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", fontWeight: 500, color: "#666", textAlign: "right" }}>{f(fwdCompoundCAGR)}%</div>
+
             {/* Terminal */}
             <div style={{ padding: "7px 0", ...labelSm }}>Terminal (Y3+)</div>
-            <div style={{ padding: "7px 12px 7px 0", ...formulaSm }}>
-              {fwdCagr != null ? "(Hist+CAGR)/2" : "Hist Only"}
-            </div>
+            <div style={{ padding: "7px 12px 7px 0", ...formulaSm }}>(HB + FC) / 2</div>
             <div style={{ padding: "7px 0", ...valueSm, color: "#C4A06E" }}>{f(blendedTerminal)}%</div>
           </div>
         </div>
@@ -290,13 +305,13 @@ export function DataSections({
             {divYield.toFixed(1)}%
           </span>
         </div>
-        {divYield > 0 && (
-          <DerivedStat
-            label="Total Terminal Rate"
-            value={`(${f(blendedTerminal)}% + ${f(divYield)}%) = ${f(blendedTerminal + divYield)}%`}
-            accent="#C4A06E"
-          />
-        )}
+        <DerivedStat
+          label={divYield > 0 ? "Final Blended Rate" : "Final Blended Rate (no dividend)"}
+          value={divYield > 0
+            ? `(${f(blendedTerminal)}% + ${f(divYield)}%) = ${f(blendedTerminal + divYield)}%`
+            : `${f(blendedTerminal)}%`}
+          accent="#C4A06E"
+        />
       </div>
 
       {/* 03 Technical */}
