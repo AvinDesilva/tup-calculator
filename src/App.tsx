@@ -4,7 +4,7 @@ import { calcTUP } from "./lib/calcTUP.ts";
 import { lookupTicker, lookupTickerQuick, fetchFilteredPool, fetchIndustryGrowth } from "./lib/api.ts";
 import type { IndustryGrowthData } from "./lib/api.ts";
 import { C } from "./lib/theme.ts";
-import type { InputState, Mode, TUPResult, GrowthScenario, RollFilters, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement } from "./lib/types.ts";
+import type { InputState, Mode, TUPResult, GrowthScenario, RollFilters, TupRangeFilter, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement } from "./lib/types.ts";
 
 import { VerdictCard } from "./components/VerdictCard.tsx";
 import { ValuationContext } from "./components/ValuationContext.tsx";
@@ -38,6 +38,18 @@ interface ScorecardState {
   exchange: string;
 }
 
+function matchesTupRange(pb: number, ranges: TupRangeFilter[]): boolean {
+  if (ranges.length === 0) return pb > 4 && pb < 18;
+  return ranges.some(r => {
+    if (r === "≤5")  return pb <= 5;
+    if (r === "≤10") return pb > 5  && pb <= 10;
+    if (r === "≤15") return pb > 10 && pb <= 15;
+    if (r === "≤20") return pb > 15 && pb <= 20;
+    if (r === "20+") return pb > 20;
+    return false;
+  });
+}
+
 export default function App() {
   const [ticker, setTicker] = useState("");
   const [loading, setLoading] = useState(false);
@@ -48,8 +60,8 @@ export default function App() {
   const diceAbortRef = useRef(false);
   const [dicePhrase, setDicePhrase] = useState(DICE_PHRASES[0]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [rollFilters, setRollFilters] = useState<RollFilters>({ marketCap: [], sector: "", exchange: [], indexEtf: "" });
-  const hasActiveFilters = rollFilters.marketCap.length > 0 || rollFilters.sector !== "" || rollFilters.exchange.length > 0 || rollFilters.indexEtf !== "";
+  const [rollFilters, setRollFilters] = useState<RollFilters>({ marketCap: [], sector: "", exchange: [], indexEtf: "", tupRange: [] });
+  const hasActiveFilters = rollFilters.marketCap.length > 0 || rollFilters.sector !== "" || rollFilters.exchange.length > 0 || rollFilters.indexEtf !== "" || rollFilters.tupRange.length > 0;
   const [showMethodology, setShowMethodology] = useState(false);
   const [company, setCompany] = useState("");
   const [meta, setMeta] = useState<{ sector: string; industry: string }>({ sector: "", industry: "" });
@@ -146,7 +158,7 @@ export default function App() {
           const testResult = calcTUP(testInp, "standard");
           const pb = testResult?.payback;
           console.log(`[rollDice] ${t} payback=${pb}`);
-          if (pb && pb > 4 && pb < 18) {
+          if (pb && matchesTupRange(pb, rollFilters.tupRange)) {
             if (diceAbortRef.current) { setRollingDice(false); return; }
             console.log(`[rollDice] MATCH ${t} — running full fetch`);
             setTicker(t);
@@ -340,7 +352,7 @@ export default function App() {
             onToggleFilter={() => setIsFilterOpen(o => !o)}
             rollFilters={rollFilters}
             onApplyFilters={setRollFilters}
-            onResetFilters={() => setRollFilters({ marketCap: [], sector: "", exchange: [], indexEtf: "" })}
+            onResetFilters={() => setRollFilters({ marketCap: [], sector: "", exchange: [], indexEtf: "", tupRange: [] })}
             hasActiveFilters={hasActiveFilters}
           />
         )}
@@ -363,7 +375,7 @@ export default function App() {
             onToggleFilter={() => setIsFilterOpen(o => !o)}
             rollFilters={rollFilters}
             onApplyFilters={setRollFilters}
-            onResetFilters={() => setRollFilters({ marketCap: [], sector: "", exchange: [], indexEtf: "" })}
+            onResetFilters={() => setRollFilters({ marketCap: [], sector: "", exchange: [], indexEtf: "", tupRange: [] })}
             hasActiveFilters={hasActiveFilters}
           />
         </>)}
@@ -630,7 +642,7 @@ export default function App() {
             grid-template-columns: 1fr !important;
           }
           .rsp-dice-filter-wrap.rsp-dice-filter-open {
-            max-height: 500px !important;
+            max-height: 600px !important;
           }
           .rsp-dice-filter {
             flex-direction: column !important;
