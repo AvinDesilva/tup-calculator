@@ -19,18 +19,48 @@ export const VERDICT: Record<VerdictKey, { label: string; color: string; icon: s
 
 // ─── ADR ratio table ──────────────────────────────────────────────────────────
 export const ADR_RATIO_TABLE: Record<string, number> = {
-  NVO:  6,
-  ASML: 1,
-  TSM:  5,
+  // ── Existing (verified) ──
+  NVO:  6,       // Novo Nordisk — Denmark (DKK)
+  ASML: 1,       // ASML Holdings — Netherlands (EUR)
+  TSM:  5,       // TSMC — Taiwan (TWD)
+  // ── Asia-Pacific ──
+  TM:   10,      // Toyota Motor — Japan (JPY)
+  SONY: 1,       // Sony Group — Japan (JPY)
+  BABA: 8,       // Alibaba Group — China (CNH)
+  INFY: 1,       // Infosys — India (INR)
+  KB:   1,       // KB Financial Group — S. Korea (KRW)
+  BHP:  2,       // BHP Group — Australia (AUD)
+  // ── Europe ──
+  SAP:  1,       // SAP SE — Germany (EUR)
+  UL:   1,       // Unilever — UK (EUR reporting)
+  DEO:  1,       // Diageo — UK (GBP)
+  NVS:  1,       // Novartis — Switzerland (CHF)
+  // ── Latin America ──
+  AMX:  20,      // América Móvil — Mexico (MXN)
 };
 
 // ─── ADR underlying financials currency ─────────────────────────────────────
 // FMP may report p.currency / reportingCurrency as "USD" for NYSE-listed ADRs,
 // but the balance sheet and income statement values are in the home currency.
 export const ADR_FINANCIALS_CCY: Record<string, string> = {
-  NVO:  "DKK",
-  ASML: "EUR",
-  TSM:  "TWD",
+  // ── Existing (verified) ──
+  NVO:  "DKK",   // Novo Nordisk — Copenhagen → DKK financials
+  ASML: "EUR",   // ASML — Euronext → EUR financials
+  TSM:  "TWD",   // TSMC — Taiwan → TWD financials
+  // ── Asia-Pacific ──
+  TM:   "JPY",   // Toyota — Tokyo → JPY financials
+  SONY: "JPY",   // Sony — Tokyo → JPY financials
+  BABA: "CNH",   // Alibaba — Hong Kong → RMB/CNH financials
+  INFY: "INR",   // Infosys — Mumbai → INR financials
+  KB:   "KRW",   // KB Financial — Seoul → KRW financials
+  BHP:  "AUD",   // BHP Group — Sydney → AUD financials
+  // ── Europe ──
+  SAP:  "EUR",   // SAP — Frankfurt → EUR financials
+  UL:   "EUR",   // Unilever — London but reports EUR
+  DEO:  "GBP",   // Diageo — London → GBP financials
+  NVS:  "CHF",   // Novartis — Zurich → CHF financials
+  // ── Latin America ──
+  AMX:  "MXN",   // América Móvil — Mexico City → MXN financials
 };
 
 // ─── Exchange → listing currency ─────────────────────────────────────────────
@@ -55,6 +85,7 @@ export const FALLBACK_FX: Record<string, number> = {
   CADUSD: 0.74,  GBPUSD: 1.26,  JPYUSD: 0.0067, AUDUSD: 0.63,
   HKDUSD: 0.128, SGDUSD: 0.74,  CHFUSD: 1.11,   CNHUSD: 0.138,
   TWDUSD: 0.031, INRUSD: 0.012, KRWUSD: 0.00073,
+  MXNUSD: 0.058, BRLUSD: 0.175,
 };
 
 // ─── Business Lifecycle S-curve ───────────────────────────────────────────────
