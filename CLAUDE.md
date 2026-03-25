@@ -23,6 +23,32 @@ npm run test:watch # Run vitest in watch mode
 - Push to GitHub to confirm commits are recorded there
 - **Why:** Keeps commit history clean, allows for proper review, and ensures changes are tracked on GitHub
 
+## CI/CD
+
+Pushing to `main` triggers the GitHub Actions workflow (`.github/workflows/deploy.yml`):
+1. **CI job:** `npm ci` → lint → typecheck → test → build
+2. **Deploy job:** Temporarily opens SSH for the runner IP, rsyncs `dist/` + `server/` to the EC2 instance, restarts tup-proxy, reloads nginx, runs a health check, then revokes SSH access.
+
+GitHub Secrets required: `EC2_SSH_PRIVATE_KEY`, `EC2_HOST`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`.
+
+The legacy manual deploy script is at `deploy.sh.legacy` (emergency fallback only).
+
+## Infrastructure (Terraform)
+
+All AWS infrastructure is managed in `terraform/` (S3 remote state):
+- EC2 instance, security group, key pair
+- CloudWatch alarms (status check, CPU, network, billing) + SNS topic
+- IAM user + scoped policy
+
+```bash
+cd terraform
+terraform init    # First time only
+terraform plan    # Preview changes
+terraform apply   # Apply changes (review plan first!)
+```
+
+State backend: S3 bucket `tup-calculator-tfstate` with DynamoDB lock table `tup-calculator-tflock`.
+
 ## Environment
 
 The FMP API key can be pre-loaded via an env variable:
