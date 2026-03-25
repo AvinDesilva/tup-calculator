@@ -1,0 +1,129 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: Lint, Typecheck, Test, Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 5
+
+  deploy:
+    name: Deploy to EC2
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Get runner IP and open SSH
+        id: ssh-access
+        run: |
+          RUNNER_IP=$(curl -s https://checkip.amazonaws.com)
+          echo "runner_ip=${RUNNER_IP}" >> "$GITHUB_OUTPUT"
+          aws ec2 authorize-security-group-ingress \
+            --group-id sg-02f1533de0a8351dd \
+            --protocol tcp --port 22 \
+            --cidr "${RUNNER_IP}/32"
+          sleep 2
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy frontend
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            dist/ \
+            ubuntu@${{ secrets.EC2_HOST }}:/var/www/tupcalculator.org/
+
+      - name: Deploy Express proxy & restart
+        run: |
+          rsync -avz \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            server/index.js server/package.json \
+            ubuntu@${{ secrets.EC2_HOST }}:/opt/tup-proxy/
+          ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            cd /opt/tup-proxy && npm install --omit=dev --quiet
+            sudo systemctl restart tup-proxy
+          ENDSSH
+
+      - name: Deploy nginx config & reload
+        run: |
+          rsync -avz \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            server/nginx.conf \
+            ubuntu@${{ secrets.EC2_HOST }}:/tmp/nginx-tup.conf
+          ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            sudo cp /tmp/nginx-tup.conf /etc/nginx/sites-available/tupcalculator.org
+            sudo ln -sf /etc/nginx/sites-available/tupcalculator.org /etc/nginx/sites-enabled/tupcalculator.org
+            sudo nginx -t && sudo nginx -s reload
+          ENDSSH
+
+      - name: Health check
+        run: |
+          sleep 5
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://tupcalculator.org)
+          if [ "$STATUS" != "200" ]; then
+            echo "Health check failed with status $STATUS"
+            exit 1
+          fi
+          echo "Health check passed (HTTP $STATUS)"
+
+      - name: Revoke SSH access & clean up
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id sg-02f1533de0a8351dd \
+            --protocol tcp --port 22 \
+            --cidr "${{ steps.ssh-access.outputs.runner_ip }}/32" || true
+          rm -f ~/.ssh/deploy_key
