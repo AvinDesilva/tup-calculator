@@ -41,11 +41,11 @@ interface ScorecardState {
 function matchesTupRange(pb: number, ranges: TupRangeFilter[]): boolean {
   if (ranges.length === 0) return pb > 4 && pb < 18;
   return ranges.some(r => {
-    if (r === "≤5")  return pb <= 5;
-    if (r === "≤10") return pb > 5  && pb <= 10;
-    if (r === "≤15") return pb > 10 && pb <= 15;
-    if (r === "≤20") return pb > 15 && pb <= 20;
-    if (r === "20+") return pb > 20;
+    if (r === "≤7")    return pb <= 7;
+    if (r === "≤9")    return pb > 7  && pb <= 9;
+    if (r === "10–12") return pb >= 10 && pb <= 12;
+    if (r === "13–15") return pb >= 13 && pb <= 15;
+    if (r === "15+")   return pb > 15;
     return false;
   });
 }

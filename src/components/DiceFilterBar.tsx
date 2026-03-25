@@ -15,7 +15,7 @@ interface DiceFilterBarProps {
 
 const CAPS: MarketCapTier[] = ["Micro", "Small", "Mid", "Large"];
 const EXCHANGES: ExchangeFilter[] = ["NYSE", "NASDAQ", "LSE", "TSX"];
-const TUP_RANGES: TupRangeFilter[] = ["≤5", "≤10", "≤15", "≤20", "20+"];
+const TUP_RANGES: TupRangeFilter[] = ["≤7", "≤9", "10–12", "13–15", "15+"];
 
 function filtersEqual(a: RollFilters, b: RollFilters): boolean {
   return a.marketCap.length === b.marketCap.length && a.marketCap.every(c => b.marketCap.includes(c)) && a.sector === b.sector && a.exchange.length === b.exchange.length && a.exchange.every(e => b.exchange.includes(e)) && a.indexEtf === b.indexEtf && a.tupRange.length === b.tupRange.length && a.tupRange.every(r => b.tupRange.includes(r));

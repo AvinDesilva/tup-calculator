@@ -41,7 +41,7 @@ export type MarketCapTier = "Micro" | "Small" | "Mid" | "Large";
 
 export type ExchangeFilter = "NYSE" | "NASDAQ" | "LSE" | "TSX";
 
-export type TupRangeFilter = "≤5" | "≤10" | "≤15" | "≤20" | "20+";
+export type TupRangeFilter = "≤7" | "≤9" | "10–12" | "13–15" | "15+";
 
 export interface RollFilters {
   marketCap: MarketCapTier[];    // empty = All
