@@ -113,9 +113,10 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
   // Fundamental verdict (ignoring technical signal)
   let fundamentalVerdict: VerdictKey;
   if (!payback || payback > SAFETY_CAP) fundamentalVerdict = "avoid";
-  else if (payback <= threshold * 0.6)  fundamentalVerdict = "strong_buy";
-  else if (payback <= threshold)        fundamentalVerdict = "buy";
-  else if (payback <= threshold * 1.3)  fundamentalVerdict = "hold";
+  else if (payback <= threshold * 0.7)  fundamentalVerdict = "strong_buy";
+  else if (payback <= threshold * 0.9)  fundamentalVerdict = "buy";
+  else if (payback <= threshold * 1.2)  fundamentalVerdict = "hold";
+  else if (payback <= threshold * 1.5)  fundamentalVerdict = "stretched";
   else                                  fundamentalVerdict = "avoid";
 
   // Apply falling knife: buy math + price below SMA → speculative

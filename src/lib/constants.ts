@@ -11,8 +11,9 @@ export const PP_THRESHOLD   = 8;
 // ─── Verdict metadata ─────────────────────────────────────────────────────────
 export const VERDICT: Record<VerdictKey, { label: string; color: string; icon: string }> = {
   strong_buy: { label: "Strong Buy",  color: "#10d97e", icon: "▲▲" },
-  buy:        { label: "Buy",         color: "#00BFA5", icon: "▲"  },
+  buy:        { label: "Buy Zone",    color: "#00BFA5", icon: "▲"  },
   hold:       { label: "Hold",        color: "#f5a020", icon: "━"  },
+  stretched:  { label: "Stretched",   color: "#e85a3a", icon: "▽"  },
   spec_buy:   { label: "Patient Buy", color: "#f5a020", icon: "→"  },
   avoid:      { label: "Avoid",       color: "#FF4D00", icon: "▼"  },
 };

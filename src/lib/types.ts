@@ -4,7 +4,7 @@ export type Mode = "standard" | "preprofit";
 
 export type GrowthScenario = "bear" | "base" | "bull";
 
-export type VerdictKey = "strong_buy" | "buy" | "hold" | "spec_buy" | "avoid";
+export type VerdictKey = "strong_buy" | "buy" | "hold" | "stretched" | "spec_buy" | "avoid";
 
 export type LifecycleStage = "startup" | "young_growth" | "high_growth" | "mature_growth" | "mature_stable" | "decline";
 

@@ -212,8 +212,8 @@ describe("guard rails", () => {
 // ── Verdict Integration ──────────────────────────────────────────────────────
 
 describe("verdict integration", () => {
-  // Use high growth + low adjPrice to hit strong_buy (payback ≤ 6)
-  it("strong_buy when payback ≤ threshold * 0.6", () => {
+  // Use high growth + low adjPrice to hit strong_buy (payback ≤ 7)
+  it("strong_buy when payback ≤ threshold * 0.7", () => {
     const r = calcTUP(
       makeInp({
         marketCap: 200_000_000, debt: 0, cash: 0, shares: 100_000_000, // adjPrice = $2
@@ -224,27 +224,27 @@ describe("verdict integration", () => {
     )!;
     expect(r.verdict).toBe("strong_buy");
     expect(r.payback).not.toBeNull();
-    expect(r.payback!).toBeLessThanOrEqual(6);
+    expect(r.payback!).toBeLessThanOrEqual(7);
   });
 
-  // Moderate growth + moderate adjPrice → buy (payback 7–10)
-  it("buy when payback ≤ threshold", () => {
+  // Moderate growth + moderate adjPrice → buy (payback 8–9)
+  it("buy when payback ≤ threshold * 0.9", () => {
     const r = calcTUP(
       makeInp({
-        marketCap: 800_000_000, debt: 0, cash: 0, shares: 100_000_000, // adjPrice = $8
+        marketCap: 1_000_000_000, debt: 0, cash: 0, shares: 100_000_000, // adjPrice = $10
         ttmEPS: 0.80, forwardEPS: 0.90,
-        historicalGrowth: 15, fwdGrowthY1: 12, fwdGrowthY2: 10,
+        historicalGrowth: 12, fwdGrowthY1: 10, fwdGrowthY2: 8,
       }),
       "standard",
     )!;
     expect(r.payback).not.toBeNull();
-    expect(r.payback!).toBeGreaterThan(6);
-    expect(r.payback!).toBeLessThanOrEqual(10);
+    expect(r.payback!).toBeGreaterThan(7);
+    expect(r.payback!).toBeLessThanOrEqual(9);
     expect(r.verdict).toBe("buy");
   });
 
-  // Lower growth + higher adjPrice → hold (payback 11–13)
-  it("hold when payback ≤ threshold * 1.3", () => {
+  // Lower growth + higher adjPrice → hold (payback 10–12)
+  it("hold when payback ≤ threshold * 1.2", () => {
     const r = calcTUP(
       makeInp({
         marketCap: 1_200_000_000, debt: 0, cash: 0, shares: 100_000_000, // adjPrice = $12
@@ -254,13 +254,29 @@ describe("verdict integration", () => {
       "standard",
     )!;
     expect(r.payback).not.toBeNull();
-    expect(r.payback!).toBeGreaterThan(10);
-    expect(r.payback!).toBeLessThanOrEqual(13);
+    expect(r.payback!).toBeGreaterThan(9);
+    expect(r.payback!).toBeLessThanOrEqual(12);
     expect(r.verdict).toBe("hold");
   });
 
+  // Stretched zone → payback 13–15
+  it("stretched when payback ≤ threshold * 1.5", () => {
+    const r = calcTUP(
+      makeInp({
+        marketCap: 2_000_000_000, debt: 0, cash: 0, shares: 100_000_000, // adjPrice = $20
+        ttmEPS: 0.80, forwardEPS: 0.85,
+        historicalGrowth: 8, fwdGrowthY1: 7, fwdGrowthY2: 6,
+      }),
+      "standard",
+    )!;
+    expect(r.payback).not.toBeNull();
+    expect(r.payback!).toBeGreaterThan(12);
+    expect(r.payback!).toBeLessThanOrEqual(15);
+    expect(r.verdict).toBe("stretched");
+  });
+
   // Very low growth + high adjPrice → avoid
-  it("avoid when payback exceeds threshold * 1.3", () => {
+  it("avoid when payback exceeds threshold * 1.5", () => {
     const r = calcTUP(
       makeInp({
         marketCap: 5_000_000_000, debt: 0, cash: 0, shares: 100_000_000, // adjPrice = $50
