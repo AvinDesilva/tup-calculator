@@ -70,6 +70,7 @@ export interface TUPResult {
   grTerminal: number;
   threshold: number;
   payback: number | null;
+  paybackNote: string | null;
   rows: TUPRow[];
   verdict: VerdictKey;
   fallingKnife: boolean;

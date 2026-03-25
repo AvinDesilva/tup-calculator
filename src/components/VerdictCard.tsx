@@ -65,12 +65,14 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
         </div>
         <div style={{
           fontFamily: "'DM Serif Display', serif", fontWeight: 400,
-          fontSize: "clamp(5rem, 14vw, 9rem)", lineHeight: 1,
+          fontSize: result.paybackNote ? "clamp(3rem, 10vw, 6rem)" : "clamp(5rem, 14vw, 9rem)", lineHeight: 1,
           color: v.color, letterSpacing: "-0.03em",
         }}>
-          {result.payback || "30+"}
+          {result.paybackNote ? "N/A" : (result.payback || "30+")}
         </div>
-        <div style={{ fontSize: "13px", color: "#888888", marginTop: "12px", letterSpacing: "0.05em" }}>Years Until Principal Returned</div>
+        <div style={{ fontSize: "13px", color: "#888888", marginTop: "12px", letterSpacing: "0.05em" }}>
+          {result.paybackNote ? "Principal Uncalculable" : "Years Until Principal Returned"}
+        </div>
       </div>
     );
   }
@@ -81,17 +83,17 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
       <div className="rsp-verdict-hero" style={{ display: "flex", alignItems: "flex-end", gap: "20px", marginBottom: "12px" }}>
         <div className="rsp-verdict-num" style={{
           fontFamily: "'DM Serif Display', serif", fontWeight: 400,
-          fontSize: "clamp(5rem, 14vw, 9rem)", lineHeight: 1,
+          fontSize: result.paybackNote ? "clamp(3rem, 10vw, 6rem)" : "clamp(5rem, 14vw, 9rem)", lineHeight: 1,
           color: v.color, letterSpacing: "-0.03em",
         }}>
-          {result.payback || "30+"}
+          {result.paybackNote ? "N/A" : (result.payback || "30+")}
         </div>
         <div style={{ paddingBottom: "8px" }}>
           <div className="rsp-verdict-label" style={{ fontSize: "22px", fontWeight: 700, color: v.color, letterSpacing: "-0.01em", fontFamily: "'Barlow Condensed', sans-serif" }}>
             {v.icon} {v.label}
           </div>
           <div className="rsp-verdict-sub" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888888", marginTop: "4px" }}>
-            Years Until Principal Returned
+            {result.paybackNote ? "Principal Uncalculable" : "Years Until Principal Returned"}
           </div>
         </div>
       </div>
@@ -228,8 +230,24 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
         </div>
       </div>
 
+      {/* Payback note — shown when calculation is broken */}
+      {result.paybackNote && (
+        <div style={{ marginTop: "12px", marginBottom: "16px", padding: "14px 16px", borderLeft: "2px solid #888", borderTop: "1px solid rgba(136,136,136,0.2)", borderRight: "1px solid rgba(136,136,136,0.2)", borderBottom: "1px solid rgba(136,136,136,0.2)", background: "rgba(136,136,136,0.05)" }}>
+          <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+            <span style={{ color: "#888", fontSize: "14px", fontWeight: 700, flexShrink: 0, lineHeight: 1.2, fontFamily: "'JetBrains Mono', monospace" }}>—</span>
+            <div>
+              <div style={{ fontSize: "11px", fontWeight: 700, color: "#888", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>
+                Calculation Not Applicable
+              </div>
+              <p style={{ fontSize: "11px", color: "rgba(136,136,136,0.7)", lineHeight: 1.75, margin: 0 }}>
+                {result.paybackNote}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Technical status */}
-      {!result.fallingKnife && result.sma200 > 0 && (
+      {!result.paybackNote && !result.fallingKnife && result.sma200 > 0 && (
         <div style={{ marginTop: "12px", marginBottom: "16px", padding: "14px 16px", borderLeft: "2px solid #00BFA5", borderTop: "1px solid rgba(0,191,165,0.2)", borderRight: "1px solid rgba(0,191,165,0.2)", borderBottom: "1px solid rgba(0,191,165,0.2)", background: "rgba(0,191,165,0.05)" }}>
           <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
             <span style={{ color: "#00BFA5", fontSize: "14px", fontWeight: 700, flexShrink: 0, lineHeight: 1.2, fontFamily: "'JetBrains Mono', monospace" }}>✓</span>

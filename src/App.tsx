@@ -316,7 +316,7 @@ export default function App() {
         <div className="sr-only" aria-live="polite">
           {loading ? "Loading stock data..." : ""}
           {error ? `Error: ${error}` : ""}
-          {result && company ? `${company}: ${result.payback || "30+"} year payback` : ""}
+          {result && company ? `${company}: ${result.paybackNote ? "N/A — unable to calculate payback" : `${result.payback || "30+"} year payback`}` : ""}
         </div>
 
         <Masthead

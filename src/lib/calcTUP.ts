@@ -66,6 +66,14 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
 
   const gr = grTerminal;
 
+  // Detect edge cases that make the payback calculation meaningless
+  let paybackNote: string | null = null;
+  if (adjPrice < 0) {
+    paybackNote = "Adjusted share price is negative — cash exceeds enterprise value, so payback cannot be calculated.";
+  } else if (gr < 0) {
+    paybackNote = "Growth rate is negative — earnings are declining, so payback cannot be calculated.";
+  }
+
   const fallingKnife = currentPrice > 0 && sma200 > 0 && currentPrice < sma200;
   const impliedRev10 = revenuePerShare * shares * Math.pow(1 + gr, 10);
   const tamWarning   = impliedRev10 > 5e12;
@@ -99,6 +107,9 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
     if (cum >= adjPrice && !payback) payback = y;
   }
 
+  // Override payback to null when calculation is meaningless
+  if (paybackNote) payback = null;
+
   // Fundamental verdict (ignoring technical signal)
   let fundamentalVerdict: VerdictKey;
   if (!payback || payback > SAFETY_CAP) fundamentalVerdict = "avoid";
@@ -117,5 +128,5 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
     verdict = fundamentalVerdict;
   }
 
-  return { adjPrice, epsBase, gr, grY1, grY2, grTerminal, threshold, payback, rows, verdict, fallingKnife, tamWarning, startYr, sma200 };
+  return { adjPrice, epsBase, gr, grY1, grY2, grTerminal, threshold, payback, paybackNote, rows, verdict, fallingKnife, tamWarning, startYr, sma200 };
 }
