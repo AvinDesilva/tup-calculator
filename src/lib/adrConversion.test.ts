@@ -5,6 +5,7 @@ import {
   FALLBACK_FX,
   EXCHANGE_CCY,
 } from "./constants.ts";
+import { deriveShares } from "./api.ts";
 
 // ── A. Currency resolution priority ──────────────────────────────────────────
 // ADR_FINANCIALS_CCY must override FMP-reported "USD" for NYSE-listed ADRs.
@@ -179,25 +180,7 @@ describe("FX rate application — one test per currency region", () => {
 
 // ── C. ADR share count derivation ────────────────────────────────────────────
 
-describe("ADR share count derivation", () => {
-  /**
-   * Mimics api.ts share derivation:
-   *   adrShares = adrRatio > 1 && mktCap > 0 && price > 0
-   *     ? mktCap / price
-   *     : sharesOutstanding
-   */
-  function deriveAdrShares(
-    ticker: string,
-    mktCap: number,
-    price: number,
-    sharesOutstanding: number,
-  ): number {
-    const adrRatio = ADR_RATIO_TABLE[ticker] || 1;
-    return adrRatio > 1 && mktCap > 0 && price > 0
-      ? mktCap / price
-      : sharesOutstanding;
-  }
-
+describe("ADR share count derivation (deriveShares)", () => {
   describe("ratio > 1 — derives shares from mktCap / price", () => {
     const adrsWithRatio: [string, number][] = [
       ["TSM",  5],
@@ -215,37 +198,83 @@ describe("ADR share count derivation", () => {
         const mktCap = 500_000_000_000;
         const price = 175;
         const rawShares = 50_000_000_000; // intentionally wrong to prove derivation
-        const shares = deriveAdrShares(ticker, mktCap, price, rawShares);
+        const shares = deriveShares(ticker, mktCap, price, rawShares);
         expect(shares).toBeCloseTo(mktCap / price, 0);
         expect(shares).not.toBe(rawShares);
       },
     );
 
     it("falls back to sharesOutstanding when mktCap = 0", () => {
-      const shares = deriveAdrShares("TSM", 0, 175, 5_000_000_000);
+      const shares = deriveShares("TSM", 0, 175, 5_000_000_000);
       expect(shares).toBe(5_000_000_000);
     });
 
     it("falls back to sharesOutstanding when price = 0", () => {
-      const shares = deriveAdrShares("NVO", 300_000_000_000, 0, 4_500_000_000);
+      const shares = deriveShares("NVO", 300_000_000_000, 0, 4_500_000_000);
       expect(shares).toBe(4_500_000_000);
     });
   });
 
-  describe("ratio = 1 — uses raw sharesOutstanding", () => {
+  describe("ratio = 1 — uses sharesOutstanding when mktCap/price agrees", () => {
     const adrsWithoutRatio: string[] = [
       "ASML", "SONY", "SAP", "UL", "INFY", "KB", "DEO", "NVS",
     ];
 
     it.each(adrsWithoutRatio)(
-      "%s (ratio=1) uses sharesOutstanding directly",
+      "%s (ratio=1) uses sharesOutstanding when consistent with mktCap/price",
       (ticker) => {
         expect(ADR_RATIO_TABLE[ticker]).toBe(1);
         const rawShares = 2_000_000_000;
-        const shares = deriveAdrShares(ticker, 500_000_000_000, 175, rawShares);
+        // mktCap/price = 500B/250 = 2B — matches rawShares (no divergence)
+        const shares = deriveShares(ticker, 500_000_000_000, 250, rawShares);
         expect(shares).toBe(rawShares);
       },
     );
+  });
+
+  describe("cross-check — prefers mktCap/price when FMP shares diverge >50%", () => {
+    it("large divergence (5x) triggers cross-check", () => {
+      // mktCap/price = 2B/20 = 100M, FMP says 500M (5x off)
+      const shares = deriveShares("BWMX", 2_000_000_000, 20, 500_000_000);
+      expect(shares).toBeCloseTo(100_000_000, 0);
+    });
+
+    it("small divergence (20%) does NOT trigger cross-check", () => {
+      // mktCap/price = 10B/100 = 100M, FMP says 83M (ratio=1.2, below 1.5 threshold)
+      const shares = deriveShares("BWMX", 10_000_000_000, 100, 83_000_000);
+      expect(shares).toBe(83_000_000);
+    });
+
+    it("exact match uses FMP shares", () => {
+      const shares = deriveShares("BWMX", 10_000_000_000, 100, 100_000_000);
+      expect(shares).toBe(100_000_000);
+    });
+
+    it("mktCap = 0 falls back to FMP shares", () => {
+      const shares = deriveShares("BWMX", 0, 20, 500_000_000);
+      expect(shares).toBe(500_000_000);
+    });
+
+    it("price = 0 falls back to FMP shares", () => {
+      const shares = deriveShares("BWMX", 2_000_000_000, 0, 500_000_000);
+      expect(shares).toBe(500_000_000);
+    });
+
+    it("fmpSharesOut = 1 (fallback sentinel) skips cross-check", () => {
+      const shares = deriveShares("BWMX", 2_000_000_000, 20, 1);
+      expect(shares).toBe(1);
+    });
+
+    it("fmpSharesOut = 0 skips cross-check", () => {
+      const shares = deriveShares("BWMX", 2_000_000_000, 20, 0);
+      expect(shares).toBe(0);
+    });
+
+    it("inverted divergence (FMP too high) also triggers", () => {
+      // mktCap/price = 10B/100 = 100M, FMP says 500M (ratio=0.2)
+      const shares = deriveShares("UNKNOWN", 10_000_000_000, 100, 500_000_000);
+      expect(shares).toBeCloseTo(100_000_000, 0);
+    });
   });
 });
 

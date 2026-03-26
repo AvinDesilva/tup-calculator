@@ -149,6 +149,41 @@ function sanitizedNetIncome(y: FMPIncomeStatement, fallbackShares: number): numb
   return ni;
 }
 
+/**
+ * Derives shares outstanding with cross-check against mktCap / price.
+ * Priority:
+ *   1. ADR_RATIO_TABLE entry with ratio > 1: always use mktCap / price
+ *   2. Divergence check: if mktCap / price differs from FMP sharesOutstanding
+ *      by more than 50%, prefer mktCap / price (likely wrong share class)
+ *   3. Fall back to FMP sharesOutstanding
+ */
+export function deriveShares(
+  ticker: string,
+  mktCap: number,
+  price: number,
+  fmpSharesOut: number,
+  log?: (msg: string) => void,
+): number {
+  const adrRatio = ADR_RATIO_TABLE[ticker] || 1;
+
+  // ADR override: unconditional for known ADR ratios > 1
+  if (adrRatio > 1 && mktCap > 0 && price > 0) {
+    return mktCap / price;
+  }
+
+  // Cross-check: if mktCap/price diverges >50% from FMP shares, prefer derived
+  if (mktCap > 0 && price > 0 && fmpSharesOut > 1) {
+    const derived = mktCap / price;
+    const ratio = derived / fmpSharesOut;
+    if (ratio > 1.5 || ratio < 1 / 1.5) {
+      log?.(`  ⚠ Shares cross-check: FMP=${fmpSharesOut.toFixed(0)} vs derived=${derived.toFixed(0)} — using derived`);
+      return derived;
+    }
+  }
+
+  return fmpSharesOut;
+}
+
 // ─── Quick data fetch (4 endpoints — for dice roll validation) ────────────────
 
 export interface QuickTickerData {
@@ -217,14 +252,8 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
   const totalCash    = (bs.cashAndCashEquivalents || bs.cashAndShortTermInvestments || 0) * fxRate;
   const mktCapVal    = p.mktCap || q.marketCap || 0;
 
-  const adrRatio     = ADR_RATIO_TABLE[t] || 1;
   const price        = q.price || p.price || 0;
-  // For ADR stocks, derive shares from mktCap / price — FMP may report
-  // either ordinary or depositary shares, but mktCap/price always gives
-  // the correct count in the listing share basis.
-  const adrShares    = adrRatio > 1 && mktCapVal > 0 && price > 0
-    ? mktCapVal / price
-    : sharesOut;
+  const adrShares    = deriveShares(t, mktCapVal, price, sharesOut);
   const rawNetIncome = inc[0] ? sanitizedNetIncome(inc[0], sharesOut) : 0;
   const ttmEPS       = adrShares > 0 ? (rawNetIncome * fxRate) / adrShares : 0;
 
@@ -457,12 +486,7 @@ export async function lookupTicker(
   // This reflects the company's actual profitability per share.
   const adrRatio     = ADR_RATIO_TABLE[t] || 1;
   const price        = q.price || p.price || 0;
-  // For ADR stocks, derive shares from mktCap / price — FMP may report
-  // either ordinary or depositary shares, but mktCap/price always gives
-  // the correct count in the listing share basis.
-  const adrShares    = adrRatio > 1 && mktCapVal > 0 && price > 0
-    ? mktCapVal / price
-    : sharesOut;
+  const adrShares    = deriveShares(t, mktCapVal, price, sharesOut, log);
   const rawNetIncome = inc[0] ? sanitizedNetIncome(inc[0], sharesOut) : 0;
   const ttmEPS       = adrShares > 0 ? (rawNetIncome * fxRate) / adrShares : 0;
 
