@@ -126,6 +126,8 @@ export interface FMPIncomeStatement {
   weightedAverageShsOutDil?: number;
   operatingIncome?: number;
   grossProfit?: number;
+  eps?: number;
+  epsDiluted?: number;
 }
 
 export interface FMPEstimate {

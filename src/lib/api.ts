@@ -124,6 +124,31 @@ export async function fetchFMP<T = unknown>(endpoint: string): Promise<T> {
   return res.json() as T;
 }
 
+// ─── Net income sanity check ──────────────────────────────────────────────────
+// FMP occasionally returns a corrupted netIncome (e.g. $222,800 instead of
+// $222.8M) while the eps/epsDiluted fields on the same row are correct.
+// When the two diverge by more than 50%, trust epsDiluted × diluted shares.
+function sanitizedNetIncome(y: FMPIncomeStatement, fallbackShares: number): number {
+  const ni = y.netIncome ?? 0;
+  const sh = y.weightedAverageShsOutDil || y.weightedAverageShsOut || fallbackShares;
+  const reportedEps = y.epsDiluted ?? y.eps;
+  if (reportedEps != null && sh > 0) {
+    const derivedEps = sh > 0 ? ni / sh : 0;
+    const expectedNi = reportedEps * sh;
+    // If both are near-zero, no divergence to detect
+    if (Math.abs(derivedEps) < 0.001 && Math.abs(reportedEps) < 0.001) return ni;
+    // Check for >50% divergence between derived EPS and reported EPS
+    const ref = Math.max(Math.abs(derivedEps), Math.abs(reportedEps));
+    if (ref > 0 && Math.abs(derivedEps - reportedEps) / ref > 0.5) {
+      if (import.meta.env.DEV) {
+        console.warn(`[TUP SANITY] netIncome=${ni} → EPS=${derivedEps.toFixed(4)}, but epsDiluted=${reportedEps} → using ${expectedNi.toFixed(0)}`);
+      }
+      return expectedNi;
+    }
+  }
+  return ni;
+}
+
 // ─── Quick data fetch (4 endpoints — for dice roll validation) ────────────────
 
 export interface QuickTickerData {
@@ -200,7 +225,7 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
   const adrShares    = adrRatio > 1 && mktCapVal > 0 && price > 0
     ? mktCapVal / price
     : sharesOut;
-  const rawNetIncome = inc[0]?.netIncome || 0;
+  const rawNetIncome = inc[0] ? sanitizedNetIncome(inc[0], sharesOut) : 0;
   const ttmEPS       = adrShares > 0 ? (rawNetIncome * fxRate) / adrShares : 0;
 
   const latestRevenue  = (inc[0]?.revenue || 0) * fxRate;
@@ -210,7 +235,7 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
   const forwardEPS = ttmEPS > 0 ? ttmEPS * 1.1 : 0;
 
   // ── Historical growth — net income CAGR ──────────────────────────────────
-  const niHistory = inc.map(y => (y.netIncome || 0) * fxRate);
+  const niHistory = inc.map(y => sanitizedNetIncome(y, sharesOut) * fxRate);
   let avgHistGrowth5yr = 10;
   if (niHistory.length >= 2 && niHistory[0] > 0) {
     const maxIdx = Math.min(niHistory.length - 1, 4);
@@ -438,7 +463,7 @@ export async function lookupTicker(
   const adrShares    = adrRatio > 1 && mktCapVal > 0 && price > 0
     ? mktCapVal / price
     : sharesOut;
-  const rawNetIncome = (inc[0]?.netIncome || 0);
+  const rawNetIncome = inc[0] ? sanitizedNetIncome(inc[0], sharesOut) : 0;
   const ttmEPS       = adrShares > 0 ? (rawNetIncome * fxRate) / adrShares : 0;
 
   if (import.meta.env.DEV) console.log(
@@ -469,8 +494,10 @@ export async function lookupTicker(
   // ── Historical EPS growth — per-share basis (net income ÷ shares) ────────
   // Uses diluted EPS per year so buyback-driven growth is captured, matching
   // the methodology: "Derived from diluted EPS on the income statement."
+  // sanitizedNetIncome cross-checks against epsDiluted to guard against
+  // corrupted netIncome values from FMP.
   const epsHistory = inc.map(y => {
-    const ni = (y.netIncome || 0) * fxRate;
+    const ni = sanitizedNetIncome(y, sharesOut) * fxRate;
     const sh = y.weightedAverageShsOutDil || y.weightedAverageShsOut || sharesOut;
     return sh > 0 ? ni / sh : 0;
   });
@@ -801,7 +828,7 @@ export async function lookupTicker(
   }
 
   // ── Target margin & breakeven ─────────────────────────────────────────────
-  const netIncome    = (inc[0]?.netIncome || 0) * fxRate;
+  const netIncome    = (inc[0] ? sanitizedNetIncome(inc[0], sharesOut) : 0) * fxRate;
   const netMargin    = latestRevenue > 0 ? (netIncome / latestRevenue) * 100 : 0;
   const targetMargin = netMargin > 0 ? Math.min(netMargin * 1.2, 40) : 15;
   const breakEvenYear = netIncome > 0 ? 0 : 2;
@@ -821,7 +848,7 @@ export async function lookupTicker(
   // ── Lifecycle stage (multi-factor — Damodaran framework) ────────────────
   const lifecycleStage = classifyLifecycle({
     revenueHistory: inc.map(y => (y.revenue || 0) * fxRate),
-    netIncome: (inc[0]?.netIncome || 0) * fxRate,
+    netIncome: (inc[0] ? sanitizedNetIncome(inc[0], sharesOut) : 0) * fxRate,
     operatingIncome: operatingIncomeVal,
     dividendYield,
   });
