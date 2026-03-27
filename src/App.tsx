@@ -163,9 +163,12 @@ export default function App() {
             console.log(`[rollDice] MATCH ${t} — running full fetch`);
             setTicker(t);
             setIsFilterOpen(false);
-            await doFetch(t);
-            setRollingDice(false);
-            return;
+            const fullPb = await doFetch(t);
+            if (fullPb && matchesTupRange(fullPb, rollFilters.tupRange)) {
+              setRollingDice(false);
+              return;
+            }
+            console.log(`[rollDice] ${t} full-fetch payback=${fullPb} — diverged from quick estimate, skipping`);
           }
         } catch (err) {
           console.warn(`[rollDice] ${t} failed:`, err instanceof Error ? err.message : err);
@@ -178,9 +181,10 @@ export default function App() {
     setRollingDice(false);
   };
 
-  const doFetch = async (tickerOverride?: string) => {
+  const doFetch = async (tickerOverride?: string): Promise<number | null> => {
     const t = (tickerOverride || ticker).trim().toUpperCase();
-    if (!t) { setError("Enter a ticker symbol."); return; }
+    if (!t) { setError("Enter a ticker symbol."); return null; }
+    let paybackResult: number | null = null;
     setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, industryGrowth: null, industryGrowthLoading: false }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "", exchange: "" }); setStrongBuyPrice(null); setBuyPrice(null); setHasSearched(true);
     window.scrollTo(0, 0);
 
@@ -238,6 +242,7 @@ export default function App() {
 
       // Compute target prices from calcTUP rows (consistent with VDR + Y1/Y2 growth)
       const origResult = calcTUP(origInp, "standard");
+      paybackResult = origResult?.payback ?? null;
       if (origResult && origResult.epsBase > 0 && origResult.gr > 0 && origResult.rows.length >= 10) {
         const netDebt = (data.debt - data.cash) / data.shares;
         const sb = origResult.rows[6].cum - netDebt;
@@ -251,6 +256,7 @@ export default function App() {
       setError(msg);
     }
     setLoading(false);
+    return paybackResult;
   };
 
   // Read URL params on mount → auto-fetch if ticker present
