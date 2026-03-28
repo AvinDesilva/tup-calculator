@@ -330,7 +330,7 @@ export default function App() {
           meta={meta}
           isConverted={isConverted}
           currencyNote={currencyNote}
-          onShowMethodology={() => { setShowMethodology(true); window.scrollTo(0, 0); }}
+          onShowMethodology={() => { setShowMethodology(true); setIsFilterOpen(false); window.scrollTo(0, 0); }}
           onReset={hasSearched ? () => {
             setHasSearched(false);
             setCompany("");

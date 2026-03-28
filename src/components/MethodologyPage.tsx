@@ -1,19 +1,170 @@
+import { useState, useEffect, useRef } from "react";
 import { C } from "../lib/theme.ts";
 import { SubHead, FormulaBlock, CalloutBlock, SectionNum } from "./MethodologyParts.tsx";
+
+const NAV_ITEMS = [
+  { id: "overview", label: "Overview" },
+  { id: "section-01", label: "01 — Adjusted Share Price" },
+  { id: "section-02", label: "02 — Historical EPS Growth" },
+  { id: "section-03", label: "03 — Analyst Forward Growth" },
+  { id: "section-04", label: "04 — Dividend Yield" },
+  { id: "section-05", label: "05 — Combined Growth Rate" },
+  { id: "section-06", label: "06 — Roll the TUP Dice" },
+];
 
 interface MethodologyPageProps {
   onBack: () => void;
 }
 
 export function MethodologyPage({ onBack }: MethodologyPageProps) {
+  const [activeSection, setActiveSection] = useState("overview");
+  const [tocOpen, setTocOpen] = useState(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  useEffect(() => {
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        }
+      },
+      { rootMargin: "-20% 0px -70% 0px" }
+    );
+
+    for (const item of NAV_ITEMS) {
+      const el = document.getElementById(item.id);
+      if (el) observerRef.current.observe(el);
+    }
+
+    return () => observerRef.current?.disconnect();
+  }, []);
+
+
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text1, fontFamily: C.body }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Barlow+Condensed:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+      <style>{`
+        /* ── Desktop sidebar (default) ─────────────────────────── */
+        .rsp-meth-layout {
+          display: flex;
+        }
+        .rsp-meth-sidebar {
+          width: 280px;
+          flex-shrink: 0;
+          position: sticky;
+          top: 95px;
+          height: calc(100vh - 95px);
+          overflow-y: auto;
+          padding-top: 24px;
+          padding-right: 32px;
+          border-right: 1px solid rgba(255,255,255,0.06);
+          background: ${C.bg};
+          z-index: 10;
+        }
+        .rsp-meth-nav {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .rsp-meth-nav a {
+          display: block;
+          padding: 8px 12px;
+          font-size: 11px;
+          font-weight: 400;
+          font-family: ${C.body};
+          color: ${C.text3};
+          border-left: 2px solid transparent;
+          text-decoration: none;
+          transition: color 0.2s, border-color 0.2s;
+          line-height: 1.4;
+        }
+        .rsp-meth-nav a[data-active="true"] {
+          font-weight: 600;
+          color: ${C.accent};
+          border-left-color: ${C.accent};
+        }
+        /* Mobile toggle button — hidden on desktop */
+        .rsp-meth-toggle { display: none; }
+        /* Mobile overlay backdrop — hidden on desktop */
+        .rsp-meth-backdrop { display: none; }
+
+        /* ── Tablet (768–1023px) ───────────────────────────────── */
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .rsp-meth-sidebar {
+            width: 220px;
+            padding-right: 20px;
+          }
+        }
+
+        /* ── Mobile (<768px) ───────────────────────────────────── */
+        @media (max-width: 767px) {
+          .rsp-meth-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 56px;
+            background: rgba(196,160,110,0.15);
+            border: 1px solid rgba(196,160,110,0.3);
+            border-left: none;
+            border-radius: 0 8px 8px 0;
+            color: ${C.accent};
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 1001;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: opacity 0.2s;
+          }
+          .rsp-meth-toggle[data-open="true"] {
+            opacity: 0;
+            pointer-events: none;
+          }
+          .rsp-meth-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 1001;
+          }
+          .rsp-meth-backdrop[data-open="true"] {
+            display: block;
+          }
+          .rsp-meth-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 260px;
+            height: 100vh;
+            height: 100dvh;
+            padding: 24px 20px 24px 16px;
+            border-right: 1px solid rgba(255,255,255,0.08);
+            border-bottom: none;
+            z-index: 1002;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+            overflow-y: auto;
+          }
+          .rsp-meth-sidebar[data-open="true"] {
+            transform: translateX(0);
+          }
+        }
+      `}</style>
 
       <div style={{ margin: "0 auto", padding: "0 32px" }}>
 
         {/* Header */}
-        <header style={{ paddingTop: "28px", paddingBottom: "24px", borderBottom: `2px solid ${C.accent}`, display: "flex", alignItems: "center", gap: "24px" }}>
+        <header style={{ paddingTop: "28px", paddingBottom: "24px", borderBottom: `2px solid ${C.accent}`, display: "flex", alignItems: "center", gap: "24px", position: "sticky", top: 0, zIndex: 20, background: C.bg }}>
           <button onClick={onBack} style={{
             background: "none", border: "none", color: C.accent, cursor: "pointer",
             fontSize: "10px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase",
@@ -30,10 +181,51 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
           </div>
         </header>
 
-        <main id="main-content">
+        {/* Mobile: toggle button + backdrop */}
+        <button
+          className="rsp-meth-toggle"
+          data-open={tocOpen}
+          onClick={() => setTocOpen(true)}
+          aria-label="Open table of contents"
+        >▶</button>
+        <div
+          className="rsp-meth-backdrop"
+          data-open={tocOpen}
+          role="button"
+          tabIndex={-1}
+          aria-label="Close table of contents"
+          onClick={() => setTocOpen(false)}
+          onKeyDown={(e) => { if (e.key === "Escape") setTocOpen(false); }}
+        />
 
-        {/* Overview */}
-        <div style={{ padding: "32px 0 40px", borderBottom: `1px solid ${C.borderWeak}` }}>
+        <div className="rsp-meth-layout">
+
+          {/* Sidebar navigation */}
+          <nav className="rsp-meth-sidebar" data-open={tocOpen} aria-label="Table of contents">
+            <div className="rsp-meth-heading" style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.text3, marginBottom: 16, paddingLeft: 12 }}>
+              Contents
+            </div>
+            <div className="rsp-meth-nav">
+              {NAV_ITEMS.map((item) => {
+                const isActive = activeSection === item.id;
+                return (
+                  <a
+                    key={item.id}
+                    href={`#${item.id}`}
+                    data-active={isActive}
+                    onClick={(e) => { e.preventDefault(); scrollTo(item.id); setTocOpen(false); }}
+                  >
+                    {item.label}
+                  </a>
+                );
+              })}
+            </div>
+          </nav>
+
+          <main id="main-content" style={{ flex: 1, minWidth: 0 }}>
+
+          {/* Overview */}
+          <div id="overview" style={{ padding: "32px 0 40px", borderBottom: `1px solid ${C.borderWeak}` }}>
           <p style={{ fontSize: "15px", color: C.text2, lineHeight: 1.9, margin: 0 }}>
             TUP (Time Until Payback) measures how many years of a company's earnings it takes to
             recover what you paid for the stock. It starts with the <strong style={{ color: C.text1 }}>blended
@@ -46,7 +238,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         </div>
 
         {/* 01 Adjusted Share Price */}
-        <section style={{ padding: "40px 0", borderBottom: `1px solid ${C.borderWeak}` }}>
+        <section id="section-01" style={{ padding: "40px 0", borderBottom: `1px solid ${C.borderWeak}` }}>
           <SectionNum n="01" title="Adjusted Share Price" sub="Enterprise Value Per Share" />
           <p style={{ fontSize: "15px", color: C.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             Before comparing earnings against the stock price, TUP adjusts for the company's balance sheet.
@@ -78,7 +270,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         </section>
 
         {/* 02 Historical EPS Growth */}
-        <section style={{ padding: "40px 0", borderBottom: `1px solid ${C.borderWeak}` }}>
+        <section id="section-02" style={{ padding: "40px 0", borderBottom: `1px solid ${C.borderWeak}` }}>
           <SectionNum n="02" title="Historical EPS Growth" sub="Endpoint CAGR with Anchor Shifting" />
           <p style={{ fontSize: "15px", color: C.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             Derived from diluted EPS on the income statement (net income ÷ shares). TUP uses a{" "}
@@ -150,7 +342,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         </section>
 
         {/* 03 Analyst Forward Growth */}
-        <section style={{ padding: "40px 0", borderBottom: `1px solid ${C.borderWeak}` }}>
+        <section id="section-03" style={{ padding: "40px 0", borderBottom: `1px solid ${C.borderWeak}` }}>
           <SectionNum n="03" title="Analyst Forward Growth (2yr)" sub="Consensus Estimate" />
           <p style={{ fontSize: "15px", color: C.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             The consensus view of professional researchers covering the stock — typically the estimated EPS
@@ -226,7 +418,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         </section>
 
         {/* 04 Dividend Yield */}
-        <section style={{ padding: "40px 0", borderBottom: `1px solid ${C.borderWeak}` }}>
+        <section id="section-04" style={{ padding: "40px 0", borderBottom: `1px solid ${C.borderWeak}` }}>
           <SectionNum n="04" title="Dividend Yield" sub="Total Return Component" />
           <p style={{ fontSize: "15px", color: C.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             For income-generating companies, the dividend yield represents a guaranteed annual return
@@ -251,7 +443,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         </section>
 
         {/* 05 TUP Combined Growth Rate */}
-        <section style={{ padding: "40px 0" }}>
+        <section id="section-05" style={{ padding: "40px 0" }}>
           <SectionNum n="05" title="TUP Combined Growth Rate" sub="Blended Assumption" />
           <p style={{ fontSize: "15px", color: C.text2, lineHeight: 1.85, margin: "0 0 24px" }}>
             TUP uses a two-stage blend for the terminal rate (Y3+). First, the historical CAGR is
@@ -574,7 +766,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         </section>
 
         {/* ── Roll the TUP Dice ──────────────────────────────────────────── */}
-        <section style={{ marginBottom: "48px" }}>
+        <section id="section-06" style={{ marginBottom: "48px" }}>
           <SectionNum n="06" title="Roll the TUP Dice" sub="Random Stock Discovery" />
 
           <p style={{ fontSize: "15px", color: C.text2, lineHeight: 1.85, margin: "0 0 16px" }}>
@@ -620,6 +812,7 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
         </footer>
 
         </main>
+        </div>{/* end rsp-meth-layout */}
       </div>
     </div>
   );
