@@ -6,15 +6,14 @@ import type { IndustryGrowthData } from "./lib/api.ts";
 import { C } from "./lib/theme.ts";
 import type { InputState, Mode, TUPResult, GrowthScenario, RollFilters, TupRangeFilter, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement } from "./lib/types.ts";
 
-import { VerdictCard } from "./components/VerdictCard.tsx";
-import { ValuationContext } from "./components/ValuationContext.tsx";
-import { CompanyScorecard } from "./components/CompanyScorecard.tsx";
-import { Table } from "./components/Table.tsx";
-import { MethodologyPage } from "./components/MethodologyPage.tsx";
-import { Masthead } from "./components/Masthead.tsx";
-import { HeroSearch } from "./components/HeroSearch.tsx";
-import { CompactTickerBar } from "./components/CompactTickerBar.tsx";
-import { DataSections } from "./components/DataSections.tsx";
+import { VerdictCard } from "./components/VerdictCard";
+import { ValuationContext } from "./components/ValuationContext";
+import { CompanyScorecard } from "./components/CompanyScorecard";
+import { MethodologyPage } from "./components/MethodologyPage";
+import { Masthead } from "./components/Masthead";
+import { HeroSearch } from "./components/HeroSearch";
+import { CompactTickerBar } from "./components/CompactTickerBar";
+import { DataSections } from "./components/DataSections";
 import * as dev from "./lib/devData.ts";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -433,24 +432,31 @@ export default function App() {
 
           </div>
 
-          {/* Left column bottom: Data sections */}
-          <div className="rsp-left-data" style={{ paddingRight: "40px", paddingTop: "28px", paddingBottom: "40px", animation: "fadeInUp 0.5s 0.15s ease both" }}>
-
-            <DataSections
-              inp={inp}
-              company={company}
-              currencyMismatchWarning={currencyMismatchWarning}
-              growthPeriod={growthPeriod}
-              growthYears={growthYears}
-              epsGrowthHistory={scorecard.epsGrowthHistory}
-              onGrowthPeriodChange={p => {
-                if (p === "10yr" && growthYears.long <= growthYears.short) return;
-                setGrowthPeriod(p);
-                setInp(prev => ({ ...prev, historicalGrowth: p === "5yr" ? growthValues.g5 : growthValues.g10, growthOverrides: {} }));
-              }}
-            />
-
-          </div>
+          {/* Data sections (01–03 left column, 04 right column) */}
+          <DataSections
+            inp={inp}
+            company={company}
+            currencyMismatchWarning={currencyMismatchWarning}
+            growthPeriod={growthPeriod}
+            growthYears={growthYears}
+            epsGrowthHistory={scorecard.epsGrowthHistory}
+            onGrowthPeriodChange={p => {
+              if (p === "10yr" && growthYears.long <= growthYears.short) return;
+              setGrowthPeriod(p);
+              setInp(prev => ({ ...prev, historicalGrowth: p === "5yr" ? growthValues.g5 : growthValues.g10, growthOverrides: {} }));
+            }}
+            decayMode={inp.decayMode}
+            onDecayModeToggle={(mode) => setInp(p => ({ ...p, decayMode: p.decayMode === mode ? "none" : mode }))}
+            result={result}
+            growthOverrides={inp.growthOverrides}
+            onGrowthChange={(year, val) => {
+              setInp(p => {
+                const overrides = { ...p.growthOverrides };
+                for (let y = year; y <= 30; y++) overrides[y] = val;
+                return { ...p, growthOverrides: overrides };
+              });
+            }}
+          />
 
           {/* Hairline vertical rule */}
           <div className="rsp-hairline-v" style={{ background: C.border, width: "2px" }} />
@@ -481,42 +487,6 @@ export default function App() {
                 dividendYield={inp.dividendYield}
               />
             )}
-          </div>
-
-          {/* Right column bottom: Table */}
-          <div className="rsp-right-bottom" style={{ paddingLeft: "40px", paddingTop: "28px", paddingBottom: "40px" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#C4A06E", fontSize: "14px", letterSpacing: "0.05em", fontWeight: 700 }}>04</span>
-                <h3 style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888", margin: 0 }}>Year-by-Year Breakdown</h3>
-                <div style={{ display: "flex", gap: "0px" }}>
-                  <button aria-pressed={inp.decayMode === "ff"} aria-label="Toggle fixed friction decay" onClick={() => setInp(p => ({ ...p, decayMode: p.decayMode === "ff" ? "none" : "ff" as const }))} style={{
-                    fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
-                    letterSpacing: "0.05em", padding: "2px 6px",
-                    background: inp.decayMode === "ff" ? "rgba(196,160,110,0.2)" : "transparent",
-                    border: `1px solid ${inp.decayMode === "ff" ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
-                    color: inp.decayMode === "ff" ? "#C4A06E" : "#666",
-                    cursor: "pointer", borderRadius: "3px 0 0 3px",
-                  }}>FF</button>
-                  <button aria-pressed={inp.decayMode === "vdr"} aria-label="Toggle variable decay rate" onClick={() => setInp(p => ({ ...p, decayMode: p.decayMode === "vdr" ? "none" : "vdr" as const }))} style={{
-                    fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
-                    letterSpacing: "0.05em", padding: "2px 6px",
-                    background: inp.decayMode === "vdr" ? "rgba(196,160,110,0.2)" : "transparent",
-                    border: `1px solid ${inp.decayMode === "vdr" ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
-                    color: inp.decayMode === "vdr" ? "#C4A06E" : "#666",
-                    cursor: "pointer", borderRadius: "0 3px 3px 0", marginLeft: "-1px",
-                  }}>VDR</button>
-                </div>
-                <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.06)" }} />
-              </div>
-              <Table result={result} growthOverrides={inp.growthOverrides} onGrowthChange={(year, val) => {
-                setInp(p => {
-                  const overrides = { ...p.growthOverrides };
-                  for (let y = year; y <= 30; y++) overrides[y] = val;
-                  return { ...p, growthOverrides: overrides };
-                });
-              }} />
-            </div>
           </div>
         </div>
 

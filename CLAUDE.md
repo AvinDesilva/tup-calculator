@@ -18,10 +18,31 @@ npm run test:watch # Run vitest in watch mode
 
 - **Always create a feature branch before making substantive code changes**
 - Branch naming: `feature/`, `fix/`, `refactor/`, etc. for clarity
-- Test/review changes on the branch before merging to `main`
-- Merge to `main` only after verification (testing or user approval)
-- Push to GitHub to confirm commits are recorded there
-- **Why:** Keeps commit history clean, allows for proper review, and ensures changes are tracked on GitHub
+
+### Deploy to dev for testing
+
+After committing changes on a feature branch, **always deploy to the dev server first**:
+
+```bash
+git push origin feature/my-branch:dev -f
+```
+
+This triggers `.github/workflows/deploy-dev.yml` and deploys to `https://dev.tupcalculator.org`. Wait for the user to verify changes on the dev server before proceeding.
+
+### Deploy to production
+
+Only after the user approves changes on dev:
+
+```bash
+git checkout main
+git merge feature/my-branch
+git push origin main
+```
+
+This triggers `.github/workflows/deploy.yml` and deploys to `https://tupcalculator.org`.
+
+- **Never merge directly to `main` without deploying to dev first**
+- The `dev` branch is a deployment target only — force-push is expected
 
 ## CI/CD
 
