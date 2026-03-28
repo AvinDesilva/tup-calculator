@@ -489,22 +489,24 @@ export default function App() {
               <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#C4A06E", fontSize: "14px", letterSpacing: "0.05em", fontWeight: 700 }}>04</span>
                 <h3 style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888", margin: 0 }}>Year-by-Year Breakdown</h3>
-                <button aria-pressed={inp.decayMode === "ff"} aria-label="Toggle fixed friction decay" onClick={() => setInp(p => ({ ...p, decayMode: p.decayMode === "ff" ? "none" : "ff" as const }))} style={{
-                  fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
-                  letterSpacing: "0.05em", padding: "2px 6px",
-                  background: inp.decayMode === "ff" ? "rgba(196,160,110,0.2)" : "transparent",
-                  border: `1px solid ${inp.decayMode === "ff" ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
-                  color: inp.decayMode === "ff" ? "#C4A06E" : "#666",
-                  cursor: "pointer", borderRadius: "3px",
-                }}>FF</button>
-                <button aria-pressed={inp.decayMode === "vdr"} aria-label="Toggle variable decay rate" onClick={() => setInp(p => ({ ...p, decayMode: p.decayMode === "vdr" ? "none" : "vdr" as const }))} style={{
-                  fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
-                  letterSpacing: "0.05em", padding: "2px 6px",
-                  background: inp.decayMode === "vdr" ? "rgba(196,160,110,0.2)" : "transparent",
-                  border: `1px solid ${inp.decayMode === "vdr" ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
-                  color: inp.decayMode === "vdr" ? "#C4A06E" : "#666",
-                  cursor: "pointer", borderRadius: "3px",
-                }}>VDR</button>
+                <div style={{ display: "flex", gap: "0px" }}>
+                  <button aria-pressed={inp.decayMode === "ff"} aria-label="Toggle fixed friction decay" onClick={() => setInp(p => ({ ...p, decayMode: p.decayMode === "ff" ? "none" : "ff" as const }))} style={{
+                    fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                    letterSpacing: "0.05em", padding: "2px 6px",
+                    background: inp.decayMode === "ff" ? "rgba(196,160,110,0.2)" : "transparent",
+                    border: `1px solid ${inp.decayMode === "ff" ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+                    color: inp.decayMode === "ff" ? "#C4A06E" : "#666",
+                    cursor: "pointer", borderRadius: "3px 0 0 3px",
+                  }}>FF</button>
+                  <button aria-pressed={inp.decayMode === "vdr"} aria-label="Toggle variable decay rate" onClick={() => setInp(p => ({ ...p, decayMode: p.decayMode === "vdr" ? "none" : "vdr" as const }))} style={{
+                    fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                    letterSpacing: "0.05em", padding: "2px 6px",
+                    background: inp.decayMode === "vdr" ? "rgba(196,160,110,0.2)" : "transparent",
+                    border: `1px solid ${inp.decayMode === "vdr" ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+                    color: inp.decayMode === "vdr" ? "#C4A06E" : "#666",
+                    cursor: "pointer", borderRadius: "0 3px 3px 0", marginLeft: "-1px",
+                  }}>VDR</button>
+                </div>
                 <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.06)" }} />
               </div>
               <Table result={result} growthOverrides={inp.growthOverrides} onGrowthChange={(year, val) => {
