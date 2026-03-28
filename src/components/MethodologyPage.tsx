@@ -507,6 +507,59 @@ export function MethodologyPage({ onBack }: MethodologyPageProps) {
             that reflects their total shareholder return. No hard ceiling is needed — the math self-corrects.
           </CalloutBlock>
 
+          <SubHead>Fixed Friction (FF) — Conservative Alternative</SubHead>
+          <p style={{ fontSize: "15px", color: C.text2, lineHeight: 1.85, margin: "0 0 20px" }}>
+            The <strong style={{ color: C.text1 }}>Fixed Friction</strong> model is a simpler, more conservative
+            alternative to VDR. Instead of computing a multi-factor decay rate, FF applies a flat
+            <strong style={{ color: C.text1 }}> 5 percentage-point annual deduction</strong> from the blended CAGR
+            after the same lifecycle-stage hold period. The decay floor is the <strong style={{ color: C.text1 }}>3%
+            risk-free rate</strong> plus the company&apos;s dividend yield — ensuring that even as growth fades,
+            the total return never drops below what a Treasury bond plus dividends would provide.
+          </p>
+
+          <FormulaBlock label="Fixed Friction Decay">
+            G(n) = max( G<sub>initial</sub> − (n − HoldPeriod) × 5%, &nbsp;3% + Dividend_Yield )
+          </FormulaBlock>
+
+          <p style={{ fontSize: "15px", color: C.text2, lineHeight: 1.85, margin: "0 0 20px" }}>
+            FF uses the same lifecycle hold periods as VDR (Start-Up: 7yr, Young Growth: 5yr, etc.),
+            but strips away the margin, profitability, and growth-magnitude modifiers. This makes the
+            decay predictable and uniform — every company loses exactly 5pp/yr of growth after its hold
+            period, regardless of moat or margin quality.
+          </p>
+
+          <div style={{ border: `1px solid ${C.borderWeak}`, marginBottom: "32px" }}>
+            <div style={{ padding: "12px 20px", borderBottom: `1px solid ${C.borderWeak}` }}>
+              <SubHead>FF Example — High Growth Company (20% initial, High Growth, 2% yield)</SubHead>
+            </div>
+            {[
+              ["Floor",                     "3% + 2% = 5%",                false],
+              ["Years 1–3 (hold)",          "20%",                         false],
+              ["Year 4",                    "20% − 5% = 15%",             false],
+              ["Year 5",                    "15% − 5% = 10%",             false],
+              ["Year 6",                    "10% − 5% = 5%",              false],
+              ["Year 7+",                   "5% floor (RF + dividend)",    true],
+            ].map(([label, val, highlight]) => (
+              <div key={label as string} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "baseline",
+                padding: "12px 20px",
+                borderBottom: `1px solid ${C.borderWeak}`,
+                background: highlight ? "rgba(196,160,110,0.06)" : "transparent",
+                borderLeft: highlight ? `2px solid ${C.accent}` : "2px solid transparent",
+              }}>
+                <span style={{ fontSize: "14px", color: highlight ? C.text1 : C.text2, fontWeight: highlight ? 600 : 400 }}>{label}</span>
+                <span style={{ fontFamily: C.mono, fontSize: "15px", color: highlight ? C.accent : C.text1, fontWeight: highlight ? 700 : 400 }}>{val}</span>
+              </div>
+            ))}
+          </div>
+
+          <CalloutBlock label="When to Use FF vs VDR">
+            FF is toggled on by default because it is the more conservative model — it assumes no company
+            deserves a slower decay, regardless of margins or moat. Use VDR when you want the decay rate
+            to reflect the company&apos;s financial quality (wide-moat blue chips decay slower, speculative
+            names decay faster). Use FF when you prefer a uniform, worst-case fade that makes fewer assumptions.
+          </CalloutBlock>
+
           <SubHead>Key Guardrails</SubHead>
           {[
             ["Dividend Yield Adder", "The yield is added post-blend, not averaged in. This correctly preserves the growth signal: a 4.9% yield on a 15.5% terminal rate produces 20.4% total compounding, not a misleadingly diluted average."],
