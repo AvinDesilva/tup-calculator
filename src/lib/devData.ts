@@ -42,7 +42,7 @@ export const DEV_INP: InputState = {
   operatingMargin: 40,
   lifecycleStage: "high_growth",
   growthOverrides: {},
-  vdrEnabled: true,
+  decayMode: "ff",
 };
 
 export const DEV_VALUATION = {

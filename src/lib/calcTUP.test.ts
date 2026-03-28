@@ -26,7 +26,7 @@ const BASE_INP: InputState = {
   operatingMargin: 20,
   lifecycleStage: null,
   growthOverrides: {},
-  vdrEnabled: false,
+  decayMode: "none",
 };
 
 function makeInp(overrides: Partial<InputState>): InputState {
@@ -348,5 +348,102 @@ describe("payback year sanity", () => {
       const r = calcTUP(makeInp(p), "standard")!;
       expect(r.payback).toBeNull();
     }
+  });
+});
+
+// ── Fixed Friction Decay ────────────────────────────────────────────────────
+
+describe("fixed friction decay", () => {
+  it("decays 5pp/yr after hold period", () => {
+    const r = calcTUP(
+      makeInp({
+        lifecycleStage: "high_growth", // hold = 3
+        decayMode: "ff",
+        historicalGrowth: 30, fwdGrowthY1: 25, fwdGrowthY2: 20,
+        dividendYield: 0,
+      }),
+      "standard",
+    )!;
+    // Year 3 is still Y2 rate (explicit forward), year 4+ uses terminal with FF decay
+    // FF floor = 0.03 + 0 = 0.03
+    const y4gr = r.rows[3].growthRate / 100;
+    const y5gr = r.rows[4].growthRate / 100;
+    expect(y4gr - y5gr).toBeCloseTo(0.05, 4);
+  });
+
+  it("floors at risk-free rate (3%) when no dividends", () => {
+    const r = calcTUP(
+      makeInp({
+        lifecycleStage: null, // hold = 0
+        decayMode: "ff",
+        historicalGrowth: 15, fwdGrowthY1: 12, fwdGrowthY2: 10,
+        dividendYield: 0,
+      }),
+      "standard",
+    )!;
+    // Terminal rate ~12.75%, floor = 3%, decay = 5pp/yr from year 3+
+    // Should eventually hit floor
+    const lastRow = r.rows[r.rows.length - 1];
+    expect(lastRow.growthRate / 100).toBeGreaterThanOrEqual(0.03 - 0.001);
+  });
+
+  it("floors at RF + dividendYield", () => {
+    const r = calcTUP(
+      makeInp({
+        lifecycleStage: null, // hold = 0
+        decayMode: "ff",
+        historicalGrowth: 15, fwdGrowthY1: 12, fwdGrowthY2: 10,
+        dividendYield: 4, // floor = 3% + 4% = 7%
+      }),
+      "standard",
+    )!;
+    // With 4% dividend yield, floor = 0.07
+    const lastRow = r.rows[r.rows.length - 1];
+    expect(lastRow.growthRate / 100).toBeGreaterThanOrEqual(0.07 - 0.001);
+  });
+
+  it("respects hold period — no decay during hold years", () => {
+    const r = calcTUP(
+      makeInp({
+        lifecycleStage: "startup", // hold = 7
+        decayMode: "ff",
+        historicalGrowth: 30, fwdGrowthY1: 28, fwdGrowthY2: 25,
+        dividendYield: 0,
+      }),
+      "standard",
+    )!;
+    // Years 3-7 should all have the same terminal growth rate (hold period)
+    const y3gr = r.rows[2].growthRate;
+    const y7gr = r.rows[6].growthRate;
+    expect(y3gr).toBeCloseTo(y7gr, 4);
+  });
+
+  it("returns initial when already below floor", () => {
+    const r = calcTUP(
+      makeInp({
+        lifecycleStage: null,
+        decayMode: "ff",
+        historicalGrowth: 2, fwdGrowthY1: 2, fwdGrowthY2: 2,
+        dividendYield: 0, // floor = 3%, terminal ~2% which is below floor
+      }),
+      "standard",
+    )!;
+    // Terminal rate ~2%, below 3% floor → should stay at terminal rate (no upward adjustment)
+    const y3gr = r.rows[2].growthRate / 100;
+    expect(y3gr).toBeLessThan(0.03);
+  });
+
+  it("produces different payback than none mode", () => {
+    const base = {
+      marketCap: 2_000_000_000, debt: 0, cash: 0, shares: 100_000_000, // adjPrice = $20
+      ttmEPS: 0.80, forwardEPS: 0.85,
+      lifecycleStage: "high_growth" as const, // hold = 3
+      historicalGrowth: 12, fwdGrowthY1: 10, fwdGrowthY2: 8,
+      dividendYield: 0,
+    };
+    const rFF = calcTUP(makeInp({ ...base, decayMode: "ff" }), "standard")!;
+    const rNone = calcTUP(makeInp({ ...base, decayMode: "none" }), "standard")!;
+    // FF decay kicks in after hold period, so payback should be longer
+    expect(rFF.payback).toBeGreaterThan(rNone.payback!);
   });
 });

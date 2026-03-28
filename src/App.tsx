@@ -77,7 +77,7 @@ export default function App() {
     marketCap: 0, debt: 0, cash: 0, shares: 1,
     ttmEPS: 0, forwardEPS: 0, historicalGrowth: 10, analystGrowth: 10, fwdGrowthY1: 10, fwdGrowthY2: null, fwdCAGR: null,
     revenuePerShare: 0, targetMargin: 15, inceptionGrowth: 30, breakEvenYear: 2,
-    currentPrice: 0, sma200: 0, dividendYield: 0, operatingMargin: null, lifecycleStage: null, growthOverrides: {}, vdrEnabled: true,
+    currentPrice: 0, sma200: 0, dividendYield: 0, operatingMargin: null, lifecycleStage: null, growthOverrides: {}, decayMode: "ff",
   });
 
   const result: TUPResult | null = useMemo(() => calcTUP(inp, mode), [inp, mode]);
@@ -153,7 +153,7 @@ export default function App() {
             revenuePerShare: data.revenuePerShare, targetMargin: data.targetMargin,
             inceptionGrowth: data.inceptionGrowth, breakEvenYear: data.breakEvenYear,
             currentPrice: data.currentPrice, sma200: data.sma200,
-            dividendYield: data.dividendYield || 0, operatingMargin: data.operatingMargin ?? null, lifecycleStage: data.lifecycleStage, growthOverrides: {}, vdrEnabled: true,
+            dividendYield: data.dividendYield || 0, operatingMargin: data.operatingMargin ?? null, lifecycleStage: data.lifecycleStage, growthOverrides: {}, decayMode: "ff",
           };
           const testResult = calcTUP(testInp, "standard");
           const pb = testResult?.payback;
@@ -217,7 +217,7 @@ export default function App() {
         bull: { y1: data.fwdGrowthY1Bull ?? 0, y2: data.fwdGrowthY2Bull, cagr: data.fwdCAGRBull },
       });
       let finalGrowthPeriod: "5yr" | "10yr" = "5yr";
-      const origInp = {
+      const origInp: InputState = {
         marketCap: data.marketCap, debt: data.debt, cash: data.cash, shares: data.shares,
         ttmEPS: data.ttmEPS, forwardEPS: data.forwardEPS,
         historicalGrowth: data.historicalGrowth5yr, analystGrowth: data.analystGrowth,
@@ -225,7 +225,7 @@ export default function App() {
         revenuePerShare: data.revenuePerShare, targetMargin: data.targetMargin,
         inceptionGrowth: data.inceptionGrowth, breakEvenYear: data.breakEvenYear,
         currentPrice: data.currentPrice, sma200: data.sma200,
-        dividendYield: data.dividendYield || 0, operatingMargin: data.operatingMargin ?? null, lifecycleStage: data.lifecycleStage, growthOverrides: {}, vdrEnabled: true,
+        dividendYield: data.dividendYield || 0, operatingMargin: data.operatingMargin ?? null, lifecycleStage: data.lifecycleStage, growthOverrides: {}, decayMode: "ff",
       };
       let finalInp = origInp;
       const overrides = urlOverridesRef.current;
@@ -489,12 +489,20 @@ export default function App() {
               <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#C4A06E", fontSize: "14px", letterSpacing: "0.05em", fontWeight: 700 }}>04</span>
                 <h3 style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888", margin: 0 }}>Year-by-Year Breakdown</h3>
-                <button aria-pressed={inp.vdrEnabled} aria-label="Toggle value decay rate" onClick={() => setInp(p => ({ ...p, vdrEnabled: !p.vdrEnabled }))} style={{
+                <button aria-pressed={inp.decayMode === "ff"} aria-label="Toggle fixed friction decay" onClick={() => setInp(p => ({ ...p, decayMode: p.decayMode === "ff" ? "none" : "ff" as const }))} style={{
                   fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
                   letterSpacing: "0.05em", padding: "2px 6px",
-                  background: inp.vdrEnabled ? "rgba(196,160,110,0.2)" : "transparent",
-                  border: `1px solid ${inp.vdrEnabled ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
-                  color: inp.vdrEnabled ? "#C4A06E" : "#666",
+                  background: inp.decayMode === "ff" ? "rgba(196,160,110,0.2)" : "transparent",
+                  border: `1px solid ${inp.decayMode === "ff" ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+                  color: inp.decayMode === "ff" ? "#C4A06E" : "#666",
+                  cursor: "pointer", borderRadius: "3px",
+                }}>FF</button>
+                <button aria-pressed={inp.decayMode === "vdr"} aria-label="Toggle variable decay rate" onClick={() => setInp(p => ({ ...p, decayMode: p.decayMode === "vdr" ? "none" : "vdr" as const }))} style={{
+                  fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
+                  letterSpacing: "0.05em", padding: "2px 6px",
+                  background: inp.decayMode === "vdr" ? "rgba(196,160,110,0.2)" : "transparent",
+                  border: `1px solid ${inp.decayMode === "vdr" ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+                  color: inp.decayMode === "vdr" ? "#C4A06E" : "#666",
                   cursor: "pointer", borderRadius: "3px",
                 }}>VDR</button>
                 <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.06)" }} />

@@ -1,6 +1,6 @@
 import { SAFETY_CAP, STD_THRESHOLD, PP_THRESHOLD } from "./constants.ts";
 import type { InputState, Mode, TUPResult, TUPRow, VerdictKey } from "./types.ts";
-import { fadedGrowth, type VDRContext } from "./vdr.ts";
+import { fadedGrowth, fixedFrictionGrowth, type VDRContext } from "./vdr.ts";
 
 /**
  * Core TUP (Time Until Payback) calculation engine.
@@ -14,7 +14,7 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
     historicalGrowth, analystGrowth, fwdGrowthY1, fwdGrowthY2,
     revenuePerShare, targetMargin,
     inceptionGrowth, breakEvenYear, currentPrice, sma200, dividendYield,
-    operatingMargin, lifecycleStage, growthOverrides, vdrEnabled,
+    operatingMargin, lifecycleStage, growthOverrides, decayMode,
   } = inp;
 
   if (!shares || shares <= 0) return null;
@@ -98,7 +98,9 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
     } else if (y === 2) {
       yearGr = grY2;
     } else {
-      yearGr = vdrEnabled ? fadedGrowth(grTerminal, y, vdrCtx) : grTerminal;
+      yearGr = decayMode === "vdr" ? fadedGrowth(grTerminal, y, vdrCtx)
+             : decayMode === "ff"  ? fixedFrictionGrowth(grTerminal, y, vdrCtx)
+             : grTerminal;
     }
     eps *= (1 + yearGr);
     const annual = y >= startYr ? eps : 0;

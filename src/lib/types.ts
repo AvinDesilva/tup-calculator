@@ -8,6 +8,8 @@ export type VerdictKey = "strong_buy" | "buy" | "hold" | "stretched" | "spec_buy
 
 export type LifecycleStage = "startup" | "young_growth" | "high_growth" | "mature_growth" | "mature_stable" | "decline";
 
+export type DecayMode = "ff" | "vdr" | "none";
+
 // ─── Calculator inputs ────────────────────────────────────────────────────────
 
 export interface InputState {
@@ -32,7 +34,7 @@ export interface InputState {
   operatingMargin: number | null;
   lifecycleStage: LifecycleStage | null;
   growthOverrides: Record<number, number>;
-  vdrEnabled: boolean;
+  decayMode: DecayMode;
 }
 
 // ─── Roll Dice filters ───────────────────────────────────────────────────────

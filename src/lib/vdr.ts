@@ -93,3 +93,22 @@ export function fadedGrowth(initial: number, year: number, ctx: VDRContext): num
   const decay = (year - hold) * vdr;
   return Math.max(initial - decay, floor);
 }
+
+/**
+ * Fixed Friction (FF) decay model.
+ *
+ * Simpler alternative to VDR: deducts a flat 5pp/yr from the blended CAGR
+ * after the lifecycle-stage hold period, with a floor at the risk-free rate
+ * (3%) plus dividend yield.
+ */
+const FF_DECAY  = 0.05;  // flat 5pp/yr decay
+const RF_FLOOR  = 0.03;  // 3% risk-free rate
+
+export function fixedFrictionGrowth(initial: number, year: number, ctx: VDRContext): number {
+  const floor = RF_FLOOR + ctx.dividendYield / 100;
+  if (initial <= floor) return initial;
+  const hold = ctx.stage ? HOLD_PERIOD[ctx.stage] : 0;
+  if (year <= hold) return initial;
+  const decay = (year - hold) * FF_DECAY;
+  return Math.max(initial - decay, floor);
+}
