@@ -2,7 +2,7 @@
 
 const express = require("express");
 const app  = express();
-const PORT = 3001;
+const PORT = parseInt(process.env.PORT || "3001", 10);
 
 // ── Guard: key must be set before accepting any traffic ───────────────────────
 const API_KEY = process.env.FMP_API_KEY;
@@ -55,6 +55,7 @@ const industryCache = new TTLCache(6 * 60 * 60 * 1000,  200);  // 6 hrs
 const ALLOWED_ORIGINS = new Set([
   "https://tupcalculator.org",
   "https://www.tupcalculator.org",
+  "https://dev.tupcalculator.org",
   "http://localhost:5173",
 ]);
 

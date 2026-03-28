@@ -15,7 +15,7 @@ variable "ami_id" {
 
 variable "ssh_allowed_cidr" {
   type    = string
-  default = "98.194.33.214/32"
+  default = "99.130.119.194/32"
 }
 
 variable "sns_email" {
