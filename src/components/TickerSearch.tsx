@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
 import type React from "react";
 import { searchTickers } from "../lib/api.ts";
 import type { SearchResult } from "../lib/api.ts";
+import { SearchDropdown } from "./SearchDropdown.tsx";
 
 interface TickerSearchProps {
   value: string;
@@ -97,9 +97,10 @@ export function TickerSearch({
   }, [activeIndex]);
 
   const selectItem = useCallback((symbol: string) => {
+    const sym = symbol.toUpperCase();
     suppressRef.current = true;
-    lastSearchedRef.current = symbol.toUpperCase();
-    onSelect(symbol.toUpperCase());
+    lastSearchedRef.current = sym;
+    onSelect(sym);
     setIsOpen(false);
     setResults([]);
   }, [onSelect]);
@@ -117,12 +118,10 @@ export function TickerSearch({
       setActiveIndex(i => (i <= 0 ? results.length - 1 : i - 1));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (activeIndex >= 0 && activeIndex < results.length) {
-        selectItem(results[activeIndex].symbol);
-      }
-      setIsOpen(false);
-      setResults([]);
-      onSubmit();
+      const selected = activeIndex >= 0 && activeIndex < results.length
+        ? results[activeIndex].symbol : undefined;
+      if (selected) selectItem(selected);
+      else onSubmit();
     } else if (e.key === "Escape") {
       setIsOpen(false);
     }
@@ -130,87 +129,6 @@ export function TickerSearch({
 
   const showDropdown = isOpen || (isLoading && value.trim().length >= 2);
   const listboxId = "ticker-search-listbox";
-
-  const dropdown = showDropdown && dropdownPos ? createPortal(
-    <div
-      ref={listRef}
-      id={listboxId}
-      role="listbox"
-      aria-label="Search results"
-      style={{
-        position: "absolute",
-        top: dropdownPos.top,
-        left: dropdownPos.left,
-        width: dropdownPos.width,
-        zIndex: 99999,
-        background: "#1a1a1a",
-        border: "1px solid rgba(255,255,255,0.12)",
-        borderTop: "none",
-        maxHeight: "280px",
-        overflowY: "auto",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.8)",
-      }}
-    >
-      {isLoading ? (
-        <div role="status" style={{ padding: "12px 16px", fontSize: "14px", color: "#888888", fontFamily: "'Space Grotesk', sans-serif", background: "#1a1a1a" }}>
-          Searching...
-        </div>
-      ) : results.length === 0 ? (
-        <div role="status" style={{ padding: "12px 16px", fontSize: "14px", color: "#888888", fontFamily: "'Space Grotesk', sans-serif", background: "#1a1a1a" }}>
-          No results found
-        </div>
-      ) : results.map((r, i) => (
-        <div
-          key={r.symbol}
-          role="option"
-          id={`ticker-option-${i}`}
-          aria-selected={i === activeIndex}
-          tabIndex={-1}
-          onMouseDown={e => { e.preventDefault(); selectItem(r.symbol); }}
-          onMouseEnter={() => setActiveIndex(i)}
-          style={{
-            padding: "10px 16px",
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            cursor: "pointer",
-            background: i === activeIndex ? "#2a2520" : "#1a1a1a",
-            transition: "background 0.1s",
-          }}
-        >
-          <span style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: "16px",
-            fontWeight: 600,
-            color: "#00BFA5",
-            minWidth: "60px",
-            flexShrink: 0,
-          }}>
-            {r.symbol}
-          </span>
-          <span style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontSize: "15px",
-            color: "#e8e4dc",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            flex: 1,
-          }}>
-            {r.name}
-          </span>
-          <span style={{
-            fontSize: "13px",
-            color: "#505050",
-            flexShrink: 0,
-          }}>
-            {r.exchange}
-          </span>
-        </div>
-      ))}
-    </div>,
-    document.body,
-  ) : null;
 
   return (
     <div ref={containerRef} style={{ position: "relative", width: "100%", flex: 1, minWidth: 0 }}>
@@ -242,7 +160,17 @@ export function TickerSearch({
       <div className="sr-only" aria-live="polite">
         {showDropdown && !isLoading && results.length > 0 ? `${results.length} results available` : ""}
       </div>
-      {dropdown}
+      <SearchDropdown
+        results={results}
+        isLoading={isLoading}
+        activeIndex={activeIndex}
+        onSelect={selectItem}
+        onHover={setActiveIndex}
+        position={dropdownPos}
+        show={showDropdown}
+        listRef={listRef}
+        listboxId={listboxId}
+      />
     </div>
   );
 }

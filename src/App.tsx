@@ -345,7 +345,7 @@ export default function App() {
           <HeroSearch
             ticker={ticker}
             onTickerChange={setTicker}
-            onTickerSelect={setTicker}
+            onTickerSelect={(sym: string) => { setTicker(sym); doFetch(sym); }}
             onFetch={doFetch}
             loading={loading}
             error={error}
@@ -367,7 +367,7 @@ export default function App() {
           <CompactTickerBar
             ticker={ticker}
             onTickerChange={setTicker}
-            onTickerSelect={setTicker}
+            onTickerSelect={(sym: string) => { setTicker(sym); doFetch(sym); }}
             onFetch={doFetch}
             loading={loading}
             error={error}
