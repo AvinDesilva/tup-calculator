@@ -116,7 +116,11 @@ The main `App` component manages all state. Key state:
 
 ### Styling
 
-All styles are **inline style objects** — no CSS classes except for responsive breakpoints. The `rsp-*` class names in JSX exist solely as selectors for the `<style>` block's media queries at the bottom of `App`. Tailwind is listed as a devDependency but is not used.
+All component styles are **inline style objects**. The only CSS classes are `rsp-*` names used solely as selectors for responsive media query overrides.
+
+- `src/index.css` — global resets (box-sizing, body, focus-visible, sr-only, skip-to-main)
+- `src/App.css` — keyframe animations (`spin`, `fadeInUp`, `heroGlow`) and all `rsp-*` responsive breakpoint overrides (desktop defaults, mobile, tablet)
+- `src/lib/theme.ts` — shared color tokens (`C`), font families, and reusable style objects (`inputShared`, `toggleBtn`)
 
 Fonts loaded from Google Fonts at runtime: `Barlow Condensed`, `Space Grotesk`, `JetBrains Mono`.
 
