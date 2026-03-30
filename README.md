@@ -59,6 +59,11 @@ TUP Calculator is a single-page React 19 application built with TypeScript and V
 ```
 src/
 ├── App.tsx                  # Root component — all state, layout, orchestration
+├── App.css                  # Keyframe animations + responsive media query overrides
+├── index.css                # Global resets (box-sizing, body, focus-visible, sr-only)
+├── hooks/
+│   ├── useTickerFetch.ts     # Ticker lookup orchestration hook (extracted from App)
+│   └── useTickerFetch.types.ts
 ├── lib/
 │   ├── api.ts               # FMP data fetching (9 parallel requests) + derived fields
 │   ├── calcTUP.ts           # Core TUP payback algorithm
@@ -67,26 +72,42 @@ src/
 │   ├── constants.ts         # Thresholds, ADR table, FX fallbacks, verdict metadata
 │   ├── types.ts             # All shared TypeScript interfaces
 │   ├── theme.ts             # Color palette and design tokens
-│   └── utils.ts             # Number formatting helpers
-├── components/
-│   ├── HeroSearch.tsx        # Ticker search input
-│   ├── Masthead.tsx          # App header and branding
-│   ├── CompactTickerBar.tsx  # Condensed ticker display after lookup
-│   ├── DataSections.tsx      # Financial data display sections
-│   ├── DiceFilterBar.tsx     # Random stock filter controls
-│   ├── VerdictCard.tsx       # Payback result + verdict badge
-│   ├── ValuationContext.tsx  # Lynch PEG, DCF delta, Altman Z, Piotroski F
-│   ├── CompanyScorecard.tsx  # Earnings surprises + cash flow history
-│   ├── Table.tsx             # Year-by-year EPS compounding breakdown
-│   ├── MethodologyPage.tsx   # Full methodology explanation
-│   └── ui.tsx                # Shared primitives (Field, DataRow, SectionLabel)
+│   ├── utils.ts             # Number formatting helpers
+│   └── devData.ts           # Hardcoded AAPL data for local dev (no API key needed)
+├── components/              # Folder-per-component structure
+│   ├── CompactTickerBar/     # Condensed ticker display after lookup
+│   ├── CompanyScorecard/     # Earnings surprises + cash flow history
+│   ├── DataSections/         # Financial data display sections
+│   │   ├── EnterpriseValue/
+│   │   ├── GrowthAssumptions/
+│   │   ├── TechnicalValidation/
+│   │   └── YearByYearBreakdown/
+│   ├── DiceFilterBar/        # Random stock filter controls + SectorDropdown
+│   ├── HeroSearch/           # Ticker search input (hero section)
+│   ├── Masthead/             # App header and branding
+│   ├── MethodologyPage/      # Full methodology explanation
+│   │   ├── CalloutBlock.tsx
+│   │   ├── FormulaBlock.tsx
+│   │   ├── SectionNum.tsx
+│   │   └── SubHead.tsx
+│   ├── Table/                # Year-by-year EPS compounding breakdown
+│   ├── TickerSearch/         # Typeahead ticker search + SearchDropdown
+│   ├── ValuationContext/     # Lynch PEG, DCF delta, Altman Z, Piotroski F
+│   ├── VerdictCard/          # Payback result + verdict badge
+│   └── primitives/           # Shared UI primitives (Field, DataRow, SectionLabel, ErrorDisplay)
 
 server/
-└── index.js                  # Express proxy (EC2, port 3001)
-                              #   /fmp/:endpoint — FMP API proxy + cache
-                              #   /search — ticker search with dedup
-                              #   /industry-growth — peer blended growth median
+├── index.js                  # Express entry point (EC2, port 3001)
+├── routes.js                 # Route handlers (/fmp, /search, /industry-growth)
+├── middleware.js             # Express middleware (CORS, logging, error handling)
+├── lib/
+│   ├── cache.js              # Response caching layer
+│   └── fmp.js                # FMP API client (key injection, request helpers)
+├── nginx.conf                # Production Nginx config
+└── nginx-dev.conf            # Dev Nginx config
 ```
+
+Each component folder contains `ComponentName.tsx`, `ComponentName.types.ts`, and an `index.ts` barrel export. Some components include additional helpers (e.g., `*.helpers.ts`) or sub-components.
 
 ### Data Pipeline
 
