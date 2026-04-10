@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type React from "react";
-import { searchTickers } from "../../lib/api.ts";
-import type { SearchResult } from "../../lib/api.ts";
+import { searchTickers } from "../../lib/tickerSearch/api.ts";
+import type { SearchResult } from "../../lib/tickerSearch/api.ts";
 import { SearchDropdown } from "./SearchDropdown.tsx";
 import type { TickerSearchProps } from "./TickerSearch.types.ts";
 

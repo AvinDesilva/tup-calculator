@@ -5,7 +5,7 @@ import {
   ADR_EPS_RATIO,
   FALLBACK_FX,
   EXCHANGE_CCY,
-} from "./constants.ts";
+} from "../constants.ts";
 import { deriveShares, sanitizedNetIncome } from "./api.ts";
 
 // ── A. Currency resolution priority ──────────────────────────────────────────

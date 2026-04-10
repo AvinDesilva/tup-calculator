@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import type { SearchResult } from "../../lib/api.ts";
+import type { SearchResult } from "../../lib/tickerSearch/api.ts";
 
 interface SearchDropdownProps {
   results: SearchResult[];

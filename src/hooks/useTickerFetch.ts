@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
-import { calcTUP } from "../lib/calcTUP.ts";
-import { lookupTicker, lookupTickerQuick, fetchFilteredPool, fetchIndustryGrowth } from "../lib/api.ts";
+import { calcTUP } from "../lib/verdictCard/calcTUP.ts";
+import { lookupTicker, lookupTickerQuick, fetchFilteredPool, fetchIndustryGrowth } from "../lib/tickerSearch/api.ts";
 import type { InputState, GrowthScenario, RollFilters, TupRangeFilter } from "../lib/types.ts";
 import * as dev from "../lib/devData.ts";
 

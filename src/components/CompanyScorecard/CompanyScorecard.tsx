@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { LC_CURVE, LC_ZONES, STAGE_META } from "../../lib/constants.ts";
-import { classifyLifecycle, lifecycleDotX, lifecycleRevGrowth } from "../../lib/lifecycle.ts";
+import { classifyLifecycle, lifecycleDotX, lifecycleRevGrowth } from "../../lib/companyScorecard/lifecycle.ts";
 import { crPath, sampleCR, findTForX } from "./CompanyScorecard.helpers.ts";
 import type { CompanyScorecardProps, ProcessedQuarter } from "./CompanyScorecard.types.ts";
 

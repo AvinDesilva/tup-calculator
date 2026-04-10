@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 
-import { calcTUP } from "./lib/calcTUP.ts";
+import { calcTUP } from "./lib/verdictCard/calcTUP.ts";
 import { C } from "./lib/theme.ts";
 import type { InputState, Mode, TUPResult, GrowthScenario, PriceMode } from "./lib/types.ts";
 

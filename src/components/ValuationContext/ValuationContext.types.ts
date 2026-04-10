@@ -1,4 +1,4 @@
-import type { IndustryGrowthData } from "../../lib/api.ts";
+import type { IndustryGrowthData } from "../../lib/tickerSearch/api.ts";
 import type { PriceMode } from "../../lib/types.ts";
 
 export interface ValuationContextProps {

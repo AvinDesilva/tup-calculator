@@ -1,13 +1,13 @@
-import { ADR_RATIO_TABLE, ADR_EPS_RATIO, ADR_FINANCIALS_CCY, EXCHANGE_CCY, FALLBACK_FX, MKTCAP_RANGES } from "./constants.ts";
-import { f, fB } from "./utils.ts";
-import { classifyLifecycle } from "./lifecycle.ts";
+import { ADR_RATIO_TABLE, ADR_EPS_RATIO, ADR_FINANCIALS_CCY, EXCHANGE_CCY, FALLBACK_FX, MKTCAP_RANGES } from "../constants.ts";
+import { f, fB } from "../utils.ts";
+import { classifyLifecycle } from "../companyScorecard/lifecycle.ts";
 import type {
   TickerData, LifecycleStage, RollFilters,
   FMPProfile, FMPQuote, FMPBalanceSheet, FMPIncomeStatement,
   FMPEstimate,
   FMPDividend, FMPDividendHistory, FMPDCF,
   FMPEarningSurprise, FMPCashFlow, EpsGrowthPoint,
-} from "./types.ts";
+} from "../types.ts";
 
 // ─── Industry Growth ──────────────────────────────────────────────────────────
 

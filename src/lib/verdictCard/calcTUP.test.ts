@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { calcTUP } from "./calcTUP.ts";
-import type { InputState } from "./types.ts";
+import type { InputState } from "../types.ts";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

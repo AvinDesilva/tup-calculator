@@ -1,4 +1,4 @@
-import type { LifecycleStage } from "./types.ts";
+import type { LifecycleStage } from "../types.ts";
 
 /**
  * Variable Decay Rate (VDR) module.

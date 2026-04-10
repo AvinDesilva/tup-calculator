@@ -1,6 +1,6 @@
-import { SAFETY_CAP, STD_THRESHOLD, PP_THRESHOLD } from "./constants.ts";
-import type { InputState, Mode, TUPResult, TUPRow, VerdictKey } from "./types.ts";
-import { fadedGrowth, fixedFrictionGrowth, type VDRContext } from "./vdr.ts";
+import { SAFETY_CAP, STD_THRESHOLD, PP_THRESHOLD } from "../constants.ts";
+import type { InputState, Mode, TUPResult, TUPRow, VerdictKey } from "../types.ts";
+import { fadedGrowth, fixedFrictionGrowth, type VDRContext } from "../companyScorecard/vdr.ts";
 
 /**
  * Core TUP (Time Until Payback) calculation engine.

@@ -1,4 +1,4 @@
-import type { IndustryGrowthData } from "../lib/api.ts";
+import type { IndustryGrowthData } from "../lib/tickerSearch/api.ts";
 import type { InputState, GrowthScenario, RollFilters, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement, EpsGrowthPoint } from "../lib/types.ts";
 
 export interface ValuationState {

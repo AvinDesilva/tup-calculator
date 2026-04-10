@@ -1,4 +1,4 @@
-import type { LifecycleStage } from "./types.ts";
+import type { LifecycleStage } from "../types.ts";
 
 /**
  * Multi-factor lifecycle classification based on Damodaran's 6-stage
