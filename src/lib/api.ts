@@ -249,7 +249,7 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
   // ── Core fields ──────────────────────────────────────────────────────────
   const sharesOut    = q.sharesOutstanding || inc[0]?.weightedAverageShsOut || 1;
   const totalDebt    = (bs.totalDebt || bs.longTermDebt || 0) * fxRate;
-  const totalCash    = (bs.cashAndCashEquivalents || bs.cashAndShortTermInvestments || 0) * fxRate;
+  const totalCash    = (bs.cashAndShortTermInvestments || bs.cashAndCashEquivalents || 0) * fxRate;
   const mktCapVal    = p.mktCap || q.marketCap || 0;
 
   const price        = q.price || p.price || 0;
@@ -458,7 +458,7 @@ export async function lookupTicker(
   // ── Debt & Cash ───────────────────────────────────────────────────────────
   const sharesOut  = q.sharesOutstanding || inc[0]?.weightedAverageShsOut || 1;
   let totalDebt    = (bs.totalDebt || bs.longTermDebt || 0) * fxRate;
-  let totalCash    = (bs.cashAndCashEquivalents || bs.cashAndShortTermInvestments || 0) * fxRate;
+  let totalCash    = (bs.cashAndShortTermInvestments || bs.cashAndCashEquivalents || 0) * fxRate;
 
   // Sanity check: debt >5× market cap for a profitable company → likely unconverted
   const mktCapVal = p.mktCap || q.marketCap || 0;
