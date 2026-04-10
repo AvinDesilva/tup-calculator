@@ -492,23 +492,26 @@ describe("analyst EPS normalization with ADR ratio + FX", () => {
     expect(ADR_RATIO_TABLE["NVO"]).toBe(6);
   });
 
-  // ⚠ UNVERIFIED ASSUMPTION — TM, BHP, AMX
-  // These tests assert epsScale = ADR_RATIO_TABLE value (e.g. TM ×10). This was
-  // also the original assumption for TSM (×5) and BABA (×8), which turned out to
-  // be wrong: FMP normalises their shares to ADR-equivalent units, so epsAvg is
-  // already per-ADR and epsScale should be 1.
+  // ⚠ UNVERIFIED ASSUMPTION — BHP, AMX
+  // These tests assert epsScale = ADR_RATIO_TABLE value. This was also the original
+  // assumption for TSM (×5), BABA (×8), and TM (×10), all of which turned out to be
+  // wrong: FMP normalises their shares to ADR-equivalent units, so epsAvg is already
+  // per-ADR and epsScale should be 1.
   //
-  // TM, BHP, AMX may be in the same category. To verify:
-  //   1. Fetch /api/fmp/analyst-estimates?symbol=TM (or BHP / AMX)
+  // BHP and AMX may be in the same category. To verify:
+  //   1. Fetch /api/fmp/analyst-estimates?symbol=BHP (or AMX)
   //   2. Compare epsAvg magnitude against epsDiluted from income-statement
-  //      e.g. TM ADR ~$185, if epsAvg ≈ $18 per share in JPY → epsScale=1
-  //   3. If wrong, add ADR_EPS_RATIO["TM"] = 1 to constants.ts
+  //   3. If same magnitude, add ADR_EPS_RATIO["BHP"] = 1 to constants.ts
   //
   // Until verified, these tests document the CURRENT behaviour, not confirmed truth.
 
-  it("TM: analyst EPS in JPY × ratio 10 × JPYUSD [⚠ unverified — see comment above]", () => {
+  it("TM: analyst EPS in JPY × ratio 1 × JPYUSD (ADR_EPS_RATIO override, confirmed)", () => {
+    // FMP normalizes TM shares to ADR-equivalent units (~1.311B = 13.1B ordinary ÷ 10);
+    // epsAvg from analyst estimates is already per-ADR-unit in JPY (same magnitude as
+    // income statement epsDiluted ~3,596 JPY). ADR_EPS_RATIO["TM"] = 1 confirmed.
     const result = epsOf(250, "TM");
-    expect(result).toBeCloseTo(250 * 10 * 0.0067, 4);
+    expect(result).toBeCloseTo(250 * 1 * 0.0067, 4);
+    expect(result).not.toBeCloseTo(250 * 10 * 0.0067, 4);
   });
 
   it("BABA: analyst EPS in CNH × ratio 1 × CNHUSD (ADR_EPS_RATIO override)", () => {
@@ -536,8 +539,8 @@ describe("analyst EPS normalization with ADR ratio + FX", () => {
   });
 
   it("tickers without ADR_EPS_RATIO entry fall back to ADR_RATIO_TABLE", () => {
-    // TM, BHP, AMX have no ADR_EPS_RATIO entry → use ADR_RATIO_TABLE (⚠ unverified)
-    for (const ticker of ["TM", "BHP", "AMX"]) {
+    // BHP, AMX have no ADR_EPS_RATIO entry → use ADR_RATIO_TABLE (⚠ unverified)
+    for (const ticker of ["BHP", "AMX"]) {
       expect(ADR_EPS_RATIO[ticker]).toBeUndefined();
       expect(ADR_RATIO_TABLE[ticker]).toBeGreaterThan(1);
     }
@@ -736,9 +739,9 @@ describe("bear/bull analyst EPS scaling", () => {
     expect(epsOfBull(18, "NVO")).not.toBeCloseTo(18 * 6 * 0.145, 4);
   });
 
-  it("TM bear: no ADR_EPS_RATIO override — uses ADR_RATIO_TABLE ×10", () => {
-    // ⚠ See Section G unverified assumption note — ratio may need investigation
-    expect(epsOfBear(200, "TM")).toBeCloseTo(200 * 10 * 0.0067, 4);
+  it("TM bear: ADR_EPS_RATIO override ×1 (confirmed — FMP provides ADR-unit shares)", () => {
+    expect(epsOfBear(200, "TM")).toBeCloseTo(200 * 1 * 0.0067, 4);
+    expect(epsOfBear(200, "TM")).not.toBeCloseTo(200 * 10 * 0.0067, 4);
   });
 
   it("ASML bear: ratio=1 — only FX conversion", () => {

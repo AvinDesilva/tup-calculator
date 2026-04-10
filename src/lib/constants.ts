@@ -49,6 +49,7 @@ export const ADR_EPS_RATIO: Record<string, number> = {
   NVO:  1,  // 1 ADR = 1 B-share — ratio 6 in ADR_RATIO_TABLE forces mktCap/price shares, but EPS scale is 1
   TSM:  1,  // FMP normalizes TSM shares to ADR-equivalent units (÷5); epsAvg is already per-ADR-unit in TWD
   BABA: 1,  // FMP normalizes BABA shares to ADR-equivalent units (~2.35B); epsAvg is already per-ADR-unit in CNH
+  TM:   1,  // FMP normalizes TM shares to ADR-equivalent units (~1.311B = 13.1B ordinary ÷ 10); epsAvg already per-ADR-unit in JPY
 };
 
 // ─── ADR underlying financials currency ─────────────────────────────────────
