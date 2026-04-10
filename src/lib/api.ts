@@ -352,7 +352,7 @@ export async function lookupTicker(
   log: (msg: string) => void,
 ): Promise<TickerData> {
   const t = ticker.trim().toUpperCase();
-  if (!/^[A-Z0-9$.\-]{1,10}$/.test(t)) {
+  if (!/^[A-Z0-9$.-]{1,10}$/.test(t)) {
     throw new Error("Invalid ticker symbol. Use letters, numbers, $, ., or - only (max 10 characters).");
   }
 
