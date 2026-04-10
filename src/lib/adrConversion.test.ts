@@ -492,16 +492,16 @@ describe("analyst EPS normalization with ADR ratio + FX", () => {
     expect(ADR_RATIO_TABLE["NVO"]).toBe(6);
   });
 
-  // ⚠ UNVERIFIED ASSUMPTION — TM, BABA, BHP, AMX
+  // ⚠ UNVERIFIED ASSUMPTION — TM, BHP, AMX
   // These tests assert epsScale = ADR_RATIO_TABLE value (e.g. TM ×10). This was
-  // also the original assumption for TSM (×5), which turned out to be wrong: FMP
-  // normalises TSM's shares to ADR-equivalent units, so epsAvg is already per-ADR
-  // and epsScale should be 1 (hence ADR_EPS_RATIO["TSM"] = 1).
+  // also the original assumption for TSM (×5) and BABA (×8), which turned out to
+  // be wrong: FMP normalises their shares to ADR-equivalent units, so epsAvg is
+  // already per-ADR and epsScale should be 1.
   //
-  // TM, BABA, BHP, AMX may be in the same category. To verify:
-  //   1. Fetch /api/fmp/analyst-estimates?symbol=TM (or BABA / BHP / AMX)
-  //   2. Compare epsAvg magnitude against the known ADR price and P/E
-  //      e.g. TM ADR ~$185, if epsAvg is already ~$18 (not ~$1.8) → epsScale=1
+  // TM, BHP, AMX may be in the same category. To verify:
+  //   1. Fetch /api/fmp/analyst-estimates?symbol=TM (or BHP / AMX)
+  //   2. Compare epsAvg magnitude against epsDiluted from income-statement
+  //      e.g. TM ADR ~$185, if epsAvg ≈ $18 per share in JPY → epsScale=1
   //   3. If wrong, add ADR_EPS_RATIO["TM"] = 1 to constants.ts
   //
   // Until verified, these tests document the CURRENT behaviour, not confirmed truth.
@@ -511,9 +511,13 @@ describe("analyst EPS normalization with ADR ratio + FX", () => {
     expect(result).toBeCloseTo(250 * 10 * 0.0067, 4);
   });
 
-  it("BABA: analyst EPS in CNH × ratio 8 × CNHUSD [⚠ unverified — see comment above]", () => {
+  it("BABA: analyst EPS in CNH × ratio 1 × CNHUSD (ADR_EPS_RATIO override)", () => {
+    // FMP normalizes BABA shares to ADR-equivalent units; epsAvg is already per-ADR-unit in CNH
+    // epsDiluted FY2025 = 53.6 CNH; analyst estimates are in the same range (~35–73 CNH)
+    // epsScale=8 would inflate to 8.5 * 8 * 0.138 = $9.39 (8× too high)
     const result = epsOf(8.5, "BABA");
-    expect(result).toBeCloseTo(8.5 * 8 * 0.138, 4);
+    expect(result).toBeCloseTo(8.5 * 1 * 0.138, 4);
+    expect(result).not.toBeCloseTo(8.5 * 8 * 0.138, 4);
   });
 
   it("AMX: analyst EPS in MXN × ratio 20 × MXNUSD [⚠ unverified — see comment above]", () => {
@@ -532,8 +536,8 @@ describe("analyst EPS normalization with ADR ratio + FX", () => {
   });
 
   it("tickers without ADR_EPS_RATIO entry fall back to ADR_RATIO_TABLE", () => {
-    // TM, BABA, BHP, AMX have no ADR_EPS_RATIO entry → use ADR_RATIO_TABLE
-    for (const ticker of ["TM", "BABA", "BHP", "AMX"]) {
+    // TM, BHP, AMX have no ADR_EPS_RATIO entry → use ADR_RATIO_TABLE (⚠ unverified)
+    for (const ticker of ["TM", "BHP", "AMX"]) {
       expect(ADR_EPS_RATIO[ticker]).toBeUndefined();
       expect(ADR_RATIO_TABLE[ticker]).toBeGreaterThan(1);
     }
@@ -791,8 +795,9 @@ describe("dividend yield Tier 3 — profile.lastDiv with epsScale", () => {
     expect(yld).toBeCloseTo((1.00 * 4) / 100 * 100, 4); // 4%
   });
 
-  it("BABA (epsScale=8): freq=2, lastDiv divided by 8 before FX", () => {
-    // epsScale=8 → freq=2 (semi-annual), lastDivConverted = (lastDiv / 8) × fxRate
+  it("epsScale=8 ticker: freq=2, lastDiv divided by 8 before FX", () => {
+    // epsScale > 1 → freq=2 (semi-annual inference), lastDivConverted = (lastDiv / 8) × fxRate
+    // Models a hypothetical ADR where FMP reports lastDiv per ordinary share in home currency
     const yld = tier3Yield(8, 8, 0.138, 50);
     const expected = ((8 / 8) * 0.138 * 2) / 50 * 100;
     expect(yld).toBeCloseTo(expected, 4);
@@ -804,9 +809,9 @@ describe("dividend yield Tier 3 — profile.lastDiv with epsScale", () => {
     expect(yld).toBeCloseTo(expected, 4);
   });
 
-  it("zero lastDiv → yield = 0", () => {
+  it("zero lastDiv → yield = 0 regardless of epsScale", () => {
     expect(tier3Yield(0, 1, 1, 100)).toBe(0);
-    expect(tier3Yield(0, 8, 0.138, 50)).toBe(0);
+    expect(tier3Yield(0, 10, 0.0067, 50)).toBe(0);
   });
 
   it("epsScale boundary: epsScale=1 uses freq=4, epsScale=2 uses freq=2", () => {

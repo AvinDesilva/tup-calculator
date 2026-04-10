@@ -46,8 +46,9 @@ export const ADR_RATIO_TABLE: Record<string, number> = {
 // share derivation, but the actual ordinary-shares-per-ADR for EPS scaling differs.
 // Entries here override ADR_RATIO_TABLE for analyst estimate scaling only.
 export const ADR_EPS_RATIO: Record<string, number> = {
-  NVO: 1,  // 1 ADR = 1 B-share — ratio 6 in ADR_RATIO_TABLE forces mktCap/price shares, but EPS scale is 1
-  TSM: 1,  // FMP normalizes TSM shares to ADR-equivalent units (÷5); epsAvg is already per-ADR-unit in TWD
+  NVO:  1,  // 1 ADR = 1 B-share — ratio 6 in ADR_RATIO_TABLE forces mktCap/price shares, but EPS scale is 1
+  TSM:  1,  // FMP normalizes TSM shares to ADR-equivalent units (÷5); epsAvg is already per-ADR-unit in TWD
+  BABA: 1,  // FMP normalizes BABA shares to ADR-equivalent units (~2.35B); epsAvg is already per-ADR-unit in CNH
 };
 
 // ─── ADR underlying financials currency ─────────────────────────────────────
