@@ -47,6 +47,7 @@ export const ADR_RATIO_TABLE: Record<string, number> = {
 // Entries here override ADR_RATIO_TABLE for analyst estimate scaling only.
 export const ADR_EPS_RATIO: Record<string, number> = {
   NVO: 1,  // 1 ADR = 1 B-share — ratio 6 in ADR_RATIO_TABLE forces mktCap/price shares, but EPS scale is 1
+  TSM: 1,  // FMP normalizes TSM shares to ADR-equivalent units (÷5); epsAvg is already per-ADR-unit in TWD
 };
 
 // ─── ADR underlying financials currency ─────────────────────────────────────

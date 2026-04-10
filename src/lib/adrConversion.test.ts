@@ -71,9 +71,14 @@ describe("ADR_FINANCIALS_CCY overrides FMP-reported currency", () => {
 describe("FX rate application — one test per currency region", () => {
   /**
    * Mimics the core conversion logic in api.ts:
-   *   totalDebt = rawDebt * fxRate
-   *   totalCash = rawCash * fxRate
-   *   ttmEPS    = (rawNetIncome * fxRate) / adrShares
+   *   totalDebt     = rawDebt * fxRate
+   *   totalCash     = rawCash * fxRate
+   *   ttmEPS        = (rawNetIncome * fxRate) / adrShares
+   *   revenuePerShare = (rawRevenue * fxRate) / adrShares
+   *
+   * Note: adrShares from deriveShares() already returns the correct per-ADR unit
+   * count (either from mktCap/price for forced derivation, or sharesOutstanding).
+   * No additional epsScale is applied to ttmEPS — it is inherently per-ADR.
    */
   function applyConversion(
     rawDebt: number,
@@ -95,8 +100,11 @@ describe("FX rate application — one test per currency region", () => {
     return FALLBACK_FX[`${ccy}USD`] || 1;
   }
 
-  it("TSM (Taiwan, TWD) — debt converts correctly", () => {
+  it("TSM (Taiwan, TWD) — debt converts correctly, ttmEPS per ADR-unit share", () => {
     const fx = getFxRate("TWD"); // 0.031
+    // FMP normalizes TSM shares to ADR-equivalent units (~5.187B = 25.9B ordinary ÷ 5)
+    // So adrShares from deriveShares is already the ADR unit count.
+    // ttmEPS = netIncome × fxRate / adrUnits — no additional scaling needed.
     const r = applyConversion(1_900_000_000_000, 200_000_000_000, 800_000_000_000, 2_500_000_000_000, 5_180_000_000, fx);
     expect(r.totalDebt).toBeCloseTo(1_900_000_000_000 * 0.031, 0);
     expect(r.totalCash).toBeCloseTo(200_000_000_000 * 0.031, 0);
@@ -459,10 +467,13 @@ describe("analyst EPS normalization with ADR ratio + FX", () => {
     return (epsAvg * epsScale) * fxRate;
   }
 
-  it("TSM: analyst EPS in TWD × ratio 5 × TWDUSD", () => {
-    // FMP reports EPS per ordinary share in TWD; 1 ADR = 5 shares → scale by 5
+  it("TSM: analyst EPS in TWD × ratio 1 × TWDUSD (ADR_EPS_RATIO override)", () => {
+    // FMP reports epsAvg per ADR-unit in TWD (already normalized, not per-ordinary-share)
+    // ADR_EPS_RATIO["TSM"] = 1 → epsScale = 1, only FX conversion applies
     const result = epsOf(6, "TSM");
-    expect(result).toBeCloseTo(6 * 5 * 0.031, 4);
+    expect(result).toBeCloseTo(6 * 1 * 0.031, 4);
+    // Without the override: 6 * 5 * 0.031 = 0.93 (5× too high)
+    expect(result).not.toBeCloseTo(6 * 5 * 0.031, 4);
   });
 
   it("NVO: analyst EPS in DKK × ratio 1 × DKKUSD (ADR_EPS_RATIO override)", () => {
@@ -507,8 +518,8 @@ describe("analyst EPS normalization with ADR ratio + FX", () => {
   });
 
   it("tickers without ADR_EPS_RATIO entry fall back to ADR_RATIO_TABLE", () => {
-    // TSM, TM, BABA, BHP, AMX have no ADR_EPS_RATIO entry → use ADR_RATIO_TABLE
-    for (const ticker of ["TSM", "TM", "BABA", "BHP", "AMX"]) {
+    // TM, BABA, BHP, AMX have no ADR_EPS_RATIO entry → use ADR_RATIO_TABLE
+    for (const ticker of ["TM", "BABA", "BHP", "AMX"]) {
       expect(ADR_EPS_RATIO[ticker]).toBeUndefined();
       expect(ADR_RATIO_TABLE[ticker]).toBeGreaterThan(1);
     }
@@ -521,5 +532,68 @@ describe("analyst EPS normalization with ADR ratio + FX", () => {
       const epsScale = ADR_EPS_RATIO[ticker] ?? adrRatio;
       expect(epsScale).toBe(1);
     }
+  });
+});
+
+// ── H. TSM forwardEPS fix — ADR_EPS_RATIO["TSM"] = 1 ────────────────────────
+// Root cause of the TSM $40 bug:
+//   FMP normalizes TSM shares to ADR-equivalent units (25.9B ordinary ÷ 5 = 5.187B ADR units)
+//   → deriveShares returns 5.187B = ADR unit count (already per-ADR)
+//   → ttmEPS = netIncome × fxRate / adrUnits = per-ADR EPS (correct, ~$10.37 at FALLBACK_FX)
+//   → But analyst epsAvg from FMP is also per-ADR-unit in home currency
+//   → epsOf applied epsScale=5 → forwardEPS was 5× too high
+//
+// Fix: ADR_EPS_RATIO["TSM"] = 1 → epsScale=1 for analyst estimates
+// epsBase = (ttmEPS + forwardEPS) / 2 now correctly ~$11–14 at FALLBACK_FX,
+// vs old (buggy) $40 from ($8.53 + $71.49) / 2 at live fxRate.
+
+describe("TSM forwardEPS fix — ADR_EPS_RATIO override", () => {
+  it("ADR_EPS_RATIO['TSM'] is 1 (analyst estimates are per-ADR-unit, not per-ordinary)", () => {
+    expect(ADR_EPS_RATIO["TSM"]).toBe(1);
+    // ADR_RATIO_TABLE still has 5 (still needed for deriveShares mktCap/price override)
+    expect(ADR_RATIO_TABLE["TSM"]).toBe(5);
+  });
+
+  it("TSM epsScale resolves to 1 (ADR_EPS_RATIO override wins over ADR_RATIO_TABLE)", () => {
+    const adrRatio = ADR_RATIO_TABLE["TSM"] || 1; // 5
+    const epsScale = ADR_EPS_RATIO["TSM"] ?? adrRatio; // 1 (override)
+    expect(epsScale).toBe(1);
+  });
+
+  it("TSM ttmEPS (from netIncome / adrUnits) already gives per-ADR EPS", () => {
+    // FMP's weightedAverageShsOut for TSM ≈ 5.187B (ADR units = 25.9B ordinary ÷ 5)
+    // ttmEPS = netIncome × fxRate / adrUnits = per-ADR EPS
+    const netIncome = 1_735_678_080_000; // TWD (FY2025 actual)
+    const fxRate    = FALLBACK_FX["TWDUSD"]; // 0.031
+    const adrUnits  = 5_187_000_000;     // ADR-equivalent share count from FMP
+    const ttmEPS    = (netIncome * fxRate) / adrUnits;
+    // ≈ $10.37/ADR — close to Google's ~$10.64 (difference from FALLBACK_FX vs live rate)
+    expect(ttmEPS).toBeGreaterThan(8);
+    expect(ttmEPS).toBeLessThan(13);
+  });
+
+  it("TSM epsOf with old epsScale=5 would inflate forwardEPS 5×", () => {
+    const epsAvg   = 560.71; // TWD/ADR-unit (FMP 2027 estimate)
+    const fxRate   = FALLBACK_FX["TWDUSD"]; // 0.031
+    const wrongEps = (epsAvg * 5) * fxRate; // old behaviour
+    const rightEps = (epsAvg * 1) * fxRate; // with ADR_EPS_RATIO["TSM"] = 1
+    expect(wrongEps).toBeCloseTo(rightEps * 5, 1);
+    expect(wrongEps).toBeGreaterThan(80); // ≈ $86.91 — clearly wrong
+    expect(rightEps).toBeLessThan(20);    // ≈ $17.38 — reasonable forward EPS
+  });
+
+  it("TSM: epsBase with fix is in single digits to low teens (not ~$40)", () => {
+    const netIncome = 1_735_678_080_000;
+    const epsAvg    = 560.71; // TWD/ADR-unit (2027 estimate)
+    const fxRate    = FALLBACK_FX["TWDUSD"]; // 0.031
+    const adrUnits  = 5_187_000_000;
+    const epsScale  = ADR_EPS_RATIO["TSM"] ?? ADR_RATIO_TABLE["TSM"]; // 1
+
+    const ttmEPS     = (netIncome * fxRate) / adrUnits;
+    const forwardEPS = (epsAvg * epsScale) * fxRate;
+    const epsBase    = (ttmEPS + forwardEPS) / 2;
+
+    expect(epsBase).toBeGreaterThan(10);
+    expect(epsBase).toBeLessThan(16);  // ~$13.9 at FALLBACK_FX 0.031
   });
 });
