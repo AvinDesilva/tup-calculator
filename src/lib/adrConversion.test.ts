@@ -6,7 +6,7 @@ import {
   FALLBACK_FX,
   EXCHANGE_CCY,
 } from "./constants.ts";
-import { deriveShares } from "./api.ts";
+import { deriveShares, sanitizedNetIncome } from "./api.ts";
 
 // ── A. Currency resolution priority ──────────────────────────────────────────
 // ADR_FINANCIALS_CCY must override FMP-reported "USD" for NYSE-listed ADRs.
@@ -492,17 +492,31 @@ describe("analyst EPS normalization with ADR ratio + FX", () => {
     expect(ADR_RATIO_TABLE["NVO"]).toBe(6);
   });
 
-  it("TM: analyst EPS in JPY × ratio 10 × JPYUSD", () => {
+  // ⚠ UNVERIFIED ASSUMPTION — TM, BABA, BHP, AMX
+  // These tests assert epsScale = ADR_RATIO_TABLE value (e.g. TM ×10). This was
+  // also the original assumption for TSM (×5), which turned out to be wrong: FMP
+  // normalises TSM's shares to ADR-equivalent units, so epsAvg is already per-ADR
+  // and epsScale should be 1 (hence ADR_EPS_RATIO["TSM"] = 1).
+  //
+  // TM, BABA, BHP, AMX may be in the same category. To verify:
+  //   1. Fetch /api/fmp/analyst-estimates?symbol=TM (or BABA / BHP / AMX)
+  //   2. Compare epsAvg magnitude against the known ADR price and P/E
+  //      e.g. TM ADR ~$185, if epsAvg is already ~$18 (not ~$1.8) → epsScale=1
+  //   3. If wrong, add ADR_EPS_RATIO["TM"] = 1 to constants.ts
+  //
+  // Until verified, these tests document the CURRENT behaviour, not confirmed truth.
+
+  it("TM: analyst EPS in JPY × ratio 10 × JPYUSD [⚠ unverified — see comment above]", () => {
     const result = epsOf(250, "TM");
     expect(result).toBeCloseTo(250 * 10 * 0.0067, 4);
   });
 
-  it("BABA: analyst EPS in CNH × ratio 8 × CNHUSD", () => {
+  it("BABA: analyst EPS in CNH × ratio 8 × CNHUSD [⚠ unverified — see comment above]", () => {
     const result = epsOf(8.5, "BABA");
     expect(result).toBeCloseTo(8.5 * 8 * 0.138, 4);
   });
 
-  it("AMX: analyst EPS in MXN × ratio 20 × MXNUSD", () => {
+  it("AMX: analyst EPS in MXN × ratio 20 × MXNUSD [⚠ unverified — see comment above]", () => {
     const result = epsOf(1.2, "AMX");
     expect(result).toBeCloseTo(1.2 * 20 * 0.058, 4);
   });
@@ -595,5 +609,211 @@ describe("TSM forwardEPS fix — ADR_EPS_RATIO override", () => {
 
     expect(epsBase).toBeGreaterThan(10);
     expect(epsBase).toBeLessThan(16);  // ~$13.9 at FALLBACK_FX 0.031
+  });
+});
+
+// ── I. sanitizedNetIncome — FMP netIncome corruption guard ───────────────────
+// FMP occasionally returns a corrupted netIncome (e.g. $222,800 instead of
+// $222.8M) while epsDiluted on the same row is correct.
+// When derivedEps (netIncome / shares) diverges from reportedEps by >50%,
+// the function returns reportedEps × shares instead.
+// Source: api.ts:131-150
+
+describe("sanitizedNetIncome — netIncome corruption detection", () => {
+  it("normal case: values agree — returns netIncome unchanged", () => {
+    // derivedEps = 100M / 100M = 1.00, reportedEps = 1.00 → no divergence
+    const result = sanitizedNetIncome(
+      { netIncome: 100_000_000, epsDiluted: 1.00, weightedAverageShsOutDil: 100_000_000 },
+      100_000_000,
+    );
+    expect(result).toBe(100_000_000);
+  });
+
+  it("corrupted — netIncome ~1000× too small: returns epsDiluted × shares", () => {
+    // FMP bug: $222,800 reported instead of $222.8M
+    // derivedEps = 222_800 / 100M = 0.002228 vs reportedEps = 2.228 → >50% diverge
+    const result = sanitizedNetIncome(
+      { netIncome: 222_800, epsDiluted: 2.228, weightedAverageShsOutDil: 100_000_000 },
+      100_000_000,
+    );
+    expect(result).toBeCloseTo(2.228 * 100_000_000, 0);
+  });
+
+  it("corrupted — netIncome ~1000× too large: corrects downward", () => {
+    // derivedEps = 222.8B / 100M = 2228 vs reportedEps = 2.228 → >50% diverge
+    const result = sanitizedNetIncome(
+      { netIncome: 222_800_000_000, epsDiluted: 2.228, weightedAverageShsOutDil: 100_000_000 },
+      100_000_000,
+    );
+    expect(result).toBeCloseTo(2.228 * 100_000_000, 0);
+  });
+
+  it("near-zero both — skips divergence check, returns netIncome", () => {
+    // Both < 0.001: treated as "near zero", no correction applied
+    const result = sanitizedNetIncome(
+      { netIncome: 0.000005, epsDiluted: 0.000005, weightedAverageShsOutDil: 1_000_000 },
+      1_000_000,
+    );
+    expect(result).toBe(0.000005);
+  });
+
+  it("missing epsDiluted — no correction possible, returns netIncome", () => {
+    // Without reportedEps, the divergence check is skipped entirely
+    const result = sanitizedNetIncome(
+      { netIncome: 100_000_000, weightedAverageShsOutDil: 100_000_000 },
+      100_000_000,
+    );
+    expect(result).toBe(100_000_000);
+  });
+
+  it("negative netIncome (valid loss) — within tolerance, returned unchanged", () => {
+    // derivedEps = -50M / 100M = -0.50, reportedEps = -0.50 → agree
+    const result = sanitizedNetIncome(
+      { netIncome: -50_000_000, epsDiluted: -0.50, weightedAverageShsOutDil: 100_000_000 },
+      100_000_000,
+    );
+    expect(result).toBe(-50_000_000);
+  });
+
+  it("falls back to fallbackShares when weightedAverageShsOutDil is absent", () => {
+    // Uses fallbackShares (2nd arg) when income statement row has no share count
+    const result = sanitizedNetIncome(
+      { netIncome: 200_000_000, epsDiluted: 2.00 },
+      100_000_000,  // fallbackShares
+    );
+    // derivedEps = 200M / 100M = 2.00, reportedEps = 2.00 → agree
+    expect(result).toBe(200_000_000);
+  });
+});
+
+// ── J. Bear/bull analyst EPS scaling ─────────────────────────────────────────
+// Mirrors epsOfBear / epsOfBull in api.ts:511-512:
+//   epsOfBear = (e) => ((e?.epsLow  || 0) * epsScale) * fxRate
+//   epsOfBull = (e) => ((e?.epsHigh || 0) * epsScale) * fxRate
+//
+// These use the same epsScale as epsOf, so ADR_EPS_RATIO overrides apply equally.
+// 6 fields in TickerData (fwdGrowthY1Bear/Bull, fwdGrowthY2Bear/Bull,
+// fwdCAGRBear/Bull) depend on these functions being scaled correctly.
+
+describe("bear/bull analyst EPS scaling", () => {
+  function epsOfBear(epsLow: number | null, ticker: string): number {
+    const adrRatio = ADR_RATIO_TABLE[ticker] || 1;
+    const epsScale = ADR_EPS_RATIO[ticker] ?? adrRatio;
+    const ccy    = ADR_FINANCIALS_CCY[ticker];
+    const fxRate = ccy ? (FALLBACK_FX[`${ccy}USD`] || 1) : 1;
+    return ((epsLow || 0) * epsScale) * fxRate;
+  }
+
+  function epsOfBull(epsHigh: number | null, ticker: string): number {
+    const adrRatio = ADR_RATIO_TABLE[ticker] || 1;
+    const epsScale = ADR_EPS_RATIO[ticker] ?? adrRatio;
+    const ccy    = ADR_FINANCIALS_CCY[ticker];
+    const fxRate = ccy ? (FALLBACK_FX[`${ccy}USD`] || 1) : 1;
+    return ((epsHigh || 0) * epsScale) * fxRate;
+  }
+
+  it("TSM bear: ADR_EPS_RATIO=1 applies — epsLow × 1 × TWDUSD (not ×5)", () => {
+    expect(epsOfBear(5, "TSM")).toBeCloseTo(5 * 1 * 0.031, 4);
+    expect(epsOfBear(5, "TSM")).not.toBeCloseTo(5 * 5 * 0.031, 4);
+  });
+
+  it("TSM bull: ADR_EPS_RATIO=1 applies — epsHigh × 1 × TWDUSD (not ×5)", () => {
+    expect(epsOfBull(7, "TSM")).toBeCloseTo(7 * 1 * 0.031, 4);
+    expect(epsOfBull(7, "TSM")).not.toBeCloseTo(7 * 5 * 0.031, 4);
+  });
+
+  it("NVO bear: ADR_EPS_RATIO=1 applies — epsLow × 1 × DKKUSD (not ×6)", () => {
+    expect(epsOfBear(12, "NVO")).toBeCloseTo(12 * 1 * 0.145, 4);
+    expect(epsOfBear(12, "NVO")).not.toBeCloseTo(12 * 6 * 0.145, 4);
+  });
+
+  it("NVO bull: ADR_EPS_RATIO=1 applies — epsHigh × 1 × DKKUSD (not ×6)", () => {
+    expect(epsOfBull(18, "NVO")).toBeCloseTo(18 * 1 * 0.145, 4);
+    expect(epsOfBull(18, "NVO")).not.toBeCloseTo(18 * 6 * 0.145, 4);
+  });
+
+  it("TM bear: no ADR_EPS_RATIO override — uses ADR_RATIO_TABLE ×10", () => {
+    // ⚠ See Section G unverified assumption note — ratio may need investigation
+    expect(epsOfBear(200, "TM")).toBeCloseTo(200 * 10 * 0.0067, 4);
+  });
+
+  it("ASML bear: ratio=1 — only FX conversion", () => {
+    expect(epsOfBear(18, "ASML")).toBeCloseTo(18 * 1 * 1.09, 4);
+  });
+
+  it("AAPL bear: domestic — value returned unchanged", () => {
+    expect(epsOfBear(6, "AAPL")).toBeCloseTo(6, 4);
+  });
+
+  it("null input → 0 for both bear and bull", () => {
+    expect(epsOfBear(null, "TSM")).toBe(0);
+    expect(epsOfBull(null, "TSM")).toBe(0);
+    expect(epsOfBear(null, "AAPL")).toBe(0);
+  });
+
+  it("bear < base < bull — scale ordering is preserved for NVO", () => {
+    // All three functions apply the same epsScale; ordering comes from data
+    const base = (15 * 1) * 0.145;
+    const bear = (12 * 1) * 0.145;
+    const bull = (18 * 1) * 0.145;
+    expect(bear).toBeLessThan(base);
+    expect(bull).toBeGreaterThan(base);
+  });
+});
+
+// ── K. Dividend yield — Tier 3 (profile.lastDiv with epsScale) ───────────────
+// When Tiers 1 and 2 produce no dividend yield, Tier 3 falls back to
+// profile.lastDiv with epsScale-aware conversion (api.ts:789-793):
+//
+//   const freq             = epsScale > 1 ? 2 : 4;
+//   const lastDivConverted = (p.lastDiv / epsScale) * fxRate;
+//   dividendYield          = (lastDivConverted * freq) / livePrice * 100;
+//
+// epsScale > 1 infers a semi-annual payout (typical for many non-US ADRs);
+// dividing by epsScale converts a per-ordinary-share amount to per-ADR-unit.
+
+describe("dividend yield Tier 3 — profile.lastDiv with epsScale", () => {
+  function tier3Yield(
+    lastDiv: number,
+    epsScale: number,
+    fxRate: number,
+    livePrice: number,
+  ): number {
+    if (!lastDiv || lastDiv <= 0 || livePrice <= 0) return 0;
+    const freq             = epsScale > 1 ? 2 : 4;
+    const lastDivConverted = (lastDiv / epsScale) * fxRate;
+    return (lastDivConverted * freq) / livePrice * 100;
+  }
+
+  it("domestic / NVO / TSM (epsScale=1): freq=4, no division by epsScale", () => {
+    // epsScale=1 → freq=4 (quarterly assumption), lastDivConverted = lastDiv × fxRate
+    const yld = tier3Yield(1.00, 1, 1, 100);
+    expect(yld).toBeCloseTo((1.00 * 4) / 100 * 100, 4); // 4%
+  });
+
+  it("BABA (epsScale=8): freq=2, lastDiv divided by 8 before FX", () => {
+    // epsScale=8 → freq=2 (semi-annual), lastDivConverted = (lastDiv / 8) × fxRate
+    const yld = tier3Yield(8, 8, 0.138, 50);
+    const expected = ((8 / 8) * 0.138 * 2) / 50 * 100;
+    expect(yld).toBeCloseTo(expected, 4);
+  });
+
+  it("AMX (epsScale=20): freq=2, lastDiv divided by 20 before FX", () => {
+    const yld = tier3Yield(20, 20, 0.058, 25);
+    const expected = ((20 / 20) * 0.058 * 2) / 25 * 100;
+    expect(yld).toBeCloseTo(expected, 4);
+  });
+
+  it("zero lastDiv → yield = 0", () => {
+    expect(tier3Yield(0, 1, 1, 100)).toBe(0);
+    expect(tier3Yield(0, 8, 0.138, 50)).toBe(0);
+  });
+
+  it("epsScale boundary: epsScale=1 uses freq=4, epsScale=2 uses freq=2", () => {
+    const withScale1 = tier3Yield(1, 1, 1, 100);
+    const withScale2 = tier3Yield(1, 2, 1, 100);
+    // freq=4 vs freq=2 (but also divided by 2), so net yield is same
+    expect(withScale1).toBeCloseTo(4, 4);   // (1/1 × 1 × 4) / 100 × 100 = 4%
+    expect(withScale2).toBeCloseTo(1, 4);   // (1/2 × 1 × 2) / 100 × 100 = 1%
   });
 });

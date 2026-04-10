@@ -128,7 +128,7 @@ export async function fetchFMP<T = unknown>(endpoint: string): Promise<T> {
 // FMP occasionally returns a corrupted netIncome (e.g. $222,800 instead of
 // $222.8M) while the eps/epsDiluted fields on the same row are correct.
 // When the two diverge by more than 50%, trust epsDiluted × diluted shares.
-function sanitizedNetIncome(y: FMPIncomeStatement, fallbackShares: number): number {
+export function sanitizedNetIncome(y: FMPIncomeStatement, fallbackShares: number): number {
   const ni = y.netIncome ?? 0;
   const sh = y.weightedAverageShsOutDil || y.weightedAverageShsOut || fallbackShares;
   const reportedEps = y.epsDiluted ?? y.eps;
