@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 
 import { calcTUP } from "./lib/calcTUP.ts";
 import { C } from "./lib/theme.ts";
-import type { InputState, Mode, TUPResult, GrowthScenario } from "./lib/types.ts";
+import type { InputState, Mode, TUPResult, GrowthScenario, PriceMode } from "./lib/types.ts";
 
 import { VerdictCard } from "./components/VerdictCard";
 import { ValuationContext } from "./components/ValuationContext";
@@ -40,8 +40,25 @@ export default function App() {
   } = useTickerFetch();
 
   const [showMethodology, setShowMethodology] = useState(false);
+  const [priceMode, setPriceMode] = useState<PriceMode>("adj");
   const mode: Mode = "standard";
-  const result: TUPResult | null = useMemo(() => calcTUP(inp, mode), [inp, mode]);
+  const result: TUPResult | null = useMemo(
+    () => calcTUP(inp, mode, priceMode === "listed" && inp.currentPrice > 0 ? inp.currentPrice : undefined),
+    [inp, mode, priceMode],
+  );
+
+  const { displayStrongBuyPrice, displayBuyPrice } = useMemo(() => {
+    if (!result || result.rows.length < 10)
+      return { displayStrongBuyPrice: strongBuyPrice, displayBuyPrice: buyPrice };
+    if (priceMode === "listed") {
+      const sb = result.rows[6].cum;
+      const bp = result.rows[9].cum;
+      return { displayStrongBuyPrice: sb > 0 ? sb : null, displayBuyPrice: bp > 0 ? bp : null };
+    }
+    return { displayStrongBuyPrice: strongBuyPrice, displayBuyPrice: buyPrice };
+  }, [priceMode, result, strongBuyPrice, buyPrice]);
+
+  const handleFetch = (sym?: string) => { setPriceMode("adj"); doFetch(sym); };
 
   const onScenarioChange = (s: GrowthScenario) => {
     setGrowthScenario(s);
@@ -75,11 +92,11 @@ export default function App() {
           <HeroSearch
             ticker={ticker}
             onTickerChange={setTicker}
-            onTickerSelect={(sym: string) => { setTicker(sym); doFetch(sym); }}
-            onFetch={doFetch}
+            onTickerSelect={(sym: string) => { setTicker(sym); handleFetch(sym); }}
+            onFetch={handleFetch}
             loading={loading}
             error={error}
-            onRollDice={rollDice}
+            onRollDice={() => { setPriceMode("adj"); rollDice(); }}
             onCancelDice={cancelDice}
             rollingDice={rollingDice}
             dicePhrase={dicePhrase}
@@ -97,12 +114,12 @@ export default function App() {
           <CompactTickerBar
             ticker={ticker}
             onTickerChange={setTicker}
-            onTickerSelect={(sym: string) => { setTicker(sym); doFetch(sym); }}
-            onFetch={doFetch}
+            onTickerSelect={(sym: string) => { setTicker(sym); handleFetch(sym); }}
+            onFetch={handleFetch}
             loading={loading}
             error={error}
             fetchLog={fetchLog}
-            onRollDice={rollDice}
+            onRollDice={() => { setPriceMode("adj"); rollDice(); }}
             onCancelDice={cancelDice}
             rollingDice={rollingDice}
             dicePhrase={dicePhrase}
@@ -135,6 +152,8 @@ export default function App() {
               growthScenario={growthScenario}
               onScenarioChange={onScenarioChange}
               hasScenarioData={hasScenarioData}
+              priceMode={priceMode}
+              onPriceModeToggle={() => setPriceMode(m => m === "adj" ? "listed" : "adj")}
               onGrowthStep={(d: number) => {
               setGrowthScenario("base");
               setInp(p => ({
@@ -198,14 +217,15 @@ export default function App() {
           {/* Right column top: Valuation + Scorecard */}
           <div className="rsp-right-top" style={{ paddingLeft: "40px", paddingTop: "12px", paddingBottom: "28px", animation: "fadeInUp 0.5s 0.2s ease both" }}>
             <ValuationContext
-              strongBuyPrice={strongBuyPrice}
-              buyPrice={buyPrice}
+              strongBuyPrice={displayStrongBuyPrice}
+              buyPrice={displayBuyPrice}
               dcf={valuation.dcf}
               currentPrice={inp.currentPrice}
               adjPrice={result?.adjPrice}
               industryGrowth={valuation.industryGrowth}
               industryGrowthLoading={valuation.industryGrowthLoading}
               companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
+              priceMode={priceMode}
             />
             {company && (
               <CompanyScorecard

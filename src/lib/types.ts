@@ -10,6 +10,8 @@ export type LifecycleStage = "startup" | "young_growth" | "high_growth" | "matur
 
 export type DecayMode = "ff" | "vdr" | "none";
 
+export type PriceMode = "adj" | "listed";
+
 // ─── Calculator inputs ────────────────────────────────────────────────────────
 
 export interface InputState {

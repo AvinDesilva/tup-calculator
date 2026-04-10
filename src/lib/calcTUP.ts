@@ -8,7 +8,7 @@ import { fadedGrowth, fixedFrictionGrowth, type VDRContext } from "./vdr.ts";
  * Computes how many years of compounded EPS growth it takes to recover the
  * adjusted share price (enterprise value per share).
  */
-export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
+export function calcTUP(inp: InputState, mode: Mode, targetPriceOverride?: number): TUPResult | null {
   const {
     marketCap, debt, cash, shares, ttmEPS, forwardEPS,
     historicalGrowth, analystGrowth, fwdGrowthY1, fwdGrowthY2,
@@ -20,6 +20,9 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
   if (!shares || shares <= 0) return null;
 
   const adjPrice = (marketCap + debt - cash) / shares;
+  const paybackTarget = (targetPriceOverride != null && targetPriceOverride > 0)
+    ? targetPriceOverride
+    : adjPrice;
   let epsBase: number, threshold: number, startYr: number;
   let grY1: number, grY2: number, grTerminal: number;
 
@@ -68,7 +71,7 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
 
   // Detect edge cases that make the payback calculation meaningless
   let paybackNote: string | null = null;
-  if (adjPrice < 0) {
+  if (paybackTarget < 0) {
     paybackNote = "Adjusted share price is negative — cash exceeds enterprise value, so payback cannot be calculated.";
   } else if (gr < 0) {
     paybackNote = "Growth rate is negative — earnings are declining, so payback cannot be calculated.";
@@ -105,8 +108,8 @@ export function calcTUP(inp: InputState, mode: Mode): TUPResult | null {
     eps *= (1 + yearGr);
     const annual = y >= startYr ? eps : 0;
     cum += annual;
-    rows.push({ year: y, growthRate: yearGr * 100, annual, cum, remaining: Math.max(0, adjPrice - cum) });
-    if (cum >= adjPrice && !payback) payback = y;
+    rows.push({ year: y, growthRate: yearGr * 100, annual, cum, remaining: Math.max(0, paybackTarget - cum) });
+    if (cum >= paybackTarget && !payback) payback = y;
   }
 
   // Override payback to null when calculation is meaningless

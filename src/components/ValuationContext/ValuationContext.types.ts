@@ -1,4 +1,5 @@
 import type { IndustryGrowthData } from "../../lib/api.ts";
+import type { PriceMode } from "../../lib/types.ts";
 
 export interface ValuationContextProps {
   strongBuyPrice: number | null;
@@ -9,6 +10,7 @@ export interface ValuationContextProps {
   industryGrowth?: IndustryGrowthData | null;
   industryGrowthLoading?: boolean;
   companyBlendedGrowth?: number | null;
+  priceMode?: PriceMode;
 }
 
 export interface PanelData {

@@ -1,7 +1,7 @@
 import { Panel } from "./Panel.tsx";
 import type { ValuationContextProps, PanelData } from "./ValuationContext.types.ts";
 
-export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, adjPrice, industryGrowth, industryGrowthLoading = false, companyBlendedGrowth }: ValuationContextProps) {
+export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, adjPrice, industryGrowth, industryGrowthLoading = false, companyBlendedGrowth, priceMode = "adj" }: ValuationContextProps) {
   const mono = "'JetBrains Mono', monospace";
 
   const hasStrongBuy = strongBuyPrice != null && strongBuyPrice > 0 && currentPrice > 0;
@@ -49,12 +49,14 @@ export function ValuationContext({ strongBuyPrice, buyPrice, dcf, currentPrice, 
     }
   }
 
-  // Sub text: % diff vs adjusted price for buy targets, vs current price for DCF
-  const hasAdj = adjPrice != null && adjPrice > 0;
-  const sbDiffPct = hasStrongBuy && hasAdj ? (((strongBuyPrice as number) - adjPrice) / adjPrice) * 100 : null;
-  const buyDiffPct = hasBuy && hasAdj ? (((buyPrice as number) - adjPrice) / adjPrice) * 100 : null;
+  // Sub text: % diff vs reference price (adj price or listed price based on mode)
+  const refPrice = priceMode === "listed" ? currentPrice : adjPrice;
+  const hasRef = refPrice != null && refPrice > 0;
+  const sbDiffPct  = hasStrongBuy && hasRef ? (((strongBuyPrice as number) - (refPrice as number)) / (refPrice as number)) * 100 : null;
+  const buyDiffPct = hasBuy && hasRef       ? (((buyPrice as number)       - (refPrice as number)) / (refPrice as number)) * 100 : null;
 
-  const fmtDiff = (pct: number) => `${pct > 0 ? "+" : ""}${pct.toFixed(1)}% vs adj. price`;
+  const diffLabel = priceMode === "listed" ? "vs listed price" : "vs adj. price";
+  const fmtDiff = (pct: number) => `${pct > 0 ? "+" : ""}${pct.toFixed(1)}% ${diffLabel}`;
 
   // Build panels
   const sbPanel: PanelData | null = hasStrongBuy ? {

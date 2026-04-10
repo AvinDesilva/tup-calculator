@@ -4,7 +4,7 @@ import { f } from "../../lib/utils.ts";
 import { useHoldRepeat } from "../primitives";
 import type { VerdictCardProps } from "./VerdictCard.types.ts";
 
-export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, currentPrice, growthScenario, onScenarioChange, hasScenarioData }: VerdictCardProps) {
+export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, currentPrice, growthScenario, onScenarioChange, hasScenarioData, priceMode, onPriceModeToggle }: VerdictCardProps) {
   const holdDown = useHoldRepeat(() => onGrowthStep(-1));
   const holdUp   = useHoldRepeat(() => onGrowthStep(1));
   const [editingGrowth, setEditingGrowth] = useState(false);
@@ -94,17 +94,43 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
 
       {/* Stats — stacked vertically */}
       <div className="rsp-verdict-stats" style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-        {/* Adj. Price */}
+        {/* Price mode row */}
         <div style={{ padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={labelStyle}>Adj. Price</div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={labelStyle}>{priceMode === "adj" ? "Adj. Price" : "Listed Price"}</div>
             {currentPrice > 0 && (
-              <>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", fontWeight: 400, color: "#666" }}>${f(currentPrice)}</span>
-                <span style={{ fontSize: "10px", color: "#555" }}>→</span>
-              </>
+              <button
+                onClick={onPriceModeToggle}
+                aria-label={`Switch to ${priceMode === "adj" ? "listed" : "adjusted"} price mode`}
+                aria-pressed={priceMode === "listed"}
+                style={{
+                  fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em",
+                  textTransform: "uppercase", padding: "2px 6px",
+                  border: `1px solid ${priceMode === "listed" ? "#C4A06E" : "rgba(255,255,255,0.15)"}`,
+                  borderRadius: "10px",
+                  background: priceMode === "listed" ? "rgba(196,160,110,0.15)" : "transparent",
+                  color: priceMode === "listed" ? "#C4A06E" : "#555",
+                  cursor: "pointer", lineHeight: 1.4,
+                }}
+              >
+                {priceMode === "adj" ? "LISTED" : "ADJ"}
+              </button>
             )}
-            <span style={valueStyle}>${f(result.adjPrice)}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+            {priceMode === "adj" ? (
+              <>
+                {currentPrice > 0 && (
+                  <>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", fontWeight: 400, color: "#666" }}>${f(currentPrice)}</span>
+                    <span style={{ fontSize: "10px", color: "#555" }}>→</span>
+                  </>
+                )}
+                <span style={valueStyle}>${f(result.adjPrice)}</span>
+              </>
+            ) : (
+              <span style={valueStyle}>${f(currentPrice)}</span>
+            )}
           </div>
         </div>
         {/* EPS Base */}

@@ -1,4 +1,4 @@
-import type { TUPResult, GrowthScenario } from "../../lib/types.ts";
+import type { TUPResult, GrowthScenario, PriceMode } from "../../lib/types.ts";
 
 export interface VerdictCardProps {
   result: TUPResult | null;
@@ -9,4 +9,6 @@ export interface VerdictCardProps {
   growthScenario: GrowthScenario;
   onScenarioChange: (s: GrowthScenario) => void;
   hasScenarioData: boolean;
+  priceMode: PriceMode;
+  onPriceModeToggle: () => void;
 }
