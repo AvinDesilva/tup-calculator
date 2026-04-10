@@ -97,7 +97,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
         {/* Price mode row */}
         <div style={{ padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div style={labelStyle}>{priceMode === "adj" ? "Adj. Price" : "Listed Price"}</div>
+            <div style={{ ...labelStyle, marginBottom: 0 }}>{priceMode === "adj" ? "Adj. Price" : "Listed Price"}</div>
             {currentPrice > 0 && (
               <button
                 onClick={onPriceModeToggle}
