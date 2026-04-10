@@ -1,4 +1,4 @@
-import { ADR_RATIO_TABLE, ADR_FINANCIALS_CCY, EXCHANGE_CCY, FALLBACK_FX, MKTCAP_RANGES } from "./constants.ts";
+import { ADR_RATIO_TABLE, ADR_EPS_RATIO, ADR_FINANCIALS_CCY, EXCHANGE_CCY, FALLBACK_FX, MKTCAP_RANGES } from "./constants.ts";
 import { f, fB } from "./utils.ts";
 import { classifyLifecycle } from "./lifecycle.ts";
 import type {
@@ -485,6 +485,7 @@ export async function lookupTicker(
   // Derive TTM EPS from netIncome / shares (Basic Earnings), not quote.eps.
   // This reflects the company's actual profitability per share.
   const adrRatio     = ADR_RATIO_TABLE[t] || 1;
+  const epsScale     = ADR_EPS_RATIO[t] ?? adrRatio;
   const price        = q.price || p.price || 0;
   const adrShares    = deriveShares(t, mktCapVal, price, sharesOut, log);
   const rawNetIncome = inc[0] ? sanitizedNetIncome(inc[0], sharesOut) : 0;
@@ -506,9 +507,9 @@ export async function lookupTicker(
 
   // Normalize analyst EPS estimates to the current share count so dilution
   // doesn't skew the blended yield.  epsOf returns per-share in price currency.
-  const epsOf = (e: FMPEstimate | null): number => ((e?.epsAvg || 0) * adrRatio) * fxRate;
-  const epsOfBear = (e: FMPEstimate | null): number => ((e?.epsLow || 0) * adrRatio) * fxRate;
-  const epsOfBull = (e: FMPEstimate | null): number => ((e?.epsHigh || 0) * adrRatio) * fxRate;
+  const epsOf = (e: FMPEstimate | null): number => ((e?.epsAvg || 0) * epsScale) * fxRate;
+  const epsOfBear = (e: FMPEstimate | null): number => ((e?.epsLow || 0) * epsScale) * fxRate;
+  const epsOfBull = (e: FMPEstimate | null): number => ((e?.epsHigh || 0) * epsScale) * fxRate;
 
   // Forward EPS: analyst consensus, normalized to current shares.
   const forwardEPS    = (estFwd ? epsOf(estFwd) : 0) || (ttmEPS > 0 ? ttmEPS * 1.1 : 0);
@@ -786,10 +787,10 @@ export async function lookupTicker(
 
   // Tier 3: manual from profile.lastDiv
   if (dividendYield === 0 && p.lastDiv && p.lastDiv > 0 && livePrice > 0) {
-    const freq             = adrRatio > 1 ? 2 : 4;
-    const lastDivConverted = (p.lastDiv / adrRatio) * fxRate;
+    const freq             = epsScale > 1 ? 2 : 4;
+    const lastDivConverted = (p.lastDiv / epsScale) * fxRate;
     dividendYield          = (lastDivConverted * freq) / livePrice * 100;
-    divNote                = `lastDiv ${p.lastDiv.toFixed(4)} ÷ ${adrRatio} × ${fxRate.toFixed(4)} × ${freq} ÷ $${livePrice.toFixed(2)}`;
+    divNote                = `lastDiv ${p.lastDiv.toFixed(4)} ÷ ${epsScale} × ${fxRate.toFixed(4)} × ${freq} ÷ $${livePrice.toFixed(2)}`;
     log(`  ✓ Fwd div yield (manual lastDiv): ${dividendYield.toFixed(2)}%`);
   }
 

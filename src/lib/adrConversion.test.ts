@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   ADR_FINANCIALS_CCY,
   ADR_RATIO_TABLE,
+  ADR_EPS_RATIO,
   FALLBACK_FX,
   EXCHANGE_CCY,
 } from "./constants.ts";
@@ -444,24 +445,40 @@ describe("FALLBACK_FX has entries for all ADR currencies", () => {
 describe("analyst EPS normalization with ADR ratio + FX", () => {
   /**
    * Mimics epsOf() in api.ts:
-   *   const epsOf = (e) => ((e?.epsAvg || 0) * adrRatio) * fxRate
+   *   const epsScale = ADR_EPS_RATIO[t] ?? adrRatio
+   *   const epsOf = (e) => ((e?.epsAvg || 0) * epsScale) * fxRate
+   *
+   * ADR_EPS_RATIO overrides ADR_RATIO_TABLE for tickers where share-count
+   * derivation ratio ≠ ordinary-shares-per-ADR for EPS purposes (e.g. NVO).
    */
   function epsOf(epsAvg: number, ticker: string): number {
     const adrRatio = ADR_RATIO_TABLE[ticker] || 1;
+    const epsScale = ADR_EPS_RATIO[ticker] ?? adrRatio;
     const ccy = ADR_FINANCIALS_CCY[ticker];
     const fxRate = ccy ? (FALLBACK_FX[`${ccy}USD`] || 1) : 1;
-    return (epsAvg * adrRatio) * fxRate;
+    return (epsAvg * epsScale) * fxRate;
   }
 
   it("TSM: analyst EPS in TWD × ratio 5 × TWDUSD", () => {
-    // FMP might report EPS per ordinary share (~6 TWD)
+    // FMP reports EPS per ordinary share in TWD; 1 ADR = 5 shares → scale by 5
     const result = epsOf(6, "TSM");
     expect(result).toBeCloseTo(6 * 5 * 0.031, 4);
   });
 
-  it("NVO: analyst EPS in DKK × ratio 6 × DKKUSD", () => {
+  it("NVO: analyst EPS in DKK × ratio 1 × DKKUSD (ADR_EPS_RATIO override)", () => {
+    // ADR_RATIO_TABLE["NVO"] = 6 (forces mktCap/price share derivation)
+    // ADR_EPS_RATIO["NVO"]   = 1 (1 ADR = 1 B-share — no EPS scaling)
+    // Without the override, this would be 15 * 6 * 0.145 = 13.05 (wrong)
     const result = epsOf(15, "NVO");
-    expect(result).toBeCloseTo(15 * 6 * 0.145, 4);
+    expect(result).toBeCloseTo(15 * 1 * 0.145, 4);
+    // Confirm it is NOT the old (wrong) value
+    expect(result).not.toBeCloseTo(15 * 6 * 0.145, 4);
+  });
+
+  it("NVO: ADR_EPS_RATIO entry is 1 (not absent, not 6)", () => {
+    expect(ADR_EPS_RATIO["NVO"]).toBe(1);
+    // Share-count ratio stays 6 to force mktCap/price derivation
+    expect(ADR_RATIO_TABLE["NVO"]).toBe(6);
   });
 
   it("TM: analyst EPS in JPY × ratio 10 × JPYUSD", () => {
@@ -487,5 +504,22 @@ describe("analyst EPS normalization with ADR ratio + FX", () => {
   it("AAPL: no override — returns raw EPS unchanged", () => {
     const result = epsOf(6.5, "AAPL");
     expect(result).toBeCloseTo(6.5, 4); // ratio=1, fxRate=1
+  });
+
+  it("tickers without ADR_EPS_RATIO entry fall back to ADR_RATIO_TABLE", () => {
+    // TSM, TM, BABA, BHP, AMX have no ADR_EPS_RATIO entry → use ADR_RATIO_TABLE
+    for (const ticker of ["TSM", "TM", "BABA", "BHP", "AMX"]) {
+      expect(ADR_EPS_RATIO[ticker]).toBeUndefined();
+      expect(ADR_RATIO_TABLE[ticker]).toBeGreaterThan(1);
+    }
+  });
+
+  it("tickers with ratio=1 in ADR_RATIO_TABLE need no ADR_EPS_RATIO entry", () => {
+    // ASML, SONY, SAP, etc. have adrRatio=1 → epsScale=1 regardless
+    for (const ticker of ["ASML", "SONY", "SAP", "UL", "DEO", "NVS"]) {
+      const adrRatio = ADR_RATIO_TABLE[ticker] || 1;
+      const epsScale = ADR_EPS_RATIO[ticker] ?? adrRatio;
+      expect(epsScale).toBe(1);
+    }
   });
 });

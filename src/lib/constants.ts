@@ -40,6 +40,15 @@ export const ADR_RATIO_TABLE: Record<string, number> = {
   AMX:  20,      // América Móvil — Mexico (MXN)
 };
 
+// ─── ADR analyst EPS scaling override ───────────────────────────────────────
+// For most ADRs, the EPS scale equals ADR_RATIO_TABLE (ordinary shares per ADR).
+// Some ADRs have a mismatch: the ratio > 1 is needed to force mktCap/price
+// share derivation, but the actual ordinary-shares-per-ADR for EPS scaling differs.
+// Entries here override ADR_RATIO_TABLE for analyst estimate scaling only.
+export const ADR_EPS_RATIO: Record<string, number> = {
+  NVO: 1,  // 1 ADR = 1 B-share — ratio 6 in ADR_RATIO_TABLE forces mktCap/price shares, but EPS scale is 1
+};
+
 // ─── ADR underlying financials currency ─────────────────────────────────────
 // FMP may report p.currency / reportingCurrency as "USD" for NYSE-listed ADRs,
 // but the balance sheet and income statement values are in the home currency.
