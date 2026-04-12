@@ -1,4 +1,4 @@
-import { ADR_RATIO_TABLE, ADR_EPS_RATIO, ADR_FINANCIALS_CCY, EXCHANGE_CCY, FALLBACK_FX, MKTCAP_RANGES } from "../constants.ts";
+import { ADR_RATIO_TABLE, ADR_EPS_RATIO, ADR_FINANCIALS_CCY, COUNTRY_CCY, EXCHANGE_CCY, FALLBACK_FX, MKTCAP_RANGES } from "../constants.ts";
 import { f, fB } from "../utils.ts";
 import { classifyLifecycle } from "../companyScorecard/lifecycle.ts";
 import type {
@@ -237,7 +237,25 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
   const priceCurrency     = EXCHANGE_CCY[exchange] || p.currency || "USD";
   // ADR override: FMP may report "USD" for NYSE-listed ADRs, but financials
   // are in the home currency (e.g. TSM balance sheet is TWD).
-  const financialsCurrency = ADR_FINANCIALS_CCY[t] || inc[0]?.reportingCurrency || p.currency || "USD";
+  let financialsCurrency = ADR_FINANCIALS_CCY[t] || inc[0]?.reportingCurrency || p.currency || "USD";
+
+  const mktCapVal = p.mktCap || q.marketCap || 0;
+
+  // Generic ADR currency inference: FMP sometimes reports "USD" for US-listed
+  // ADRs whose financials are in a foreign currency (e.g. TAK → JPY).
+  // When the reported currencies match but the company's home country implies
+  // otherwise, use a magnitude check to confirm conversion is needed.
+  if (financialsCurrency === priceCurrency && !ADR_FINANCIALS_CCY[t] && p.country) {
+    const impliedCcy = COUNTRY_CCY[p.country];
+    if (impliedCcy && impliedCcy !== priceCurrency) {
+      const rawDebt = bs.totalDebt || bs.longTermDebt || 0;
+      const rawCash = bs.cashAndShortTermInvestments || bs.cashAndCashEquivalents || 0;
+      // Values >50× market cap are impossible in USD — confirms foreign currency.
+      if (mktCapVal > 0 && (rawDebt > mktCapVal * 50 || rawCash > mktCapVal * 50)) {
+        financialsCurrency = impliedCcy;
+      }
+    }
+  }
 
   let fxRate = 1;
   if (priceCurrency !== financialsCurrency) {
@@ -250,7 +268,6 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
   const sharesOut    = q.sharesOutstanding || inc[0]?.weightedAverageShsOut || 1;
   const totalDebt    = (bs.totalDebt || bs.longTermDebt || 0) * fxRate;
   const totalCash    = (bs.cashAndShortTermInvestments || bs.cashAndCashEquivalents || 0) * fxRate;
-  const mktCapVal    = p.mktCap || q.marketCap || 0;
 
   const price        = q.price || p.price || 0;
   const adrShares    = deriveShares(t, mktCapVal, price, sharesOut);
@@ -410,7 +427,26 @@ export async function lookupTicker(
   const priceCurrency   = EXCHANGE_CCY[exchange] || p.currency || "USD";
   // ADR override: FMP may report "USD" for NYSE-listed ADRs, but financials
   // are in the home currency (e.g. TSM balance sheet is TWD).
-  const financialsCurrency = ADR_FINANCIALS_CCY[t] || inc[0]?.reportingCurrency || p.currency || "USD";
+  let financialsCurrency = ADR_FINANCIALS_CCY[t] || inc[0]?.reportingCurrency || p.currency || "USD";
+
+  const mktCapVal = p.mktCap || q.marketCap || 0;
+
+  // Generic ADR currency inference: FMP sometimes reports "USD" for US-listed
+  // ADRs whose financials are in a foreign currency (e.g. TAK → JPY).
+  // When the reported currencies match but the company's home country implies
+  // otherwise, use a magnitude check to confirm conversion is needed.
+  if (financialsCurrency === priceCurrency && !ADR_FINANCIALS_CCY[t] && p.country) {
+    const impliedCcy = COUNTRY_CCY[p.country];
+    if (impliedCcy && impliedCcy !== priceCurrency) {
+      const rawDebt = bs.totalDebt || bs.longTermDebt || 0;
+      const rawCash = bs.cashAndShortTermInvestments || bs.cashAndCashEquivalents || 0;
+      // Values >50× market cap are impossible in USD — confirms foreign currency.
+      if (mktCapVal > 0 && (rawDebt > mktCapVal * 50 || rawCash > mktCapVal * 50)) {
+        log(`  ⚠ Country-implied currency override: FMP reported "${priceCurrency}" but ${p.country} → "${impliedCcy}" (debt=${rawDebt.toExponential(2)}, mktCap=${mktCapVal.toExponential(2)})`);
+        financialsCurrency = impliedCcy;
+      }
+    }
+  }
 
   if (import.meta.env.DEV) console.log(`[TUP FX] ticker=${t} exchange=${exchange} priceCurrency=${priceCurrency} financialsCurrency=${financialsCurrency}`);
 
@@ -461,7 +497,6 @@ export async function lookupTicker(
   let totalCash    = (bs.cashAndShortTermInvestments || bs.cashAndCashEquivalents || 0) * fxRate;
 
   // Sanity check: debt >5× market cap for a profitable company → likely unconverted
-  const mktCapVal = p.mktCap || q.marketCap || 0;
   let currencyMismatchWarning = "";
   if (mktCapVal > 0 && totalDebt > mktCapVal * 5 && (inc[0]?.netIncome || 0) > 0 && fxRate === 1 && priceCurrency !== financialsCurrency) {
     const fxKey    = `${financialsCurrency}${priceCurrency}`;

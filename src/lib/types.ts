@@ -89,6 +89,7 @@ export interface FMPProfile {
   exchangeShortName?: string;
   exchange?: string;
   currency?: string;
+  country?: string;
   companyName?: string;
   description?: string;
   sector?: string;

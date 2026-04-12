@@ -78,6 +78,20 @@ export const ADR_FINANCIALS_CCY: Record<string, string> = {
   AMX:  "MXN",   // América Móvil — Mexico City → MXN financials
 };
 
+// ─── Country → expected financial reporting currency ─────────────────────────
+// Used to detect ADRs where FMP incorrectly reports "USD" as the reporting
+// currency even though balance sheet / income statement values are in the home
+// currency.  Only countries with non-USD currencies are listed.
+export const COUNTRY_CCY: Record<string, string> = {
+  JP: "JPY",  CN: "CNH",  TW: "TWD",  KR: "KRW",
+  IN: "INR",  AU: "AUD",  GB: "GBP",  DE: "EUR",
+  FR: "EUR",  NL: "EUR",  BE: "EUR",  FI: "EUR",
+  IE: "EUR",  IT: "EUR",  ES: "EUR",  PT: "EUR",
+  CH: "CHF",  SE: "SEK",  DK: "DKK",  NO: "NOK",
+  CA: "CAD",  HK: "HKD",  SG: "SGD",  MX: "MXN",
+  BR: "BRL",  ZA: "ZAR",  IL: "ILS",
+};
+
 // ─── Exchange → listing currency ─────────────────────────────────────────────
 export const EXCHANGE_CCY: Record<string, string> = {
   NYSE: "USD", NASDAQ: "USD", AMEX: "USD", NYSEAMERICAN: "USD", BATS: "USD", OTC: "USD",
