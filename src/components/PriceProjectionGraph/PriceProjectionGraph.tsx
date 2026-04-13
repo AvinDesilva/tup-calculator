@@ -21,11 +21,6 @@ function formatMonthLabel(dateStr: string): string {
   return `${mo} '${yr}`;
 }
 
-function addYears(date: Date, n: number): Date {
-  const d = new Date(date);
-  d.setFullYear(d.getFullYear() + n);
-  return d;
-}
 
 function toDateStr(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -103,14 +98,22 @@ export function PriceProjectionGraph({
       bear: currentPrice,
     };
 
-    // ── Projection points (annual) ────────────────────────────────────────────
+    // ── Projection points (monthly steps) ────────────────────────────────────
+    // Monthly steps give each projected month equal x-axis space, so the
+    // projection section takes up meaningful chart real estate vs history.
     const projYears = PROJ_YEARS[viewYears];
-    const projectionPoints: ChartPoint[] = Array.from({ length: projYears }, (_, i) => i + 1).map(n => ({
-      label: formatMonthLabel(toDateStr(addYears(today, n))),
-      base: parseFloat((currentPrice * Math.pow(1 + baseRate / 100, n)).toFixed(2)),
-      bull: parseFloat((currentPrice * Math.pow(1 + bullRate / 100, n)).toFixed(2)),
-      bear: parseFloat((currentPrice * Math.pow(1 + bearRate / 100, n)).toFixed(2)),
-    }));
+    const projectionPoints: ChartPoint[] = Array.from({ length: projYears * 12 }, (_, i) => {
+      const n = i + 1; // months ahead
+      const d = new Date(today);
+      d.setMonth(d.getMonth() + n);
+      const frac = n / 12;
+      return {
+        label: formatMonthLabel(toDateStr(d)),
+        base: parseFloat((currentPrice * Math.pow(1 + baseRate / 100, frac)).toFixed(2)),
+        bull: parseFloat((currentPrice * Math.pow(1 + bullRate / 100, frac)).toFixed(2)),
+        bear: parseFloat((currentPrice * Math.pow(1 + bearRate / 100, frac)).toFixed(2)),
+      };
+    });
 
     return [...historical, joinPoint, ...projectionPoints];
   }, [priceHistory, currentPrice, scenarioValues, result, viewYears]);
