@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   ReferenceLine, ResponsiveContainer,
@@ -41,6 +41,12 @@ export function PriceProjectionGraph({
   const body = C.body;
   const mono = C.mono;
 
+  const [projectionYears, setProjectionYears] = useState<5 | 10>(5);
+
+  // Historical years to show — cap at what's available
+  const maxHistYears = useMemo(() => Math.min(10, Math.ceil(priceHistory.length / 12) || 5), [priceHistory]);
+  const [histYears, setHistYears] = useState<5 | 10>(5);
+
   const label9: React.CSSProperties = {
     fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em",
     textTransform: "uppercase", color: "#888", fontFamily: body,
@@ -62,8 +68,9 @@ export function PriceProjectionGraph({
     const baseRate = getRate("base");
     const bullRate = getRate("bull");
 
-    // ── Historical points ─────────────────────────────────────────────────────
-    const historical: ChartPoint[] = priceHistory.map(p => ({
+    // ── Historical points (trimmed to histYears) ──────────────────────────────
+    const trimmed = priceHistory.slice(-(histYears * 12));
+    const historical: ChartPoint[] = trimmed.map(p => ({
       label: formatMonthLabel(p.date),
       historical: p.close,
     }));
@@ -79,16 +86,16 @@ export function PriceProjectionGraph({
       bear: currentPrice,
     };
 
-    // ── Projection points (annual, +1 → +4 years) ────────────────────────────
-    const projections: ChartPoint[] = [1, 2, 3, 4].map(n => ({
+    // ── Projection points (annual, +1 → projectionYears) ─────────────────────
+    const projectionPoints: ChartPoint[] = Array.from({ length: projectionYears }, (_, i) => i + 1).map(n => ({
       label: formatMonthLabel(toDateStr(addYears(today, n))),
       base: parseFloat((currentPrice * Math.pow(1 + baseRate / 100, n)).toFixed(2)),
       bull: parseFloat((currentPrice * Math.pow(1 + bullRate / 100, n)).toFixed(2)),
       bear: parseFloat((currentPrice * Math.pow(1 + bearRate / 100, n)).toFixed(2)),
     }));
 
-    return [...historical, joinPoint, ...projections];
-  }, [priceHistory, currentPrice, scenarioValues, result]);
+    return [...historical, joinPoint, ...projectionPoints];
+  }, [priceHistory, currentPrice, scenarioValues, result, histYears, projectionYears]);
 
   // Label of the "today" join point — used for the reference line
   const todayLabel = useMemo(() => {
@@ -132,9 +139,38 @@ export function PriceProjectionGraph({
     );
   }
 
+  // Toggle button style helper
+  const toggleStyle = (active: boolean): React.CSSProperties => ({
+    padding: "2px 8px",
+    fontSize: "9px",
+    fontWeight: 700,
+    letterSpacing: "0.1em",
+    fontFamily: body,
+    textTransform: "uppercase",
+    background: active ? C.accent : "transparent",
+    color: active ? "#080808" : "#666",
+    border: `1px solid ${active ? C.accent : "rgba(255,255,255,0.12)"}`,
+    cursor: "pointer",
+    transition: "all 0.15s",
+  });
+
   return (
     <div>
-      <div style={{ ...label9, marginBottom: "12px" }}>Price Projection</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+        <div style={label9}>Price Projection</div>
+        <div style={{ display: "flex", gap: "0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "12px" }}>
+            <span style={{ ...label9, marginBottom: 0 }}>History</span>
+            <button onClick={() => setHistYears(5)} style={{ ...toggleStyle(histYears === 5), borderRight: "none" }}>5Y</button>
+            <button onClick={() => { setHistYears(10); }} style={toggleStyle(histYears === 10)} disabled={maxHistYears < 10} title={maxHistYears < 10 ? "Less than 10 years of data available" : undefined}>10Y</button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ ...label9, marginBottom: 0 }}>Forecast</span>
+            <button onClick={() => setProjectionYears(5)} style={{ ...toggleStyle(projectionYears === 5), borderRight: "none" }}>5Y</button>
+            <button onClick={() => setProjectionYears(10)} style={toggleStyle(projectionYears === 10)}>10Y</button>
+          </div>
+        </div>
+      </div>
 
       <ResponsiveContainer width="100%" height={240}>
         <ComposedChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
@@ -145,7 +181,7 @@ export function PriceProjectionGraph({
             tick={{ fill: "#666", fontSize: 9, fontFamily: mono }}
             tickLine={false}
             axisLine={false}
-            interval={11}
+            interval={Math.floor(chartData.length / 8)}
           />
           <YAxis
             orientation="right"

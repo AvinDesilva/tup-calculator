@@ -207,7 +207,7 @@ router.get("/historical-price", async (req, res) => {
     // FMP stable API uses "historical-price-eod" with symbol as query param.
     // Returns: { symbol, historical: [{ date, open, high, low, close, volume, ... }] }
     // Data is newest-first; we reverse and sample to monthly.
-    const url = fmpUrl("historical-price-eod", { symbol, limit: 1260 });
+    const url = fmpUrl("historical-price-eod", { symbol, limit: 2520 });
     const upstream = await fetch(url);
     if (!upstream.ok) {
       console.warn(`[tup-proxy] FMP historical-price-eod ${upstream.status} for ${symbol}`);
@@ -226,7 +226,7 @@ router.get("/historical-price", async (req, res) => {
       const mo = pt.date.slice(0, 7); // "YYYY-MM"
       if (mo !== prevMonth) { monthly.push({ date: pt.date, close: pt.close }); prevMonth = mo; }
     }
-    const result = { priceHistory: monthly.slice(-60) };
+    const result = { priceHistory: monthly.slice(-120) }; // up to 10 years
     priceHistoryCache.set(cacheKey, result);
     res.json(result);
   } catch (err) {
