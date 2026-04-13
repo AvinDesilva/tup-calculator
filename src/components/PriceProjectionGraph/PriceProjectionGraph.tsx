@@ -41,9 +41,9 @@ export function PriceProjectionGraph({
   const body = C.body;
   const mono = C.mono;
 
-  // Single toggle: 5Y or 10Y view window
+  // Single toggle: 2Y / 5Y / 10Y view window (2Y default)
   // Controls both how much history to show and how many years to project
-  const [viewYears, setViewYears] = useState<5 | 10>(5);
+  const [viewYears, setViewYears] = useState<2 | 5 | 10>(2);
 
   const label9: React.CSSProperties = {
     fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em",
@@ -154,7 +154,8 @@ export function PriceProjectionGraph({
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
         <div style={label9}>Price Projection</div>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0" }}>
+          <button onClick={() => setViewYears(2)} style={{ ...toggleStyle(viewYears === 2), borderRight: "none" }}>2Y</button>
           <button onClick={() => setViewYears(5)} style={{ ...toggleStyle(viewYears === 5), borderRight: "none" }}>5Y</button>
           <button onClick={() => setViewYears(10)} style={toggleStyle(viewYears === 10)}>10Y</button>
         </div>
