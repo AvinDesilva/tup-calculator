@@ -196,8 +196,8 @@ export function PriceProjectionGraph({
   }
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", flexShrink: 0 }}>
         <div style={label9}>Price Projection</div>
         <div style={{ display: "flex", alignItems: "center", gap: "0" }}>
           <button onClick={() => setViewYears(2)} style={{ ...toggleStyle(viewYears === 2), borderRight: "none" }}>2Y</button>
@@ -206,7 +206,8 @@ export function PriceProjectionGraph({
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={240}>
+      <div style={{ flex: 1, minHeight: 0 }}>
+      <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
 
@@ -292,9 +293,10 @@ export function PriceProjectionGraph({
           />
         </ComposedChart>
       </ResponsiveContainer>
+      </div>
 
       {/* Legend */}
-      <div style={{ display: "flex", gap: "20px", marginTop: "10px", paddingLeft: "4px" }}>
+      <div style={{ display: "flex", gap: "20px", marginTop: "10px", paddingLeft: "4px", flexShrink: 0 }}>
         {legendItems.map(({ key, label }) => {
           const active = growthScenario === key;
           return (
