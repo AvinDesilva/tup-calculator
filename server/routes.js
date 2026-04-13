@@ -204,35 +204,25 @@ router.get("/historical-price", async (req, res) => {
   const cached = priceHistoryCache.get(cacheKey);
   if (cached !== undefined) return res.json(cached);
   try {
-    // Try endpoints in priority order — FMP renames things across API versions.
-    // "historical-price-eod" is the stable API name; "historical-price-full" is v3.
-    const ENDPOINTS = ["historical-price-eod", "historical-price-full", "historical-price"];
-    let raw = [];
-
-    for (const ep of ENDPOINTS) {
-      const tenYearsAgo = new Date();
-      tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
-      const from = tenYearsAgo.toISOString().slice(0, 10);
-      const url = fmpUrl(ep, { symbol, from });
-      let upstream;
-      try { upstream = await fetch(url); } catch { continue; }
-      if (!upstream.ok) {
-        console.warn(`[tup-proxy] historical-price: FMP ${ep} returned ${upstream.status} for ${symbol}`);
-        continue;
-      }
-      const data = await upstream.json();
-      // FMP sometimes returns {"Error Message":"..."} with status 200
-      if (!Array.isArray(data) && (data["Error Message"] || data.error)) {
-        console.warn(`[tup-proxy] historical-price: FMP ${ep} returned error for ${symbol}:`, JSON.stringify(data).slice(0, 120));
-        continue;
-      }
-      raw = Array.isArray(data) ? data : (data.historical || []);
-      if (raw.length > 0) {
-        console.log(`[tup-proxy] historical-price: ${ep} returned ${raw.length} rows for ${symbol}`);
-        break;
-      }
-      console.warn(`[tup-proxy] historical-price: FMP ${ep} returned empty data for ${symbol}, response:`, JSON.stringify(data).slice(0, 120));
+    // FMP stable API has no historical price endpoint — use v3 historical-price-full.
+    const apiKey = process.env.FMP_API_KEY;
+    const tenYearsAgo = new Date();
+    tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
+    const from = tenYearsAgo.toISOString().slice(0, 10);
+    const url = `https://financialmodelingprep.com/api/v3/historical-price-full/${encodeURIComponent(symbol)}?from=${from}&apikey=${apiKey}`;
+    const upstream = await fetch(url);
+    if (!upstream.ok) {
+      console.warn(`[tup-proxy] historical-price: v3 returned ${upstream.status} for ${symbol}`);
+      return res.json({ priceHistory: [] });
     }
+    const data = await upstream.json();
+    // v3 returns { historical: [...] }; guard against error objects
+    if (!Array.isArray(data) && (data["Error Message"] || data.error)) {
+      console.warn(`[tup-proxy] historical-price: v3 error for ${symbol}:`, JSON.stringify(data).slice(0, 120));
+      return res.json({ priceHistory: [] });
+    }
+    const raw = Array.isArray(data) ? data : (data.historical || []);
+    console.log(`[tup-proxy] historical-price: v3 returned ${raw.length} rows for ${symbol}`);
 
     // Sample to monthly — keep first trading day per calendar month, oldest→newest
     const daily = raw.slice().reverse();
