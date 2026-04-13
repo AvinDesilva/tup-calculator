@@ -204,19 +204,35 @@ router.get("/historical-price", async (req, res) => {
   const cached = priceHistoryCache.get(cacheKey);
   if (cached !== undefined) return res.json(cached);
   try {
-    // FMP stable API uses "historical-price-eod" with symbol as query param.
-    // Returns: { symbol, historical: [{ date, open, high, low, close, volume, ... }] }
-    // Data is newest-first; we reverse and sample to monthly.
-    const url = fmpUrl("historical-price-eod", { symbol, limit: 2520 });
-    const upstream = await fetch(url);
-    if (!upstream.ok) {
-      console.warn(`[tup-proxy] FMP historical-price-eod ${upstream.status} for ${symbol}`);
-      return res.json({ priceHistory: [] });
-    }
-    const data = await upstream.json();
+    // Try endpoints in priority order — FMP renames things across API versions.
+    // "historical-price-eod" is the stable API name; "historical-price-full" is v3.
+    const ENDPOINTS = ["historical-price-eod", "historical-price-full", "historical-price"];
+    let raw = [];
 
-    // Support both array response and {historical:[]} envelope
-    const raw = Array.isArray(data) ? data : (data.historical || []);
+    for (const ep of ENDPOINTS) {
+      const tenYearsAgo = new Date();
+      tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
+      const from = tenYearsAgo.toISOString().slice(0, 10);
+      const url = fmpUrl(ep, { symbol, from });
+      let upstream;
+      try { upstream = await fetch(url); } catch { continue; }
+      if (!upstream.ok) {
+        console.warn(`[tup-proxy] historical-price: FMP ${ep} returned ${upstream.status} for ${symbol}`);
+        continue;
+      }
+      const data = await upstream.json();
+      // FMP sometimes returns {"Error Message":"..."} with status 200
+      if (!Array.isArray(data) && (data["Error Message"] || data.error)) {
+        console.warn(`[tup-proxy] historical-price: FMP ${ep} returned error for ${symbol}:`, JSON.stringify(data).slice(0, 120));
+        continue;
+      }
+      raw = Array.isArray(data) ? data : (data.historical || []);
+      if (raw.length > 0) {
+        console.log(`[tup-proxy] historical-price: ${ep} returned ${raw.length} rows for ${symbol}`);
+        break;
+      }
+      console.warn(`[tup-proxy] historical-price: FMP ${ep} returned empty data for ${symbol}, response:`, JSON.stringify(data).slice(0, 120));
+    }
 
     // Sample to monthly — keep first trading day per calendar month, oldest→newest
     const daily = raw.slice().reverse();
