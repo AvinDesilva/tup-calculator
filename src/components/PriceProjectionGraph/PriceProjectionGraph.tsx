@@ -41,11 +41,9 @@ export function PriceProjectionGraph({
   const body = C.body;
   const mono = C.mono;
 
-  const [projectionYears, setProjectionYears] = useState<5 | 10>(5);
-
-  // Historical years to show — cap at what's available
-  const maxHistYears = useMemo(() => Math.min(10, Math.ceil(priceHistory.length / 12) || 5), [priceHistory]);
-  const [histYears, setHistYears] = useState<5 | 10>(5);
+  // Single toggle: 5Y or 10Y view window
+  // Controls both how much history to show and how many years to project
+  const [viewYears, setViewYears] = useState<5 | 10>(5);
 
   const label9: React.CSSProperties = {
     fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em",
@@ -68,14 +66,14 @@ export function PriceProjectionGraph({
     const baseRate = getRate("base");
     const bullRate = getRate("bull");
 
-    // ── Historical points (trimmed to histYears) ──────────────────────────────
-    const trimmed = priceHistory.slice(-(histYears * 12));
+    // ── Historical points — show up to viewYears worth; use all available if less ──
+    const trimmed = priceHistory.slice(-(viewYears * 12));
     const historical: ChartPoint[] = trimmed.map(p => ({
       label: formatMonthLabel(p.date),
       historical: p.close,
     }));
 
-    // ── Join point (today) ────────────────────────────────────────────────────
+    // ── Join point (today) — connects history to projections ──────────────────
     const today = new Date();
     const todayLabel = formatMonthLabel(toDateStr(today));
     const joinPoint: ChartPoint = {
@@ -86,8 +84,8 @@ export function PriceProjectionGraph({
       bear: currentPrice,
     };
 
-    // ── Projection points (annual, +1 → projectionYears) ─────────────────────
-    const projectionPoints: ChartPoint[] = Array.from({ length: projectionYears }, (_, i) => i + 1).map(n => ({
+    // ── Projection points (annual, +1 → +viewYears from today) ───────────────
+    const projectionPoints: ChartPoint[] = Array.from({ length: viewYears }, (_, i) => i + 1).map(n => ({
       label: formatMonthLabel(toDateStr(addYears(today, n))),
       base: parseFloat((currentPrice * Math.pow(1 + baseRate / 100, n)).toFixed(2)),
       bull: parseFloat((currentPrice * Math.pow(1 + bullRate / 100, n)).toFixed(2)),
@@ -95,12 +93,10 @@ export function PriceProjectionGraph({
     }));
 
     return [...historical, joinPoint, ...projectionPoints];
-  }, [priceHistory, currentPrice, scenarioValues, result, histYears, projectionYears]);
+  }, [priceHistory, currentPrice, scenarioValues, result, viewYears]);
 
   // Label of the "today" join point — used for the reference line
-  const todayLabel = useMemo(() => {
-    return formatMonthLabel(toDateStr(new Date()));
-  }, []);
+  const todayLabel = useMemo(() => formatMonthLabel(toDateStr(new Date())), []);
 
   // Y-axis domain with 10% padding
   const yDomain = useMemo<[number, number]>(() => {
@@ -131,15 +127,7 @@ export function PriceProjectionGraph({
     { key: "bull", label: "Bull" },
   ];
 
-  if (currentPrice <= 0) {
-    return (
-      <div style={{ height: "260px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontSize: "11px", color: C.text3, fontFamily: body }}>No price data</span>
-      </div>
-    );
-  }
-
-  // Toggle button style helper
+  // Toggle button style
   const toggleStyle = (active: boolean): React.CSSProperties => ({
     padding: "2px 8px",
     fontSize: "9px",
@@ -154,21 +142,21 @@ export function PriceProjectionGraph({
     transition: "all 0.15s",
   });
 
+  if (currentPrice <= 0) {
+    return (
+      <div style={{ height: "260px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontSize: "11px", color: C.text3, fontFamily: body }}>No price data</span>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
         <div style={label9}>Price Projection</div>
-        <div style={{ display: "flex", gap: "0" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "12px" }}>
-            <span style={{ ...label9, marginBottom: 0 }}>History</span>
-            <button onClick={() => setHistYears(5)} style={{ ...toggleStyle(histYears === 5), borderRight: "none" }}>5Y</button>
-            <button onClick={() => { setHistYears(10); }} style={toggleStyle(histYears === 10)} disabled={maxHistYears < 10} title={maxHistYears < 10 ? "Less than 10 years of data available" : undefined}>10Y</button>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ ...label9, marginBottom: 0 }}>Forecast</span>
-            <button onClick={() => setProjectionYears(5)} style={{ ...toggleStyle(projectionYears === 5), borderRight: "none" }}>5Y</button>
-            <button onClick={() => setProjectionYears(10)} style={toggleStyle(projectionYears === 10)}>10Y</button>
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          <button onClick={() => setViewYears(5)} style={{ ...toggleStyle(viewYears === 5), borderRight: "none" }}>5Y</button>
+          <button onClick={() => setViewYears(10)} style={toggleStyle(viewYears === 10)}>10Y</button>
         </div>
       </div>
 
