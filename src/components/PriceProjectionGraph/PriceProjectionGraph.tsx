@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid,
-  ReferenceLine, ResponsiveContainer,
+  ReferenceLine, ResponsiveContainer, Tooltip,
 } from "recharts";
 import { C } from "../../lib/theme.ts";
 import type { PriceProjectionGraphProps } from "./PriceProjectionGraph.types.ts";
@@ -142,7 +142,29 @@ export function PriceProjectionGraph({
     strokeWidth:   growthScenario === s ? 2.5 : 1.5,
   });
 
-  const COLORS = { base: "#ffffff", bull: "#10d97e", bear: "#FF4D00" };
+  const COLORS = { base: "#ffffff", bull: "#10d97e", bear: "#FF4D00", historical: C.accent };
+
+  // Custom tooltip — small dark box showing price for each visible line
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ChartTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    const entries = payload.filter((p: { value: unknown }) => p.value != null);
+    if (!entries.length) return null;
+    return (
+      <div style={{
+        background: "#111", border: "1px solid rgba(255,255,255,0.1)",
+        padding: "6px 10px", fontSize: "10px", fontFamily: mono,
+        pointerEvents: "none",
+      }}>
+        <div style={{ color: "#666", marginBottom: "4px", letterSpacing: "0.06em" }}>{label}</div>
+        {entries.map((e: { dataKey: string; value: number }) => (
+          <div key={e.dataKey} style={{ color: COLORS[e.dataKey as keyof typeof COLORS] ?? "#fff", fontWeight: 600 }}>
+            {tickFmt(e.value)}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const legendItems: Array<{ key: "bear" | "base" | "bull"; label: string }> = [
     { key: "bear", label: "Bear" },
@@ -205,6 +227,11 @@ export function PriceProjectionGraph({
             domain={yDomain}
           />
 
+          <Tooltip
+            content={ChartTooltip}
+            cursor={{ stroke: "rgba(255,255,255,0.12)", strokeWidth: 1 }}
+          />
+
           {/* Vertical marker at today */}
           <ReferenceLine
             x={todayLabel}
@@ -220,6 +247,7 @@ export function PriceProjectionGraph({
             stroke={C.accent}
             strokeWidth={2}
             dot={false}
+            activeDot={{ r: 4, fill: C.accent, strokeWidth: 0 }}
             connectNulls={false}
             isAnimationActive={false}
           />
@@ -231,6 +259,7 @@ export function PriceProjectionGraph({
             stroke={COLORS.base}
             strokeDasharray="6 3"
             dot={false}
+            activeDot={{ r: 4, fill: COLORS.base, strokeWidth: 0 }}
             connectNulls={false}
             isAnimationActive={false}
             {...lineStyle("base")}
@@ -243,6 +272,7 @@ export function PriceProjectionGraph({
             stroke={COLORS.bull}
             strokeDasharray="6 3"
             dot={false}
+            activeDot={{ r: 4, fill: COLORS.bull, strokeWidth: 0 }}
             connectNulls={false}
             isAnimationActive={false}
             {...lineStyle("bull")}
@@ -255,6 +285,7 @@ export function PriceProjectionGraph({
             stroke={COLORS.bear}
             strokeDasharray="6 3"
             dot={false}
+            activeDot={{ r: 4, fill: COLORS.bear, strokeWidth: 0 }}
             connectNulls={false}
             isAnimationActive={false}
             {...lineStyle("bear")}
