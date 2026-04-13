@@ -50,6 +50,21 @@ export function PriceProjectionGraph({
     textTransform: "uppercase", color: "#888", fontFamily: body,
   };
 
+  // How many weeks of history to show and how many years to project per view
+  const HIST_WEEKS    = { 2: 104, 5: 260, 10: 520 } as const;
+  const PROJ_YEARS    = { 2: 5,   5: 5,   10: 10  } as const;
+
+  // For 5Y/10Y views, sample weekly data down to one point per month
+  function toMonthly(pts: typeof priceHistory) {
+    const out: typeof priceHistory = [];
+    let prev = "";
+    for (const p of pts) {
+      const mo = p.date.slice(0, 7);
+      if (mo !== prev) { out.push(p); prev = mo; }
+    }
+    return out;
+  }
+
   const chartData = useMemo<ChartPoint[]>(() => {
     if (currentPrice <= 0) return [];
 
@@ -66,9 +81,13 @@ export function PriceProjectionGraph({
     const baseRate = getRate("base");
     const bullRate = getRate("bull");
 
-    // ── Historical points — show up to viewYears worth; use all available if less ──
-    const trimmed = priceHistory.slice(-(viewYears * 12));
-    const historical: ChartPoint[] = trimmed.map(p => ({
+    // ── Historical points ─────────────────────────────────────────────────────
+    // 2Y: raw weekly data (no sampling) — finer curve
+    // 5Y/10Y: sampled to monthly — less crowded
+    const weeks = HIST_WEEKS[viewYears];
+    const raw = priceHistory.slice(-weeks);
+    const pts = viewYears === 2 ? raw : toMonthly(raw);
+    const historical: ChartPoint[] = pts.map(p => ({
       label: formatMonthLabel(p.date),
       historical: p.close,
     }));
@@ -84,8 +103,9 @@ export function PriceProjectionGraph({
       bear: currentPrice,
     };
 
-    // ── Projection points (annual, +1 → +viewYears from today) ───────────────
-    const projectionPoints: ChartPoint[] = Array.from({ length: viewYears }, (_, i) => i + 1).map(n => ({
+    // ── Projection points (annual) ────────────────────────────────────────────
+    const projYears = PROJ_YEARS[viewYears];
+    const projectionPoints: ChartPoint[] = Array.from({ length: projYears }, (_, i) => i + 1).map(n => ({
       label: formatMonthLabel(toDateStr(addYears(today, n))),
       base: parseFloat((currentPrice * Math.pow(1 + baseRate / 100, n)).toFixed(2)),
       bull: parseFloat((currentPrice * Math.pow(1 + bullRate / 100, n)).toFixed(2)),

@@ -204,9 +204,10 @@ router.get("/historical-price", async (req, res) => {
   const cached = priceHistoryCache.get(cacheKey);
   if (cached !== undefined) return res.json(cached);
   try {
-    // Yahoo Finance unofficial API — no key required, returns monthly OHLCV.
-    // FMP stable API has no historical price endpoint and v3 requires a higher plan.
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1mo&range=10y&includePrePost=false`;
+    // Yahoo Finance unofficial API — no key required.
+    // Weekly interval gives ~520 pts for 10yr; the component samples to monthly
+    // for 5Y/10Y views and uses raw weekly for the 2Y detail view.
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1wk&range=10y&includePrePost=false`;
     const upstream = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
     if (!upstream.ok) {
       console.warn(`[tup-proxy] historical-price: Yahoo returned ${upstream.status} for ${symbol}`);
@@ -226,14 +227,8 @@ router.get("/historical-price", async (req, res) => {
       .filter(p => p.close != null && isFinite(p.close));
     console.log(`[tup-proxy] historical-price: Yahoo returned ${raw.length} rows for ${symbol}`);
 
-    // Yahoo already returns monthly data oldest→newest; deduplicate by month and cap at 120.
-    const monthly = [];
-    let prevMonth = null;
-    for (const pt of raw) {
-      const mo = pt.date.slice(0, 7); // "YYYY-MM"
-      if (mo !== prevMonth) { monthly.push({ date: pt.date, close: pt.close }); prevMonth = mo; }
-    }
-    const result = { priceHistory: monthly.slice(-120) }; // up to 10 years
+    // Return weekly points oldest→newest, capped at 520 (~10yr).
+    const result = { priceHistory: raw.slice(-520) };
     priceHistoryCache.set(cacheKey, result);
     res.json(result);
   } catch (err) {
