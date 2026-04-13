@@ -204,31 +204,32 @@ router.get("/historical-price", async (req, res) => {
   const cached = priceHistoryCache.get(cacheKey);
   if (cached !== undefined) return res.json(cached);
   try {
-    // FMP stable API has no historical price endpoint — use v3 historical-price-full.
-    const apiKey = process.env.FMP_API_KEY;
-    const tenYearsAgo = new Date();
-    tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
-    const from = tenYearsAgo.toISOString().slice(0, 10);
-    const url = `https://financialmodelingprep.com/api/v3/historical-price-full/${encodeURIComponent(symbol)}?from=${from}&apikey=${apiKey}`;
-    const upstream = await fetch(url);
+    // Yahoo Finance unofficial API — no key required, returns monthly OHLCV.
+    // FMP stable API has no historical price endpoint and v3 requires a higher plan.
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1mo&range=10y&includePrePost=false`;
+    const upstream = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
     if (!upstream.ok) {
-      console.warn(`[tup-proxy] historical-price: v3 returned ${upstream.status} for ${symbol}`);
+      console.warn(`[tup-proxy] historical-price: Yahoo returned ${upstream.status} for ${symbol}`);
       return res.json({ priceHistory: [] });
     }
     const data = await upstream.json();
-    // v3 returns { historical: [...] }; guard against error objects
-    if (!Array.isArray(data) && (data["Error Message"] || data.error)) {
-      console.warn(`[tup-proxy] historical-price: v3 error for ${symbol}:`, JSON.stringify(data).slice(0, 120));
+    const result0 = data?.chart?.result?.[0];
+    if (!result0) {
+      console.warn(`[tup-proxy] historical-price: Yahoo empty response for ${symbol}`);
       return res.json({ priceHistory: [] });
     }
-    const raw = Array.isArray(data) ? data : (data.historical || []);
-    console.log(`[tup-proxy] historical-price: v3 returned ${raw.length} rows for ${symbol}`);
+    const timestamps = result0.timestamp ?? [];
+    const closes = result0.indicators?.adjclose?.[0]?.adjclose ?? result0.indicators?.quote?.[0]?.close ?? [];
+    // Build raw array oldest→newest, dropping null closes
+    const raw = timestamps
+      .map((ts, i) => ({ date: new Date(ts * 1000).toISOString().slice(0, 10), close: closes[i] }))
+      .filter(p => p.close != null && isFinite(p.close));
+    console.log(`[tup-proxy] historical-price: Yahoo returned ${raw.length} rows for ${symbol}`);
 
-    // Sample to monthly — keep first trading day per calendar month, oldest→newest
-    const daily = raw.slice().reverse();
+    // Yahoo already returns monthly data oldest→newest; deduplicate by month and cap at 120.
     const monthly = [];
     let prevMonth = null;
-    for (const pt of daily) {
+    for (const pt of raw) {
       const mo = pt.date.slice(0, 7); // "YYYY-MM"
       if (mo !== prevMonth) { monthly.push({ date: pt.date, close: pt.close }); prevMonth = mo; }
     }
