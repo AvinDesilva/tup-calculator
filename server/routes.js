@@ -204,7 +204,7 @@ router.get("/historical-price", async (req, res) => {
   const cached = priceHistoryCache.get(cacheKey);
   if (cached !== undefined) return res.json(cached);
   try {
-    const url = fmpUrl("historical-price-full", { symbol, timeseries: 1260 });
+    const url = fmpUrl(`historical-price-full/${symbol}`, { timeseries: 1260 });
     const upstream = await fetch(url);
     if (!upstream.ok) return res.status(upstream.status).json({ error: "Data unavailable." });
     const data = await upstream.json();
