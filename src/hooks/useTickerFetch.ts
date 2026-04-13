@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 import { calcTUP } from "../lib/verdictCard/calcTUP.ts";
 import { lookupTicker, lookupTickerQuick, fetchFilteredPool, fetchIndustryGrowth } from "../lib/tickerSearch/api.ts";
-import type { InputState, GrowthScenario, RollFilters, TupRangeFilter } from "../lib/types.ts";
+import type { InputState, GrowthScenario, RollFilters, TupRangeFilter, HistoricalPricePoint } from "../lib/types.ts";
 import * as dev from "../lib/devData.ts";
 
 import type { ValuationState, ScorecardState, UseTickerFetchReturn } from "./useTickerFetch.types.ts";
@@ -52,6 +52,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
   const [scorecard, setScorecard] = useState<ScorecardState>({ earnings: [], cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "", exchange: "" });
 
   const [hasSearched, setHasSearched] = useState(false);
+  const [priceHistory, setPriceHistory] = useState<HistoricalPricePoint[]>([]);
 
   // Calculator inputs
   const [inp, setInp] = useState<InputState>({
@@ -119,6 +120,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
         });
       }
       setScorecard({ earnings: data.earningsSurprises, cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory, epsGrowthHistory: data.epsGrowthHistory, description: data.description, exchange: data.exchange });
+      setPriceHistory(data.priceHistory ?? []);
 
       setGrowthValues({ g5: data.historicalGrowth5yr, g10: data.historicalGrowth });
       setGrowthYears({ short: data.epsYearsShort, long: data.epsYearsLong });
@@ -247,6 +249,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
     setTicker("");
     setError("");
     setFetchLog([]);
+    setPriceHistory([]);
   };
 
   // ─── URL param read on mount → auto-fetch if ticker present ───────────────
@@ -322,6 +325,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
 
     // Shared mutable state
     inp, setInp,
+    priceHistory,
     growthPeriod, setGrowthPeriod,
     growthScenario, setGrowthScenario,
     growthValues, growthYears,

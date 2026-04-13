@@ -6,8 +6,9 @@ const { fmpUrl, fmpFetch, median } = require("./lib/fmp");
 
 const router = Router();
 
-const fmpCache      = new TTLCache(5 * 60 * 1000,      500);  // 5 min
-const industryCache = new TTLCache(6 * 60 * 60 * 1000,  200);  // 6 hrs
+const fmpCache          = new TTLCache(5 * 60 * 1000,      500);  // 5 min
+const industryCache     = new TTLCache(6 * 60 * 60 * 1000,  200);  // 6 hrs
+const priceHistoryCache = new TTLCache(60 * 60 * 1000,     200);  // 1 hr
 
 // ── Search — parallel symbol + name search, merged & ranked ─────────────────
 const US_EXCHANGES = new Set(["NASDAQ", "NYSE", "AMEX", "NYSEAMERICAN", "NYSEARCA", "BATS", "CBOE"]);
@@ -190,6 +191,38 @@ router.get("/industry-growth", async (req, res) => {
   } catch (err) {
     console.error("[tup-proxy] industry-growth error:", err.message);
     res.status(502).json({ error: "Unable to compute industry growth." });
+  }
+});
+
+// ── Historical Price ─────────────────────────────────────────────────────────
+router.get("/historical-price", async (req, res) => {
+  const symbol = (req.query.symbol || "").toString().toUpperCase().trim();
+  if (!/^[A-Z0-9.\-]{1,10}$/.test(symbol)) {
+    return res.status(400).json({ error: "Invalid symbol." });
+  }
+  const cacheKey = `hist:${symbol}`;
+  const cached = priceHistoryCache.get(cacheKey);
+  if (cached !== undefined) return res.json(cached);
+  try {
+    const url = fmpUrl("historical-price-full", { symbol, timeseries: 1260 });
+    const upstream = await fetch(url);
+    if (!upstream.ok) return res.status(upstream.status).json({ error: "Data unavailable." });
+    const data = await upstream.json();
+
+    // Sample to monthly — keep first trading day per calendar month, oldest→newest
+    const daily = (data.historical || []).slice().reverse();
+    const monthly = [];
+    let prevMonth = null;
+    for (const pt of daily) {
+      const mo = pt.date.slice(0, 7); // "YYYY-MM"
+      if (mo !== prevMonth) { monthly.push({ date: pt.date, close: pt.close }); prevMonth = mo; }
+    }
+    const result = { priceHistory: monthly.slice(-60) };
+    priceHistoryCache.set(cacheKey, result);
+    res.json(result);
+  } catch (err) {
+    console.error("[tup-proxy] historical-price error:", err.message);
+    res.status(502).json({ error: "Unable to fetch price history." });
   }
 });
 

@@ -20,13 +20,18 @@
 /* Dice filter row wrappers are invisible (flattened) */
 .rsp-dice-row { display: contents; }
 
-/* 2×2 grid placement */
-.rsp-left-verdict { grid-column: 1; grid-row: 1; }
-.rsp-left-data    { grid-column: 1; grid-row: 3; }
-.rsp-hairline-v   { grid-column: 2; grid-row: 1 / span 3; }
-.rsp-hairline-h   { grid-column: 1 / span 3; grid-row: 2; }
-.rsp-right-top    { grid-column: 3; grid-row: 1; }
-.rsp-right-bottom { grid-column: 3; grid-row: 3; }
+/* Grid placement */
+.rsp-left-verdict        { grid-column: 1; grid-row: 1; }
+.rsp-right-graph         { grid-column: 3; grid-row: 1; }
+.rsp-hairline-v          { grid-column: 2; grid-row: 1; }
+.rsp-hairline-h          { grid-column: 1 / span 3; grid-row: 2; }
+.rsp-bottom-context      { grid-column: 1 / span 3; grid-row: 3; display: flex; flex-direction: row; }
+.rsp-hairline-h2         { grid-column: 1 / span 3; grid-row: 4; }
+.rsp-data-sections-wrap  { grid-column: 1 / span 3; grid-row: 5; }
+
+/* DataSections inner columns use flex sizing */
+.rsp-left-data    { flex: 3 1 0; min-width: 0; }
+.rsp-right-bottom { flex: 2 1 0; min-width: 0; }
 
 /* Noise filter first, methodology second */
 .rsp-methodology-btn { order: 1; }
@@ -111,20 +116,34 @@
     padding-right: 0 !important;
     padding-top: 0px !important;
   }
-  .rsp-right-top {
+  .rsp-right-graph {
     order: 2;
     padding-left: 0 !important;
-    padding-bottom: 24px;
-    border-top: 1px solid rgba(255,255,255,0.06);
-  }
-  .rsp-left-data {
-    order: 3;
     padding-right: 0 !important;
     border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .rsp-bottom-context {
+    order: 3;
+    flex-direction: column !important;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .rsp-bottom-context > div {
+    border-left: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .rsp-data-sections-wrap {
+    order: 4;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .rsp-data-wrap {
+    flex-direction: column !important;
+  }
+  .rsp-left-data {
+    padding-right: 0 !important;
     padding-top: 28px;
   }
   .rsp-right-bottom {
-    order: 4;
     padding-left: 0 !important;
     border-top: 1px solid rgba(255,255,255,0.06);
     padding-top: 28px;
@@ -172,8 +191,8 @@
 
 @media (min-width: 768px) and (max-width: 1023px) {
   .rsp-left-verdict  { padding-right: 24px !important; }
+  .rsp-right-graph   { padding-left: 24px !important; padding-right: 24px !important; }
   .rsp-left-data     { padding-right: 24px !important; }
-  .rsp-right-top     { padding-left: 24px !important; }
   .rsp-right-bottom  { padding-left: 24px !important; }
   .rsp-api-bar {
     grid-template-columns: 1fr 120px auto !important;

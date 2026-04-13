@@ -1,5 +1,5 @@
 import type { IndustryGrowthData } from "../lib/tickerSearch/api.ts";
-import type { InputState, GrowthScenario, RollFilters, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement, EpsGrowthPoint } from "../lib/types.ts";
+import type { InputState, GrowthScenario, RollFilters, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement, EpsGrowthPoint, HistoricalPricePoint } from "../lib/types.ts";
 
 export interface ValuationState {
   dcf: number | null;
@@ -48,6 +48,8 @@ export interface UseTickerFetchReturn {
   hasSearched: boolean;
   strongBuyPrice: number | null;
   buyPrice: number | null;
+
+  priceHistory: HistoricalPricePoint[];
 
   // Shared mutable state (set by fetch, also mutated by App UI callbacks)
   inp: InputState;

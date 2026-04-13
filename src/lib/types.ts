@@ -179,6 +179,13 @@ export interface EpsGrowthPoint {
   growth: number; // decimal, e.g. 0.15 = 15%
 }
 
+// ─── Historical price point ───────────────────────────────────────────────────
+
+export interface HistoricalPricePoint {
+  date: string;   // "YYYY-MM-DD"
+  close: number;
+}
+
 // ─── lookupTicker return ──────────────────────────────────────────────────────
 
 export interface TickerData {
@@ -228,4 +235,5 @@ export interface TickerData {
   epsGrowthHistory: EpsGrowthPoint[];
   description: string;
   exchange: string;
+  priceHistory: HistoricalPricePoint[];
 }

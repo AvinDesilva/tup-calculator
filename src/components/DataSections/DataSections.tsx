@@ -10,7 +10,7 @@ export function DataSections({
   decayMode, onDecayModeToggle, result, growthOverrides, onGrowthChange,
 }: DataSectionsProps) {
   return (
-    <>
+    <div className="rsp-data-wrap" style={{ display: "flex", flexDirection: "row" }}>
       <div className="rsp-left-data" style={{ paddingRight: "40px", paddingTop: "28px", paddingBottom: "40px", animation: "fadeInUp 0.5s 0.15s ease both" }}>
         <EnterpriseValue inp={inp} company={company} currencyMismatchWarning={currencyMismatchWarning} />
         <GrowthAssumptions inp={inp} growthPeriod={growthPeriod} growthYears={growthYears} epsGrowthHistory={epsGrowthHistory} onGrowthPeriodChange={onGrowthPeriodChange} />
@@ -19,6 +19,6 @@ export function DataSections({
       <div className="rsp-right-bottom" style={{ paddingLeft: "40px", paddingTop: "28px", paddingBottom: "40px" }}>
         <YearByYearBreakdown decayMode={decayMode} onDecayModeToggle={onDecayModeToggle} result={result} growthOverrides={growthOverrides} onGrowthChange={onGrowthChange} />
       </div>
-    </>
+    </div>
   );
 }

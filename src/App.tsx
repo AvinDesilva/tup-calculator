@@ -12,6 +12,7 @@ import { Masthead } from "./components/Masthead";
 import { HeroSearch } from "./components/HeroSearch";
 import { CompactTickerBar } from "./components/CompactTickerBar";
 import { DataSections } from "./components/DataSections";
+import { PriceProjectionGraph } from "./components/PriceProjectionGraph";
 import { useTickerFetch } from "./hooks/useTickerFetch.ts";
 import "./App.css";
 
@@ -31,6 +32,7 @@ export default function App() {
     company, meta, isConverted, currencyNote, currencyMismatchWarning,
     valuation, scorecard, hasSearched,
     strongBuyPrice, buyPrice,
+    priceHistory,
     // Shared mutable state
     inp, setInp,
     growthPeriod, setGrowthPeriod,
@@ -134,9 +136,9 @@ export default function App() {
         </>)}
 
         {hasSearched && (<>
-        <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "3fr 2px 2fr", gridTemplateRows: "auto 2px auto", gap: "0", minHeight: "600px", alignItems: "start" }}>
+        <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2px 2fr", gridTemplateRows: "auto 2px auto 2px auto", gap: "0", alignItems: "start" }}>
 
-          {/* Left column top: Verdict */}
+          {/* Row 1, col 1: Verdict */}
           <div className="rsp-left-verdict" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px", animation: "fadeInUp 0.5s 0.15s ease both" }}>
 
             {hasSearched && !company && (
@@ -182,62 +184,83 @@ export default function App() {
 
           </div>
 
-          {/* Data sections (01–03 left column, 04 right column) */}
-          <DataSections
-            inp={inp}
-            company={company}
-            currencyMismatchWarning={currencyMismatchWarning}
-            growthPeriod={growthPeriod}
-            growthYears={growthYears}
-            epsGrowthHistory={scorecard.epsGrowthHistory}
-            onGrowthPeriodChange={p => {
-              if (p === "10yr" && growthYears.long <= growthYears.short) return;
-              setGrowthPeriod(p);
-              setInp(prev => ({ ...prev, historicalGrowth: p === "5yr" ? growthValues.g5 : growthValues.g10, growthOverrides: {} }));
-            }}
-            decayMode={inp.decayMode}
-            onDecayModeToggle={(mode) => setInp(p => ({ ...p, decayMode: p.decayMode === mode ? "none" : mode }))}
-            result={result}
-            growthOverrides={inp.growthOverrides}
-            onGrowthChange={(year, val) => {
-              setInp(p => {
-                const overrides = { ...p.growthOverrides };
-                for (let y = year; y <= 30; y++) overrides[y] = val;
-                return { ...p, growthOverrides: overrides };
-              });
-            }}
-          />
+          {/* Row 1, col 3: Price Projection Graph */}
+          <div className="rsp-right-graph" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px", animation: "fadeInUp 0.5s 0.2s ease both" }}>
+            <PriceProjectionGraph
+              priceHistory={priceHistory}
+              currentPrice={inp.currentPrice}
+              ticker={ticker}
+              scenarioValues={scenarioValues}
+              growthScenario={growthScenario}
+              result={result}
+            />
+          </div>
 
-          {/* Hairline vertical rule */}
+          {/* Hairline vertical — top row only */}
           <div className="rsp-hairline-v" style={{ background: C.border, width: "2px" }} />
 
-          {/* Hairline horizontal rule */}
+          {/* Hairline horizontal — after top row */}
           <div className="rsp-hairline-h" style={{ background: C.border, height: "2px" }} />
 
-          {/* Right column top: Valuation + Scorecard */}
-          <div className="rsp-right-top" style={{ paddingLeft: "40px", paddingTop: "12px", paddingBottom: "28px", animation: "fadeInUp 0.5s 0.2s ease both" }}>
-            <ValuationContext
-              strongBuyPrice={displayStrongBuyPrice}
-              buyPrice={displayBuyPrice}
-              dcf={valuation.dcf}
-              currentPrice={inp.currentPrice}
-              adjPrice={result?.adjPrice}
-              industryGrowth={valuation.industryGrowth}
-              industryGrowthLoading={valuation.industryGrowthLoading}
-              companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
-              priceMode={priceMode}
-            />
-            {company && (
-              <CompanyScorecard
-                earnings={scorecard.earnings}
-                cashFlows={scorecard.cashFlows}
-                incomeHistory={scorecard.incomeHistory}
-                description={scorecard.description}
-                exchange={scorecard.exchange}
-                lifecycleOnly
-                dividendYield={inp.dividendYield}
+          {/* Row 3: ValuationContext + Scorecard — full width */}
+          <div className="rsp-bottom-context" style={{ animation: "fadeInUp 0.5s 0.2s ease both" }}>
+            <div style={{ flex: "1 1 0", minWidth: 0, paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px" }}>
+              <ValuationContext
+                strongBuyPrice={displayStrongBuyPrice}
+                buyPrice={displayBuyPrice}
+                dcf={valuation.dcf}
+                currentPrice={inp.currentPrice}
+                adjPrice={result?.adjPrice}
+                industryGrowth={valuation.industryGrowth}
+                industryGrowthLoading={valuation.industryGrowthLoading}
+                companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
+                priceMode={priceMode}
               />
+            </div>
+            {company && (
+              <div style={{ flex: "1 1 0", minWidth: 0, paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px", borderLeft: `1px solid ${C.borderWeak}` }}>
+                <CompanyScorecard
+                  earnings={scorecard.earnings}
+                  cashFlows={scorecard.cashFlows}
+                  incomeHistory={scorecard.incomeHistory}
+                  description={scorecard.description}
+                  exchange={scorecard.exchange}
+                  lifecycleOnly
+                  dividendYield={inp.dividendYield}
+                />
+              </div>
             )}
+          </div>
+
+          {/* Hairline horizontal — before DataSections */}
+          <div className="rsp-hairline-h2" style={{ background: C.border, height: "2px" }} />
+
+          {/* Row 5: DataSections — full width */}
+          <div className="rsp-data-sections-wrap">
+            <DataSections
+              inp={inp}
+              company={company}
+              currencyMismatchWarning={currencyMismatchWarning}
+              growthPeriod={growthPeriod}
+              growthYears={growthYears}
+              epsGrowthHistory={scorecard.epsGrowthHistory}
+              onGrowthPeriodChange={p => {
+                if (p === "10yr" && growthYears.long <= growthYears.short) return;
+                setGrowthPeriod(p);
+                setInp(prev => ({ ...prev, historicalGrowth: p === "5yr" ? growthValues.g5 : growthValues.g10, growthOverrides: {} }));
+              }}
+              decayMode={inp.decayMode}
+              onDecayModeToggle={(mode) => setInp(p => ({ ...p, decayMode: p.decayMode === mode ? "none" : mode }))}
+              result={result}
+              growthOverrides={inp.growthOverrides}
+              onGrowthChange={(year, val) => {
+                setInp(p => {
+                  const overrides = { ...p.growthOverrides };
+                  for (let y = year; y <= 30; y++) overrides[y] = val;
+                  return { ...p, growthOverrides: overrides };
+                });
+              }}
+            />
           </div>
         </div>
 

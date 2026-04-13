@@ -2,7 +2,7 @@ import { ADR_RATIO_TABLE, ADR_EPS_RATIO, ADR_FINANCIALS_CCY, COUNTRY_CCY, EXCHAN
 import { f, fB } from "../utils.ts";
 import { classifyLifecycle } from "../companyScorecard/lifecycle.ts";
 import type {
-  TickerData, LifecycleStage, RollFilters,
+  TickerData, HistoricalPricePoint, LifecycleStage, RollFilters,
   FMPProfile, FMPQuote, FMPBalanceSheet, FMPIncomeStatement,
   FMPEstimate,
   FMPDividend, FMPDividendHistory, FMPDCF,
@@ -375,7 +375,7 @@ export async function lookupTicker(
 
   log(`Fetching data for ${t} from FMP endpoints...`);
 
-  const [profile, quote, balanceSheet, income, estimates, divHistory, dcfData, earningsSurprises, cashFlows] = await Promise.all([
+  const [profile, quote, balanceSheet, income, estimates, divHistory, dcfData, earningsSurprises, cashFlows, histData] = await Promise.all([
     // 1) Company Profile
     fetchFMP<FMPProfile[]>(`profile?symbol=${t}`).then(d => { log("  ✓ /profile — company info, market cap"); return d; }),
 
@@ -412,6 +412,12 @@ export async function lookupTicker(
     fetchFMP<FMPCashFlow[]>(`cash-flow-statement?symbol=${t}&limit=12`)
       .then(d => { log("  ✓ /cash-flow-statement — operating/investing/financing flows"); return d; })
       .catch(() => { log("  ⚠ /cash-flow-statement — not available"); return [] as FMPCashFlow[]; }),
+
+    // 9) Historical price (monthly-sampled, last 5 years)
+    fetch(`/api/historical-price?symbol=${t}`)
+      .then(r => r.ok ? (r.json() as Promise<{ priceHistory: HistoricalPricePoint[] }>) : { priceHistory: [] as HistoricalPricePoint[] })
+      .then(d => { log("  ✓ /historical-price — monthly price history for graph"); return d; })
+      .catch(() => { log("  ⚠ /historical-price — not available"); return { priceHistory: [] as HistoricalPricePoint[] }; }),
 
   ]);
 
@@ -960,5 +966,6 @@ export async function lookupTicker(
     epsGrowthHistory,
     description: p.description || "",
     exchange,
+    priceHistory: histData.priceHistory ?? [],
   };
 }
