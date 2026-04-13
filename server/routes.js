@@ -204,13 +204,22 @@ router.get("/historical-price", async (req, res) => {
   const cached = priceHistoryCache.get(cacheKey);
   if (cached !== undefined) return res.json(cached);
   try {
-    const url = fmpUrl(`historical-price-full/${symbol}`, { timeseries: 1260 });
+    // FMP stable API uses "historical-price-eod" with symbol as query param.
+    // Returns: { symbol, historical: [{ date, open, high, low, close, volume, ... }] }
+    // Data is newest-first; we reverse and sample to monthly.
+    const url = fmpUrl("historical-price-eod", { symbol, limit: 1260 });
     const upstream = await fetch(url);
-    if (!upstream.ok) return res.status(upstream.status).json({ error: "Data unavailable." });
+    if (!upstream.ok) {
+      console.warn(`[tup-proxy] FMP historical-price-eod ${upstream.status} for ${symbol}`);
+      return res.json({ priceHistory: [] });
+    }
     const data = await upstream.json();
 
+    // Support both array response and {historical:[]} envelope
+    const raw = Array.isArray(data) ? data : (data.historical || []);
+
     // Sample to monthly — keep first trading day per calendar month, oldest→newest
-    const daily = (data.historical || []).slice().reverse();
+    const daily = raw.slice().reverse();
     const monthly = [];
     let prevMonth = null;
     for (const pt of daily) {
@@ -222,7 +231,7 @@ router.get("/historical-price", async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error("[tup-proxy] historical-price error:", err.message);
-    res.status(502).json({ error: "Unable to fetch price history." });
+    res.json({ priceHistory: [] });
   }
 });
 
