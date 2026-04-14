@@ -321,9 +321,6 @@ export default function App() {
             )}
           </div>
 
-          {/* Hairline horizontal — before DataSections */}
-          <div className="rsp-hairline-h2" style={{ background: C.border, height: "2px" }} />
-
           {/* Row 5: DataSections — full width */}
           <div className="rsp-data-sections-wrap">
             <DataSections
