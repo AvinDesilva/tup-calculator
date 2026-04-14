@@ -18,8 +18,8 @@ type ChartPoint = {
 function formatMonthLabel(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   const yr = String(d.getFullYear()).slice(2);
-  const mo = d.toLocaleString("en-US", { month: "short" });
-  return `${mo} '${yr}`;
+  const mo = d.getMonth() + 1;
+  return `${mo}/${yr}`;
 }
 
 
