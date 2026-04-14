@@ -32,6 +32,7 @@ export function PriceProjectionGraph({
   scenarioValues,
   growthScenario,
   result,
+  sma200,
 }: PriceProjectionGraphProps) {
   const body = C.body;
   const mono = C.mono;
@@ -39,6 +40,12 @@ export function PriceProjectionGraph({
   // Single toggle: 2Y / 5Y / 10Y view window (2Y default)
   // Controls both how much history to show and how many years to project
   const [viewYears, setViewYears] = useState<2 | 5 | 10>(2);
+  const [showSma, setShowSma] = useState(true);
+
+  // SMA line color mirrors TechnicalValidation: green if price >= SMA, red if below
+  const smaColor = currentPrice > 0 && sma200 > 0
+    ? (currentPrice >= sma200 ? "#10d97e" : "#ff4136")
+    : "#10d97e";
 
   const label9: React.CSSProperties = {
     fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em",
@@ -253,6 +260,17 @@ export function PriceProjectionGraph({
             strokeWidth={1}
           />
 
+          {/* 200-day SMA — horizontal dotted line */}
+          {showSma && sma200 > 0 && (
+            <ReferenceLine
+              y={sma200}
+              stroke={smaColor}
+              strokeOpacity={0.35}
+              strokeDasharray="2 4"
+              strokeWidth={1}
+            />
+          )}
+
           {/* Historical — gold solid */}
           <Line
             type="monotone"
@@ -308,24 +326,52 @@ export function PriceProjectionGraph({
       </div>
 
       {/* Legend */}
-      <div style={{ display: "flex", gap: "20px", marginTop: "10px", paddingLeft: "4px", flexShrink: 0 }}>
-        {legendItems.map(({ key, label }) => {
-          const active = growthScenario === key;
-          return (
-            <div key={key} style={{ display: "flex", alignItems: "center", gap: "6px", opacity: active ? 1 : 0.4 }}>
-              <svg width="18" height="8" aria-hidden="true">
-                <line x1="0" y1="4" x2="18" y2="4"
-                  stroke={COLORS[key]}
-                  strokeWidth={active ? 2.5 : 1.5}
-                  strokeDasharray="5 2"
-                />
-              </svg>
-              <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color: active ? COLORS[key] : "#888", fontWeight: active ? 700 : 400 }}>
-                {label}
-              </span>
-            </div>
-          );
-        })}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "10px", paddingLeft: "4px", flexShrink: 0 }}>
+        <div style={{ display: "flex", gap: "20px" }}>
+          {legendItems.map(({ key, label }) => {
+            const active = growthScenario === key;
+            return (
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: "6px", opacity: active ? 1 : 0.4 }}>
+                <svg width="18" height="8" aria-hidden="true">
+                  <line x1="0" y1="4" x2="18" y2="4"
+                    stroke={COLORS[key]}
+                    strokeWidth={active ? 2.5 : 1.5}
+                    strokeDasharray="5 2"
+                  />
+                </svg>
+                <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color: active ? COLORS[key] : "#888", fontWeight: active ? 700 : 400 }}>
+                  {label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* SMA toggle */}
+        {sma200 > 0 && (
+          <button
+            onClick={() => setShowSma(s => !s)}
+            style={{
+              display: "flex", alignItems: "center", gap: "5px",
+              background: "transparent", border: "none", cursor: "pointer",
+              padding: "2px 0", opacity: showSma ? 1 : 0.35,
+              transition: "opacity 0.15s",
+            }}
+            aria-pressed={showSma}
+            aria-label="Toggle 200-day SMA line"
+          >
+            <svg width="18" height="8" aria-hidden="true">
+              <line x1="0" y1="4" x2="18" y2="4"
+                stroke={smaColor}
+                strokeWidth={1}
+                strokeDasharray="2 4"
+              />
+            </svg>
+            <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color: smaColor, fontWeight: 400 }}>
+              200 SMA
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );

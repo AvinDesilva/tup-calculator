@@ -7,4 +7,5 @@ export interface PriceProjectionGraphProps {
   scenarioValues: Record<GrowthScenario, { y1: number; y2: number | null; cagr: number | null }>;
   growthScenario: GrowthScenario;
   result: TUPResult | null;
+  sma200: number;
 }

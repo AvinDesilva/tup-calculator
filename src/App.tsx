@@ -193,6 +193,7 @@ export default function App() {
               scenarioValues={scenarioValues}
               growthScenario={growthScenario}
               result={result}
+              sma200={inp.sma200}
             />
           </div>
 
