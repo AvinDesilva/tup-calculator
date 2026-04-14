@@ -43,10 +43,7 @@ export function PriceProjectionGraph({
   const [viewYears, setViewYears] = useState<2 | 5 | 10>(2);
   const [showSma, setShowSma] = useState(true);
 
-  // SMA line color mirrors TechnicalValidation: green if price >= SMA, red if below
-  const smaColor = currentPrice > 0 && sma200 > 0
-    ? (currentPrice >= sma200 ? "#10d97e" : "#ff4136")
-    : "#10d97e";
+  const smaColor = "#bf5fff";
 
   const label9: React.CSSProperties = {
     fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em",
