@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 
 import { calcTUP } from "./lib/verdictCard/calcTUP.ts";
 import { C } from "./lib/theme.ts";
+import { f } from "./lib/utils.ts";
 import type { InputState, Mode, TUPResult, GrowthScenario, PriceMode } from "./lib/types.ts";
 
 import { VerdictCard } from "./components/VerdictCard";
@@ -195,6 +196,7 @@ export default function App() {
               result={result}
               sma200={inp.sma200}
               rollingDice={rollingDice}
+              onScenarioChange={onScenarioChange}
             />
           </div>
 
@@ -203,6 +205,22 @@ export default function App() {
 
           {/* Hairline horizontal — after top row */}
           <div className="rsp-hairline-h" style={{ background: C.border, height: "2px" }} />
+
+          {/* Mobile summary — hidden on desktop, shown on mobile between graph and context */}
+          <div className="rsp-mobile-summary" style={{ display: "none", animation: "fadeInUp 0.5s 0.2s ease both" }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Adj. Price</div>
+              <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: C.text1 }}>${f(result?.adjPrice)}</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>EPS Base</div>
+              <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: C.text1 }}>${f(result?.epsBase)}</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Growth</div>
+              <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: "#10d97e" }}>{result ? f(result.gr * 100) : "—"}%</div>
+            </div>
+          </div>
 
           {/* Row 3: ValuationContext + Scorecard — full width */}
           <div className="rsp-bottom-context" style={{ animation: "fadeInUp 0.5s 0.2s ease both" }}>

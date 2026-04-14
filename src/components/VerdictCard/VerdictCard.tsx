@@ -213,7 +213,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
                 })}
               </div>
             )}
-            <div style={{ display: "flex", gap: "6px", flex: 1 }}>
+            <div className="rsp-growth-step-btns" style={{ display: "flex", gap: "6px", flex: 1 }}>
               <button
                 {...holdDown}
                 aria-label="Decrease growth rate"

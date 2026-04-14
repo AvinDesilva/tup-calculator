@@ -50,6 +50,7 @@ export function PriceProjectionGraph({
   result,
   sma200,
   rollingDice,
+  onScenarioChange,
 }: PriceProjectionGraphProps) {
   const body = C.body;
   const mono = C.mono;
@@ -375,7 +376,18 @@ export function PriceProjectionGraph({
         {legendItems.map(({ key, label }) => {
           const active = growthScenario === key;
           return (
-            <div key={key} style={{ display: "flex", alignItems: "center", gap: "6px", opacity: active ? 1 : 0.4 }}>
+            <button
+              key={key}
+              onClick={() => onScenarioChange?.(key)}
+              aria-pressed={active}
+              aria-label={`${label} scenario`}
+              style={{
+                display: "flex", alignItems: "center", gap: "6px",
+                opacity: active ? 1 : 0.4,
+                background: "transparent", border: "none", cursor: onScenarioChange ? "pointer" : "default",
+                padding: "2px 0", transition: "opacity 0.15s",
+              }}
+            >
               <svg width="18" height="8" aria-hidden="true">
                 <line x1="0" y1="4" x2="18" y2="4"
                   stroke={COLORS[key]}
@@ -386,7 +398,7 @@ export function PriceProjectionGraph({
               <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color: active ? COLORS[key] : "#888", fontWeight: active ? 700 : 400 }}>
                 {label}
               </span>
-            </div>
+            </button>
           );
         })}
 
