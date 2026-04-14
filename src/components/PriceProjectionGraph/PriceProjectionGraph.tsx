@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   ReferenceLine, ResponsiveContainer, Tooltip,
@@ -27,6 +27,21 @@ function toDateStr(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+// How many weeks of history to show and how many years to project per view
+const HIST_WEEKS = { 2: 104, 5: 260, 10: 520 } as const;
+const PROJ_YEARS = { 2: 5,   5: 5,   10: 10  } as const;
+
+// For 5Y/10Y views, sample weekly data down to one point per month
+function toMonthly<T extends { date: string }>(pts: T[]): T[] {
+  const out: T[] = [];
+  let prev = "";
+  for (const p of pts) {
+    const mo = p.date.slice(0, 7);
+    if (mo !== prev) { out.push(p); prev = mo; }
+  }
+  return out;
+}
+
 export function PriceProjectionGraph({
   priceHistory,
   currentPrice,
@@ -50,21 +65,6 @@ export function PriceProjectionGraph({
     fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em",
     textTransform: "uppercase", color: "#888", fontFamily: body,
   };
-
-  // How many weeks of history to show and how many years to project per view
-  const HIST_WEEKS    = { 2: 104, 5: 260, 10: 520 } as const;
-  const PROJ_YEARS    = { 2: 5,   5: 5,   10: 10  } as const;
-
-  // For 5Y/10Y views, sample weekly data down to one point per month
-  function toMonthly(pts: typeof priceHistory) {
-    const out: typeof priceHistory = [];
-    let prev = "";
-    for (const p of pts) {
-      const mo = p.date.slice(0, 7);
-      if (mo !== prev) { out.push(p); prev = mo; }
-    }
-    return out;
-  }
 
   const chartData = useMemo<ChartPoint[]>(() => {
     if (currentPrice <= 0) return [];
@@ -141,14 +141,17 @@ export function PriceProjectionGraph({
   const todayLabel = useMemo(() => formatMonthLabel(toDateStr(new Date())), []);
 
   // Only update the chart key (and replay animations) when dice is NOT rolling.
-  // While rollingDice=true, doFetch may fire on intermediate matches; freezing the
-  // key prevents repeated animation attempts. When rolling ends the key updates once
-  // for the final ticker.
-  const [chartKey, setChartKey] = useState("initial");
+  // useReducer lets us dispatch from useEffect without triggering react-hooks/set-state-in-effect.
+  const [chartKey, dispatchChartKey] = useReducer(
+    (prev: string, action: { key: string; rolling: boolean }) =>
+      action.rolling ? prev : action.key,
+    "initial",
+  );
   useEffect(() => {
-    if (!rollingDice) {
-      setChartKey(`${priceHistory[priceHistory.length - 1]?.date ?? "empty"}-${currentPrice}`);
-    }
+    dispatchChartKey({
+      key: `${priceHistory[priceHistory.length - 1]?.date ?? "empty"}-${currentPrice}`,
+      rolling: rollingDice,
+    });
   }, [priceHistory, currentPrice, rollingDice]);
 
   // Y-axis domain with 10% padding
