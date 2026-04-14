@@ -194,6 +194,7 @@ export default function App() {
               growthScenario={growthScenario}
               result={result}
               sma200={inp.sma200}
+              rollingDice={rollingDice}
             />
           </div>
 

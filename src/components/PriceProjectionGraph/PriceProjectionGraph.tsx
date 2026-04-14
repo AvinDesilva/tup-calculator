@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   ReferenceLine, ResponsiveContainer, Tooltip,
@@ -34,6 +34,7 @@ export function PriceProjectionGraph({
   growthScenario,
   result,
   sma200,
+  rollingDice,
 }: PriceProjectionGraphProps) {
   const body = C.body;
   const mono = C.mono;
@@ -139,11 +140,16 @@ export function PriceProjectionGraph({
   // Label of the "today" join point — used for the reference line
   const todayLabel = useMemo(() => formatMonthLabel(toDateStr(new Date())), []);
 
-  // Changes whenever a new ticker is loaded — remounts ComposedChart to replay animations
-  const chartKey = useMemo(
-    () => `${priceHistory[priceHistory.length - 1]?.date ?? "empty"}-${currentPrice}`,
-    [priceHistory, currentPrice],
-  );
+  // Only update the chart key (and replay animations) when dice is NOT rolling.
+  // While rollingDice=true, doFetch may fire on intermediate matches; freezing the
+  // key prevents repeated animation attempts. When rolling ends the key updates once
+  // for the final ticker.
+  const [chartKey, setChartKey] = useState("initial");
+  useEffect(() => {
+    if (!rollingDice) {
+      setChartKey(`${priceHistory[priceHistory.length - 1]?.date ?? "empty"}-${currentPrice}`);
+    }
+  }, [priceHistory, currentPrice, rollingDice]);
 
   // Y-axis domain with 10% padding
   const yDomain = useMemo<[number, number]>(() => {

@@ -8,4 +8,5 @@ export interface PriceProjectionGraphProps {
   growthScenario: GrowthScenario;
   result: TUPResult | null;
   sma200: number;
+  rollingDice: boolean;
 }
