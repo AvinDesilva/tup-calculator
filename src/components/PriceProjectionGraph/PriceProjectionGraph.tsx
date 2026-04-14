@@ -139,6 +139,12 @@ export function PriceProjectionGraph({
   // Label of the "today" join point — used for the reference line
   const todayLabel = useMemo(() => formatMonthLabel(toDateStr(new Date())), []);
 
+  // Changes whenever a new ticker is loaded — remounts ComposedChart to replay animations
+  const chartKey = useMemo(
+    () => `${priceHistory[priceHistory.length - 1]?.date ?? "empty"}-${currentPrice}`,
+    [priceHistory, currentPrice],
+  );
+
   // Y-axis domain with 10% padding
   const yDomain = useMemo<[number, number]>(() => {
     if (chartData.length === 0) return [0, 100];
@@ -238,7 +244,7 @@ export function PriceProjectionGraph({
 
       <div style={{ flex: 1, minHeight: 0 }}>
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+        <ComposedChart key={chartKey} data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
 
           <XAxis
@@ -282,7 +288,10 @@ export function PriceProjectionGraph({
             dot={false}
             activeDot={false}
             connectNulls={false}
-            isAnimationActive={false}
+            isAnimationActive={true}
+            animationBegin={1700}
+            animationDuration={400}
+            animationEasing="ease-out"
             hide={!showSma}
           />
 
@@ -295,7 +304,10 @@ export function PriceProjectionGraph({
             dot={false}
             activeDot={{ r: 4, fill: C.accent, strokeWidth: 0 }}
             connectNulls={false}
-            isAnimationActive={false}
+            isAnimationActive={true}
+            animationBegin={0}
+            animationDuration={800}
+            animationEasing="ease-out"
           />
 
           {/* Base — white dashed */}
@@ -307,7 +319,10 @@ export function PriceProjectionGraph({
             dot={false}
             activeDot={{ r: 4, fill: COLORS.base, strokeWidth: 0 }}
             connectNulls={false}
-            isAnimationActive={false}
+            isAnimationActive={true}
+            animationBegin={1000}
+            animationDuration={600}
+            animationEasing="ease-out"
             {...lineStyle("base")}
           />
 
@@ -320,7 +335,10 @@ export function PriceProjectionGraph({
             dot={false}
             activeDot={{ r: 4, fill: COLORS.bull, strokeWidth: 0 }}
             connectNulls={false}
-            isAnimationActive={false}
+            isAnimationActive={true}
+            animationBegin={1000}
+            animationDuration={600}
+            animationEasing="ease-out"
             {...lineStyle("bull")}
           />
 
@@ -333,7 +351,10 @@ export function PriceProjectionGraph({
             dot={false}
             activeDot={{ r: 4, fill: COLORS.bear, strokeWidth: 0 }}
             connectNulls={false}
-            isAnimationActive={false}
+            isAnimationActive={true}
+            animationBegin={1000}
+            animationDuration={600}
+            animationEasing="ease-out"
             {...lineStyle("bear")}
           />
         </ComposedChart>
