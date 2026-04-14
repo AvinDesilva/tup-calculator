@@ -216,9 +216,9 @@ export function PriceProjectionGraph({
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", flexShrink: 0 }}>
+      <div style={{ marginBottom: "10px", flexShrink: 0 }}>
         <div style={label9}>Price Projection</div>
-        <div style={{ display: "flex", alignItems: "center", gap: "0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0", marginTop: "6px" }}>
           <button onClick={() => setViewYears(2)} style={{ ...toggleStyle(viewYears === 2), borderRight: "none" }}>2Y</button>
           <button onClick={() => setViewYears(5)} style={{ ...toggleStyle(viewYears === 5), borderRight: "none" }}>5Y</button>
           <button onClick={() => setViewYears(10)} style={toggleStyle(viewYears === 10)}>10Y</button>
@@ -326,28 +326,26 @@ export function PriceProjectionGraph({
       </div>
 
       {/* Legend */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "10px", paddingLeft: "4px", flexShrink: 0 }}>
-        <div style={{ display: "flex", gap: "20px" }}>
-          {legendItems.map(({ key, label }) => {
-            const active = growthScenario === key;
-            return (
-              <div key={key} style={{ display: "flex", alignItems: "center", gap: "6px", opacity: active ? 1 : 0.4 }}>
-                <svg width="18" height="8" aria-hidden="true">
-                  <line x1="0" y1="4" x2="18" y2="4"
-                    stroke={COLORS[key]}
-                    strokeWidth={active ? 2.5 : 1.5}
-                    strokeDasharray="5 2"
-                  />
-                </svg>
-                <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color: active ? COLORS[key] : "#888", fontWeight: active ? 700 : 400 }}>
-                  {label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "20px", marginTop: "10px", paddingLeft: "4px", flexShrink: 0 }}>
+        {legendItems.map(({ key, label }) => {
+          const active = growthScenario === key;
+          return (
+            <div key={key} style={{ display: "flex", alignItems: "center", gap: "6px", opacity: active ? 1 : 0.4 }}>
+              <svg width="18" height="8" aria-hidden="true">
+                <line x1="0" y1="4" x2="18" y2="4"
+                  stroke={COLORS[key]}
+                  strokeWidth={active ? 2.5 : 1.5}
+                  strokeDasharray="5 2"
+                />
+              </svg>
+              <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color: active ? COLORS[key] : "#888", fontWeight: active ? 700 : 400 }}>
+                {label}
+              </span>
+            </div>
+          );
+        })}
 
-        {/* SMA toggle */}
+        {/* SMA toggle — sits right after Bull */}
         {sma200 > 0 && (
           <button
             onClick={() => setShowSma(s => !s)}
