@@ -222,6 +222,57 @@ export default function App() {
             </div>
           </div>
 
+          {/* Mobile technical indicators — hidden on desktop, shown below summary on mobile */}
+          {result && (
+            <div className="rsp-mobile-warnings" style={{ display: "none" }}>
+              {result.paybackNote && (
+                <div style={{ margin: "0 0 8px", padding: "14px 16px", borderLeft: "2px solid #888", borderTop: "1px solid rgba(136,136,136,0.2)", borderRight: "1px solid rgba(136,136,136,0.2)", borderBottom: "1px solid rgba(136,136,136,0.2)", background: "rgba(136,136,136,0.05)" }}>
+                  <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                    <span style={{ color: "#888", fontSize: "14px", fontWeight: 700, flexShrink: 0, lineHeight: 1.2, fontFamily: C.mono }}>—</span>
+                    <div>
+                      <div style={{ fontSize: "11px", fontWeight: 700, color: "#888", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>Calculation Not Applicable</div>
+                      <p style={{ fontSize: "11px", color: "rgba(136,136,136,0.7)", lineHeight: 1.75, margin: 0 }}>{result.paybackNote}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {!result.paybackNote && !result.fallingKnife && result.sma200 > 0 && (
+                <div style={{ margin: "0 0 8px", padding: "14px 16px", borderLeft: "2px solid #00BFA5", borderTop: "1px solid rgba(0,191,165,0.2)", borderRight: "1px solid rgba(0,191,165,0.2)", borderBottom: "1px solid rgba(0,191,165,0.2)", background: "rgba(0,191,165,0.05)" }}>
+                  <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                    <span style={{ color: "#00BFA5", fontSize: "14px", fontWeight: 700, flexShrink: 0, lineHeight: 1.2, fontFamily: C.mono }}>✓</span>
+                    <div>
+                      <div style={{ fontSize: "11px", fontWeight: 700, color: "#00BFA5", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>Technically Sound</div>
+                      <p style={{ fontSize: "11px", color: "rgba(0,191,165,0.7)", lineHeight: 1.75, margin: 0 }}>Price is trading above the 200-day SMA{result.sma200 > 0 ? ` of $${f(result.sma200)}` : ""}, confirming an uptrend.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {result.fallingKnife && result.verdict === "spec_buy" && (
+                <div style={{ margin: "0 0 8px", padding: "14px 16px", borderLeft: "2px solid #f5a020", borderTop: "1px solid rgba(245,160,32,0.2)", borderRight: "1px solid rgba(245,160,32,0.2)", borderBottom: "1px solid rgba(245,160,32,0.2)", background: "rgba(245,160,32,0.05)" }}>
+                  <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                    <span style={{ color: "#f5a020", fontSize: "14px", fontWeight: 700, flexShrink: 0, lineHeight: 1.2, fontFamily: C.mono }}>!</span>
+                    <div>
+                      <div style={{ fontSize: "11px", fontWeight: 700, color: "#f5a020", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>Warning: Technically Weak</div>
+                      <p style={{ fontSize: "11px", color: "#d4923c", lineHeight: 1.75, margin: 0 }}>The math suggests a Buy, but the stock is in a downtrend (trading below its 200-day SMA{result.sma200 > 0 ? ` of $${f(result.sma200)}` : ""}).{" "}<strong style={{ color: "#f5a020" }}>Consider scaling in only after price stabilizes above the 200-day SMA</strong>.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {result.fallingKnife && result.verdict === "avoid" && (
+                <div style={{ margin: "0 0 8px", padding: "10px 14px", borderLeft: "2px solid #ff4136", borderTop: "1px solid rgba(255,65,54,0.15)", borderRight: "1px solid rgba(255,65,54,0.15)", borderBottom: "1px solid rgba(255,65,54,0.15)", display: "flex", gap: "8px", alignItems: "center" }}>
+                  <span style={{ color: "#ff4136" }}>⚠</span>
+                  <span style={{ fontSize: "11px", color: "#ff4136" }}>Falling Knife — Price below 200-day SMA. Technical avoid.</span>
+                </div>
+              )}
+              {result.tamWarning && (
+                <div style={{ padding: "10px 14px", borderLeft: "2px solid #f5a020", borderTop: "1px solid rgba(245,160,32,0.15)", borderRight: "1px solid rgba(245,160,32,0.15)", borderBottom: "1px solid rgba(245,160,32,0.15)", display: "flex", gap: "8px", alignItems: "center" }}>
+                  <span style={{ color: "#f5a020" }}>⚠</span>
+                  <span style={{ fontSize: "11px", color: "#f5a020" }}>TAM Warning — Implied Y10 revenue exceeds $5T. Growth may be unrealistic.</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Row 3: ValuationContext + Scorecard — full width */}
           <div className="rsp-bottom-context" style={{ animation: "fadeInUp 0.5s 0.2s ease both" }}>
             <div style={{ flex: "1 1 0", minWidth: 0, paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px" }}>

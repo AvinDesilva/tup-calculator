@@ -245,6 +245,8 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
         </div>
       </div>
 
+      <div className="rsp-verdict-warnings">
+
       {/* Payback note — shown when calculation is broken */}
       {result.paybackNote && (
         <div style={{ marginTop: "12px", marginBottom: "16px", padding: "14px 16px", borderLeft: "2px solid #888", borderTop: "1px solid rgba(136,136,136,0.2)", borderRight: "1px solid rgba(136,136,136,0.2)", borderBottom: "1px solid rgba(136,136,136,0.2)", background: "rgba(136,136,136,0.05)" }}>
@@ -306,6 +308,8 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
           <span style={{ fontSize: "11px", color: "#f5a020" }}>TAM Warning — Implied Y10 revenue exceeds $5T. Growth may be unrealistic.</span>
         </div>
       )}
+
+      </div>
     </div>
   );
 }

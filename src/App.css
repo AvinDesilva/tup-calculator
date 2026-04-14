@@ -126,7 +126,7 @@
     height: 320px;
   }
   .rsp-bottom-context {
-    order: 4;
+    order: 5;
     flex-direction: column !important;
     border-top: 1px solid rgba(255,255,255,0.06);
   }
@@ -136,7 +136,7 @@
     padding-right: 0 !important;
   }
   .rsp-data-sections-wrap {
-    order: 5;
+    order: 6;
     border-top: 1px solid rgba(255,255,255,0.06);
   }
   .rsp-data-wrap {
@@ -189,6 +189,7 @@
     text-align: right !important;
   }
   .rsp-verdict-stats     { display: none !important; }
+  .rsp-verdict-warnings  { display: none !important; }
   .rsp-growth-step-btns  { display: none !important; }
   .rsp-mobile-summary {
     display: flex !important;
@@ -196,6 +197,11 @@
     padding: 16px 0;
     border-top: 1px solid rgba(255,255,255,0.06);
     order: 3;
+  }
+  .rsp-mobile-warnings {
+    display: block !important;
+    order: 4;
+    padding: 12px 0 0;
   }
 }
 
