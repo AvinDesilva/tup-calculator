@@ -326,7 +326,7 @@ export function PriceProjectionGraph({
             activeDot={{ r: 4, fill: COLORS.base, strokeWidth: 0 }}
             connectNulls={false}
             isAnimationActive={true}
-            animationBegin={1000}
+            animationBegin={900}
             animationDuration={600}
             animationEasing="ease-out"
             {...lineStyle("base")}
@@ -342,7 +342,7 @@ export function PriceProjectionGraph({
             activeDot={{ r: 4, fill: COLORS.bull, strokeWidth: 0 }}
             connectNulls={false}
             isAnimationActive={true}
-            animationBegin={1000}
+            animationBegin={900}
             animationDuration={600}
             animationEasing="ease-out"
             {...lineStyle("bull")}
@@ -358,7 +358,7 @@ export function PriceProjectionGraph({
             activeDot={{ r: 4, fill: COLORS.bear, strokeWidth: 0 }}
             connectNulls={false}
             isAnimationActive={true}
-            animationBegin={1000}
+            animationBegin={900}
             animationDuration={600}
             animationEasing="ease-out"
             {...lineStyle("bear")}
