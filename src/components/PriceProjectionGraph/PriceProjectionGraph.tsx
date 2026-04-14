@@ -12,6 +12,7 @@ type ChartPoint = {
   base?: number;
   bull?: number;
   bear?: number;
+  sma?: number;
 };
 
 function formatMonthLabel(dateStr: string): string {
@@ -83,6 +84,18 @@ export function PriceProjectionGraph({
     const baseRate = getRate("base");
     const bullRate = getRate("bull");
 
+    // ── 200-day SMA (rolling 40-week average) ────────────────────────────────
+    // 200 trading days ÷ 5 trading days/week = 40-week window.
+    // Computed over the full priceHistory so the visible slice always has
+    // correct values (the first 39 weeks produce no SMA — line starts later).
+    const SMA_WINDOW = 40;
+    const smaByDate = new Map<string, number>();
+    for (let i = SMA_WINDOW - 1; i < priceHistory.length; i++) {
+      let sum = 0;
+      for (let j = i - SMA_WINDOW + 1; j <= i; j++) sum += priceHistory[j].close;
+      smaByDate.set(priceHistory[i].date, parseFloat((sum / SMA_WINDOW).toFixed(2)));
+    }
+
     // ── Historical points ─────────────────────────────────────────────────────
     // 2Y: raw weekly data (no sampling) — finer curve
     // 5Y/10Y: sampled to monthly — less crowded
@@ -92,6 +105,7 @@ export function PriceProjectionGraph({
     const historical: ChartPoint[] = pts.map(p => ({
       label: formatMonthLabel(p.date),
       historical: p.close,
+      sma: smaByDate.get(p.date),
     }));
 
     // ── Join point (today) — connects history to projections ──────────────────
@@ -133,7 +147,7 @@ export function PriceProjectionGraph({
     if (chartData.length === 0) return [0, 100];
     let min = Infinity, max = -Infinity;
     for (const pt of chartData) {
-      for (const v of [pt.historical, pt.base, pt.bull, pt.bear]) {
+      for (const v of [pt.historical, pt.base, pt.bull, pt.bear, pt.sma]) {
         if (v != null) { min = Math.min(min, v); max = Math.max(max, v); }
       }
     }
@@ -149,7 +163,7 @@ export function PriceProjectionGraph({
     strokeWidth:   growthScenario === s ? 2.5 : 1.5,
   });
 
-  const COLORS = { base: "#ffffff", bull: "#10d97e", bear: "#FF4D00", historical: C.accent };
+  const COLORS = { base: "#ffffff", bull: "#10d97e", bear: "#FF4D00", historical: C.accent, sma: smaColor };
 
   // Custom tooltip — small dark box showing price for each visible line
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -260,16 +274,20 @@ export function PriceProjectionGraph({
             strokeWidth={1}
           />
 
-          {/* 200-day SMA — horizontal dotted line */}
-          {showSma && sma200 > 0 && (
-            <ReferenceLine
-              y={sma200}
-              stroke={smaColor}
-              strokeOpacity={0.35}
-              strokeDasharray="2 4"
-              strokeWidth={1}
-            />
-          )}
+          {/* 200-day SMA — curved line following the rolling 40-week average */}
+          <Line
+            type="monotone"
+            dataKey="sma"
+            stroke={smaColor}
+            strokeOpacity={0.45}
+            strokeDasharray="2 5"
+            strokeWidth={1.5}
+            dot={false}
+            activeDot={false}
+            connectNulls={false}
+            isAnimationActive={false}
+            hide={!showSma}
+          />
 
           {/* Historical — gold solid */}
           <Line
