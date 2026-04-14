@@ -9,7 +9,7 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
   const [hovered, setHovered] = useState(false);
   return (
     <section className="rsp-ticker-bar" style={{ position: "sticky", top: 0, zIndex: 100, background: C.bg, paddingTop: "20px", paddingBottom: "20px", marginBottom: "20px", borderBottom: `1px solid ${C.borderWeak}`, animation: "fadeInUp 0.4s ease both" }}>
-      <div className="rsp-api-bar" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "20px", alignItems: "center", border: `1px solid ${hovered ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)"}`, boxShadow: hovered ? "0 0 12px rgba(255,255,255,0.08)" : "none", padding: "14px 18px", borderRadius: "4px", transition: "border-color 0.2s, box-shadow 0.2s" }}>
+      <div className="rsp-api-bar" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "20px", alignItems: "center", border: `1px solid ${hovered ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)"}`, boxShadow: hovered ? "0 0 12px rgba(255,255,255,0.08)" : "none", padding: "6px 18px", borderRadius: "4px", transition: "border-color 0.2s, box-shadow 0.2s" }}>
         <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "10px" }}>
           <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.text2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <circle cx="11" cy="11" r="8" />
