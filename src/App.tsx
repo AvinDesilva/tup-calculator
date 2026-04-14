@@ -209,8 +209,26 @@ export default function App() {
           {/* Mobile summary — hidden on desktop, shown on mobile between graph and context */}
           <div className="rsp-mobile-summary" style={{ display: "none", animation: "fadeInUp 0.5s 0.2s ease both" }}>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Adj. Price</div>
-              <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: C.text1 }}>${f(result?.adjPrice)}</div>
+              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>{priceMode === "adj" ? "Adj. Price" : "Listed Price"}</div>
+              <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: C.text1 }}>${f(priceMode === "adj" ? result?.adjPrice : inp.currentPrice)}</div>
+              {inp.currentPrice > 0 && (
+                <button
+                  onClick={() => setPriceMode(m => m === "adj" ? "listed" : "adj")}
+                  aria-label={`Switch to ${priceMode === "adj" ? "listed" : "adjusted"} price`}
+                  aria-pressed={priceMode === "listed"}
+                  style={{
+                    marginTop: "6px", fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em",
+                    textTransform: "uppercase", padding: "2px 6px",
+                    border: `1px solid ${priceMode === "listed" ? "#C4A06E" : "rgba(255,255,255,0.15)"}`,
+                    borderRadius: "10px",
+                    background: priceMode === "listed" ? "rgba(196,160,110,0.15)" : "transparent",
+                    color: priceMode === "listed" ? "#C4A06E" : "#555",
+                    cursor: "pointer", lineHeight: 1.4,
+                  }}
+                >
+                  {priceMode === "adj" ? "LISTED" : "ADJ"}
+                </button>
+              )}
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>EPS Base</div>
