@@ -140,7 +140,7 @@ export default function App() {
         <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2px 2fr", gridTemplateRows: "auto 2px auto 2px auto", gap: "0", alignItems: "start" }}>
 
           {/* Row 1, col 1: Verdict */}
-          <div className="rsp-left-verdict" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px", animation: "fadeInUp 0.5s 0.15s ease both" }}>
+          <div className="rsp-left-verdict" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "0", animation: "fadeInUp 0.5s 0.15s ease both" }}>
 
             {hasSearched && !company && (
               <div style={{ paddingTop: "48px" }}>
