@@ -67,7 +67,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
   }
 
   return (
-    <div style={{ paddingBottom: "4px" }}>
+    <>
       {/* Giant number + verdict label */}
       <div className="rsp-verdict-hero" style={{ display: "flex", alignItems: "flex-end", gap: "20px", marginBottom: "12px" }}>
         <div className="rsp-verdict-num" style={{
@@ -310,6 +310,6 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
       )}
 
       </div>
-    </div>
+    </>
   );
 }
