@@ -244,8 +244,7 @@ export function PriceProjectionGraph({
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ marginBottom: "10px", flexShrink: 0 }}>
-        <div style={label9}>Price Projection</div>
-        <div style={{ display: "flex", alignItems: "center", gap: "0", marginTop: "6px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0" }}>
           <button onClick={() => setViewYears(2)} style={{ ...toggleStyle(viewYears === 2), borderRight: "none" }}>2Y</button>
           <button onClick={() => setViewYears(5)} style={{ ...toggleStyle(viewYears === 5), borderRight: "none" }}>5Y</button>
           <button onClick={() => setViewYears(10)} style={toggleStyle(viewYears === 10)}>10Y</button>
