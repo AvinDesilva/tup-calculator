@@ -88,7 +88,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
       </div>
 
       {/* Progress bar */}
-      <div role="progressbar" aria-label="Payback progress" aria-valuenow={result.payback || 30} aria-valuemin={0} aria-valuemax={30} style={{ height: "3px", background: "rgba(255,255,255,0.04)", marginBottom: "5px", overflow: "hidden" }}>
+      <div role="progressbar" aria-label="Payback progress" aria-valuenow={result.payback || 30} aria-valuemin={0} aria-valuemax={30} style={{ height: "3px", background: "rgba(255,255,255,0.04)", marginBottom: "7px", overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${paybackPct}%`, background: v.color, opacity: 0.5, transition: "width 0.7s ease" }} />
       </div>
 
