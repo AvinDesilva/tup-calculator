@@ -182,7 +182,7 @@ export default function App() {
           </div>
 
           {/* Row 1, col 3: Price Projection Graph */}
-          <div className="rsp-right-graph" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px", animation: "fadeInUp 0.5s 0.2s ease both", alignSelf: "stretch", display: "flex", flexDirection: "column" }}>
+          <div className="rsp-right-graph" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "5px", paddingBottom: "28px", animation: "fadeInUp 0.5s 0.2s ease both", alignSelf: "stretch", display: "flex", flexDirection: "column" }}>
             <PriceProjectionGraph
               priceHistory={priceHistory}
               currentPrice={inp.currentPrice}
