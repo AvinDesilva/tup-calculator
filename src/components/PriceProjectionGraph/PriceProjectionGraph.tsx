@@ -389,6 +389,8 @@ export function PriceProjectionGraph({
                 opacity: active ? 1 : 0.45,
                 cursor: onScenarioChange ? "pointer" : "default",
                 padding: "5px 18px",
+                width: "83px",
+                justifyContent: "center",
                 border: `1px solid ${rgba.border}`,
                 marginLeft: i > 0 ? "-1px" : 0,
                 background: rgba.bg,
