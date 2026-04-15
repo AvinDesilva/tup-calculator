@@ -177,6 +177,7 @@ export function PriceProjectionGraph({
     base: { border: "rgba(255,255,255,0.2)", bg: "rgba(255,255,255,0.06)" },
     bull: { border: "rgba(16,217,126,0.2)",  bg: "rgba(16,217,126,0.06)"  },
     bear: { border: "rgba(255,77,0,0.2)",    bg: "rgba(255,77,0,0.06)"    },
+    sma:  { border: "rgba(191,95,255,0.2)",  bg: "rgba(191,95,255,0.06)"  },
   };
 
   // Custom tooltip — small dark box showing price for each visible line
@@ -372,8 +373,8 @@ export function PriceProjectionGraph({
       </div>
 
       {/* Legend */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "10px", flexShrink: 0 }}>
-        {legendItems.map(({ key, label }) => {
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: "10px", flexShrink: 0 }}>
+        {legendItems.map(({ key, label }, i) => {
           const active = growthScenario === key;
           const color = COLORS[key];
           const rgba = SCENARIO_RGBA[key];
@@ -388,12 +389,12 @@ export function PriceProjectionGraph({
                 opacity: active ? 1 : 0.45,
                 cursor: onScenarioChange ? "pointer" : "default",
                 padding: "5px 12px",
-                borderLeft: `2px solid ${color}`,
-                borderTop: `1px solid ${rgba.border}`,
-                borderRight: `1px solid ${rgba.border}`,
-                borderBottom: `1px solid ${rgba.border}`,
+                border: `1px solid ${rgba.border}`,
+                marginLeft: i > 0 ? "-1px" : 0,
                 background: rgba.bg,
                 transition: "opacity 0.15s",
+                position: "relative",
+                zIndex: active ? 1 : 0,
               }}
             >
               <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color, fontWeight: 700 }}>
@@ -403,27 +404,26 @@ export function PriceProjectionGraph({
           );
         })}
 
-        {/* SMA toggle */}
+        {/* SMA toggle — same box style */}
         {sma200 > 0 && (
           <button
             onClick={() => setShowSma(s => !s)}
-            style={{
-              display: "flex", alignItems: "center", gap: "5px",
-              background: "transparent", border: "none", cursor: "pointer",
-              padding: "2px 0", opacity: showSma ? 1 : 0.35,
-              transition: "opacity 0.15s",
-            }}
             aria-pressed={showSma}
             aria-label="Toggle 200-day SMA line"
+            style={{
+              display: "flex", alignItems: "center",
+              opacity: showSma ? 1 : 0.45,
+              cursor: "pointer",
+              padding: "5px 12px",
+              border: `1px solid ${SCENARIO_RGBA.sma.border}`,
+              marginLeft: "-1px",
+              background: SCENARIO_RGBA.sma.bg,
+              transition: "opacity 0.15s",
+              position: "relative",
+              zIndex: showSma ? 1 : 0,
+            }}
           >
-            <svg width="18" height="8" aria-hidden="true">
-              <line x1="0" y1="4" x2="18" y2="4"
-                stroke={smaColor}
-                strokeWidth={1}
-                strokeDasharray="2 4"
-              />
-            </svg>
-            <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color: smaColor, fontWeight: 400 }}>
+            <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color: smaColor, fontWeight: 700 }}>
               200 SMA
             </span>
           </button>
