@@ -14,7 +14,7 @@ export function Masthead({ onShowMethodology, onReset }: MastheadProps) {
       borderBottom: `2px solid ${C.accent}`,
       animation: "fadeInUp 0.4s ease both",
     }}>
-      <div>
+      <div className="rsp-header-logo">
         {onReset ? (
           <button
             onClick={onReset}

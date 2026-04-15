@@ -67,6 +67,11 @@
   .rsp-header {
     flex-direction: column;
     gap: 12px;
+    padding-top: 14px !important;
+    padding-bottom: 12px !important;
+  }
+  .rsp-header-logo {
+    display: none !important;
   }
   .rsp-api-bar {
     grid-template-columns: 1fr !important;
