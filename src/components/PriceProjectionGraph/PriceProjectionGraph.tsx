@@ -173,6 +173,11 @@ export function PriceProjectionGraph({
   });
 
   const COLORS = { base: "#ffffff", bull: "#10d97e", bear: "#FF4D00", historical: C.accent, sma: smaColor };
+  const SCENARIO_RGBA = {
+    base: { border: "rgba(255,255,255,0.2)", bg: "rgba(255,255,255,0.06)" },
+    bull: { border: "rgba(16,217,126,0.2)",  bg: "rgba(16,217,126,0.06)"  },
+    bear: { border: "rgba(255,77,0,0.2)",    bg: "rgba(255,77,0,0.06)"    },
+  };
 
   // Custom tooltip — small dark box showing price for each visible line
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -367,9 +372,11 @@ export function PriceProjectionGraph({
       </div>
 
       {/* Legend */}
-      <div style={{ display: "flex", alignItems: "center", gap: "20px", marginTop: "10px", paddingLeft: "4px", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginTop: "10px", flexShrink: 0 }}>
         {legendItems.map(({ key, label }) => {
           const active = growthScenario === key;
+          const color = COLORS[key];
+          const rgba = SCENARIO_RGBA[key];
           return (
             <button
               key={key}
@@ -377,27 +384,26 @@ export function PriceProjectionGraph({
               aria-pressed={active}
               aria-label={`${label} scenario`}
               style={{
-                display: "flex", alignItems: "center", gap: "6px",
-                opacity: active ? 1 : 0.4,
-                background: "transparent", border: "none", cursor: onScenarioChange ? "pointer" : "default",
-                padding: "2px 0", transition: "opacity 0.15s",
+                display: "flex", alignItems: "center",
+                opacity: active ? 1 : 0.45,
+                cursor: onScenarioChange ? "pointer" : "default",
+                padding: "5px 12px",
+                borderLeft: `2px solid ${color}`,
+                borderTop: `1px solid ${rgba.border}`,
+                borderRight: `1px solid ${rgba.border}`,
+                borderBottom: `1px solid ${rgba.border}`,
+                background: rgba.bg,
+                transition: "opacity 0.15s",
               }}
             >
-              <svg width="18" height="8" aria-hidden="true">
-                <line x1="0" y1="4" x2="18" y2="4"
-                  stroke={COLORS[key]}
-                  strokeWidth={active ? 2.5 : 1.5}
-                  strokeDasharray="5 2"
-                />
-              </svg>
-              <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color: active ? COLORS[key] : "#888", fontWeight: active ? 700 : 400 }}>
+              <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color, fontWeight: 700 }}>
                 {label}
               </span>
             </button>
           );
         })}
 
-        {/* SMA toggle — sits right after Bull */}
+        {/* SMA toggle */}
         {sma200 > 0 && (
           <button
             onClick={() => setShowSma(s => !s)}
