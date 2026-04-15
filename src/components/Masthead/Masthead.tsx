@@ -60,9 +60,14 @@ export function Masthead({ onShowMethodology, onReset }: MastheadProps) {
             }}>Calculator</span>
           </div>
         )}
-        <button onClick={onShowMethodology} style={{ ...toggleBtn(false), marginTop: "6px" }}>
-          Read Methodology →
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px" }}>
+          <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: C.text3 }}>
+            Time Until Payback
+          </span>
+          <button onClick={onShowMethodology} style={toggleBtn(false)}>
+            Read Methodology →
+          </button>
+        </div>
       </div>
     </header>
   );
