@@ -1,7 +1,7 @@
 import { C, toggleBtn } from "../../lib/theme.ts";
 import type { MastheadProps } from "./Masthead.types.ts";
 
-export function Masthead({ company, meta, isConverted, currencyNote, onShowMethodology, onReset }: MastheadProps) {
+export function Masthead({ onShowMethodology, onReset }: MastheadProps) {
   return (
     <header className="rsp-header" style={{
       paddingTop: "28px",
@@ -60,42 +60,10 @@ export function Masthead({ company, meta, isConverted, currencyNote, onShowMetho
             }}>Calculator</span>
           </div>
         )}
-        <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: C.text3, marginTop: "4px" }}>
-          Time Until Payback — Stock Valuation Engine
-        </div>
-      </div>
-
-      <div className="rsp-header-toggles" style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, paddingTop: "6px" }}>
-        <button className="rsp-methodology-btn" onClick={onShowMethodology} style={toggleBtn(false)}>
+        <button onClick={onShowMethodology} style={{ ...toggleBtn(false), marginTop: "6px" }}>
           Read Methodology →
         </button>
       </div>
-
-      {company && (
-        <div
-          role="group"
-          aria-label={`${company}${meta.sector ? `, ${meta.sector}, ${meta.industry}` : ""}`}
-          className="rsp-company-info"
-          style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", animation: "fadeInUp 0.3s ease both", width: "100%" }}
-        >
-          <span style={{ fontFamily: C.display, fontSize: "20px", fontWeight: 700, color: C.text1, letterSpacing: "0.04em", textTransform: "uppercase" }}>{company}</span>
-          {meta.sector && (
-            <span style={{ fontSize: "10px", color: C.text2, letterSpacing: "0.05em" }}>{meta.sector}</span>
-          )}
-          <button className="rsp-methodology-mobile" onClick={onShowMethodology} style={toggleBtn(false)}>
-            Read Methodology →
-          </button>
-          {isConverted && (
-            <span title={currencyNote} style={{
-              fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase",
-              color: C.accent, border: `1px solid rgba(196,160,110,0.35)`, padding: "2px 7px",
-              cursor: "help", flexShrink: 0,
-            }}>
-              ↔ FX Normalized
-            </span>
-          )}
-        </div>
-      )}
     </header>
   );
 }

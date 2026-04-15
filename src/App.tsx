@@ -30,7 +30,7 @@ export default function App() {
     // Actions
     doFetch, rollDice, cancelDice, resetSearch,
     // Fetched data
-    company, meta, isConverted, currencyNote, currencyMismatchWarning,
+    company, currencyMismatchWarning,
     valuation, scorecard, hasSearched,
     strongBuyPrice, buyPrice,
     priceHistory,
@@ -83,10 +83,6 @@ export default function App() {
         </div>
 
         <Masthead
-          company={company}
-          meta={meta}
-          isConverted={isConverted}
-          currencyNote={currencyNote}
           onShowMethodology={() => { setShowMethodology(true); setIsFilterOpen(false); window.scrollTo(0, 0); }}
           onReset={hasSearched ? () => { resetSearch(); window.scrollTo(0, 0); } : undefined}
         />

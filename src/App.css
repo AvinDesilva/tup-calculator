@@ -32,9 +32,7 @@
 .rsp-left-data    { flex: 3 1 0; min-width: 0; }
 .rsp-right-bottom { flex: 2 1 0; min-width: 0; }
 
-/* Noise filter first, methodology second */
-.rsp-methodology-btn { order: 1; }
-.rsp-methodology-mobile { display: none; }
+/* Noise filter first */
 
 /* ── Desktop (≥768px) ──────────────────────────────────────────────────────── */
 
@@ -70,10 +68,6 @@
     flex-direction: column;
     gap: 12px;
   }
-  .rsp-header-toggles {
-    display: none !important;
-  }
-  .rsp-methodology-mobile { display: inline-flex !important; }
   .rsp-api-bar {
     grid-template-columns: 1fr !important;
     gap: 14px !important;
