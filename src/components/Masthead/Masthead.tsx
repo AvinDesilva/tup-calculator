@@ -14,7 +14,7 @@ export function Masthead({ onShowMethodology, onReset }: MastheadProps) {
       borderBottom: `2px solid ${C.accent}`,
       animation: "fadeInUp 0.4s ease both",
     }}>
-      <div>
+      <div className="rsp-header-content">
         <div className="rsp-header-logo">
           {onReset ? (
             <button
@@ -62,7 +62,7 @@ export function Masthead({ onShowMethodology, onReset }: MastheadProps) {
             </div>
           )}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px" }}>
+        <div className="rsp-header-subtitle" style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px" }}>
           <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: C.text3 }}>
             Time Until Payback
           </span>

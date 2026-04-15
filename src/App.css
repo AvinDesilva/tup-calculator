@@ -73,7 +73,11 @@
   .rsp-header-logo {
     display: none !important;
   }
-  .rsp-header-logo + div {
+  .rsp-header-content {
+    width: 100%;
+  }
+  .rsp-header-subtitle {
+    justify-content: space-between;
     margin-top: 0 !important;
   }
   .rsp-api-bar {
