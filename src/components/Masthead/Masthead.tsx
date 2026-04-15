@@ -14,52 +14,54 @@ export function Masthead({ onShowMethodology, onReset }: MastheadProps) {
       borderBottom: `2px solid ${C.accent}`,
       animation: "fadeInUp 0.4s ease both",
     }}>
-      <div className="rsp-header-logo">
-        {onReset ? (
-          <button
-            onClick={onReset}
-            aria-label="Reset calculator and return to search"
-            style={{ display: "flex", alignItems: "baseline", gap: "10px", cursor: "pointer", background: "none", border: "none", padding: 0 }}
-          >
-            <h1 style={{
-              fontFamily: C.serif,
-              fontWeight: 400,
-              fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
-              lineHeight: 1,
-              letterSpacing: "-0.02em",
-              color: C.text1,
-              margin: 0,
-            }}>TUP</h1>
-            <span style={{
-              fontFamily: C.serif,
-              fontWeight: 400,
-              fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
-              lineHeight: 1,
-              letterSpacing: "-0.02em",
-              color: C.text2,
-            }}>Calculator</span>
-          </button>
-        ) : (
-          <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
-            <h1 style={{
-              fontFamily: C.serif,
-              fontWeight: 400,
-              fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
-              lineHeight: 1,
-              letterSpacing: "-0.02em",
-              color: C.text1,
-              margin: 0,
-            }}>TUP</h1>
-            <span style={{
-              fontFamily: C.serif,
-              fontWeight: 400,
-              fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
-              lineHeight: 1,
-              letterSpacing: "-0.02em",
-              color: C.text2,
-            }}>Calculator</span>
-          </div>
-        )}
+      <div>
+        <div className="rsp-header-logo">
+          {onReset ? (
+            <button
+              onClick={onReset}
+              aria-label="Reset calculator and return to search"
+              style={{ display: "flex", alignItems: "baseline", gap: "10px", cursor: "pointer", background: "none", border: "none", padding: 0 }}
+            >
+              <h1 style={{
+                fontFamily: C.serif,
+                fontWeight: 400,
+                fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
+                lineHeight: 1,
+                letterSpacing: "-0.02em",
+                color: C.text1,
+                margin: 0,
+              }}>TUP</h1>
+              <span style={{
+                fontFamily: C.serif,
+                fontWeight: 400,
+                fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
+                lineHeight: 1,
+                letterSpacing: "-0.02em",
+                color: C.text2,
+              }}>Calculator</span>
+            </button>
+          ) : (
+            <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
+              <h1 style={{
+                fontFamily: C.serif,
+                fontWeight: 400,
+                fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
+                lineHeight: 1,
+                letterSpacing: "-0.02em",
+                color: C.text1,
+                margin: 0,
+              }}>TUP</h1>
+              <span style={{
+                fontFamily: C.serif,
+                fontWeight: 400,
+                fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
+                lineHeight: 1,
+                letterSpacing: "-0.02em",
+                color: C.text2,
+              }}>Calculator</span>
+            </div>
+          )}
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px" }}>
           <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: C.text3 }}>
             Time Until Payback

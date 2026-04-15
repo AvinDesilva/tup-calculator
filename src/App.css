@@ -73,6 +73,9 @@
   .rsp-header-logo {
     display: none !important;
   }
+  .rsp-header-logo + div {
+    margin-top: 0 !important;
+  }
   .rsp-api-bar {
     grid-template-columns: 1fr !important;
     gap: 14px !important;
