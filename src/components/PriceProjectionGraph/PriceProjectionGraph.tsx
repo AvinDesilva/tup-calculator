@@ -294,7 +294,6 @@ export function PriceProjectionGraph({
             dataKey="sma"
             stroke={smaColor}
             strokeOpacity={0.45}
-            strokeDasharray="2 5"
             strokeWidth={1.5}
             dot={false}
             activeDot={false}
