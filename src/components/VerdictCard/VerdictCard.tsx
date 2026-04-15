@@ -54,7 +54,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
         </div>
         <div style={{
           fontFamily: "'DM Serif Display', serif", fontWeight: 400,
-          fontSize: result.paybackNote ? "clamp(3rem, 10vw, 6rem)" : "clamp(5rem, 14vw, 9rem)", lineHeight: 1,
+          fontSize: result.paybackNote ? "clamp(2.4rem, 8vw, 4.8rem)" : "clamp(4rem, 11.2vw, 7.2rem)", lineHeight: 1,
           color: v.color, letterSpacing: "-0.03em",
         }}>
           {result.paybackNote ? "N/A" : (result.payback || "30+")}
@@ -72,7 +72,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
       <div className="rsp-verdict-hero" style={{ display: "flex", alignItems: "flex-end", gap: "20px", marginBottom: "12px" }}>
         <div className="rsp-verdict-num" style={{
           fontFamily: "'DM Serif Display', serif", fontWeight: 400,
-          fontSize: result.paybackNote ? "clamp(3rem, 10vw, 6rem)" : "clamp(5rem, 14vw, 9rem)", lineHeight: 1,
+          fontSize: result.paybackNote ? "clamp(2.4rem, 8vw, 4.8rem)" : "clamp(4rem, 11.2vw, 7.2rem)", lineHeight: 1,
           color: v.color, letterSpacing: "-0.03em",
         }}>
           {result.paybackNote ? "N/A" : (result.payback || "30+")}

@@ -37,7 +37,7 @@
 /* ── Desktop (≥768px) ──────────────────────────────────────────────────────── */
 
 @media (min-width: 768px) {
-  .rsp-verdict-num   { font-size: clamp(7.5rem, 21vw, 13.5rem) !important; }
+  .rsp-verdict-num   { font-size: clamp(6rem, 16.8vw, 10.8rem) !important; }
   .rsp-verdict-label { font-size: 25px !important; }
   .rsp-verdict-sub   { font-size: 12px !important; }
 }
@@ -52,7 +52,7 @@
     padding-left: 16px !important;
     padding-right: 16px !important;
   }
-  .rsp-verdict-num { font-size: clamp(5.5rem, 22vw, 8rem) !important; }
+  .rsp-verdict-num { font-size: clamp(4.4rem, 17.6vw, 6.4rem) !important; }
   .rsp-hero-section {
     padding-bottom: 120px !important;
   }
