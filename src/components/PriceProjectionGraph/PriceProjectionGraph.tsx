@@ -62,11 +62,6 @@ export function PriceProjectionGraph({
 
   const smaColor = "#bf5fff";
 
-  const label9: React.CSSProperties = {
-    fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em",
-    textTransform: "uppercase", color: "#888", fontFamily: body,
-  };
-
   const chartData = useMemo<ChartPoint[]>(() => {
     if (currentPrice <= 0) return [];
 
