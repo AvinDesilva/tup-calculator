@@ -113,15 +113,16 @@ export function PriceProjectionGraph({
       bear: currentPrice,
     };
 
-    // ── Projection points (monthly steps) ────────────────────────────────────
-    // Monthly steps give each projected month equal x-axis space, so the
-    // projection section takes up meaningful chart real estate vs history.
+    // ── Projection points — sized so projections fill 3/5ths of chart width ──
+    // Each recharts data point gets equal x-axis space. We want:
+    //   historical (incl. join) : projections = 2 : 3
+    // So projCount = 1.5 × (histCount + 1 for join point).
     const projYears = PROJ_YEARS[viewYears];
-    const projectionPoints: ChartPoint[] = Array.from({ length: projYears * 12 }, (_, i) => {
-      const n = i + 1; // months ahead
+    const projCount = Math.round(1.5 * (historical.length + 1));
+    const projectionPoints: ChartPoint[] = Array.from({ length: projCount }, (_, i) => {
+      const frac = ((i + 1) / projCount) * projYears; // years ahead (evenly spaced)
       const d = new Date(today);
-      d.setMonth(d.getMonth() + n);
-      const frac = n / 12;
+      d.setDate(d.getDate() + Math.round(frac * 365.25));
       return {
         label: formatMonthLabel(toDateStr(d)),
         base: parseFloat((currentPrice * Math.pow(1 + baseRate / 100, frac)).toFixed(2)),
