@@ -193,6 +193,8 @@ export default function App() {
               sma200={inp.sma200}
               rollingDice={rollingDice}
               onScenarioChange={onScenarioChange}
+              lifecycleStage={inp.lifecycleStage}
+              dividendYield={inp.dividendYield}
             />
           </div>
 

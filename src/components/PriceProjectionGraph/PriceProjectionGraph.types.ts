@@ -1,4 +1,4 @@
-import type { GrowthScenario, HistoricalPricePoint, TUPResult } from "../../lib/types.ts";
+import type { GrowthScenario, HistoricalPricePoint, LifecycleStage, TUPResult } from "../../lib/types.ts";
 
 export interface PriceProjectionGraphProps {
   priceHistory: HistoricalPricePoint[];
@@ -10,4 +10,6 @@ export interface PriceProjectionGraphProps {
   sma200: number;
   rollingDice: boolean;
   onScenarioChange?: (s: GrowthScenario) => void;
+  lifecycleStage?: LifecycleStage | null;
+  dividendYield?: number;
 }

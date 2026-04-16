@@ -4,6 +4,8 @@ import {
   ReferenceLine, ResponsiveContainer, Tooltip,
 } from "recharts";
 import { C } from "../../lib/theme.ts";
+import { fixedFrictionGrowth } from "../../lib/companyScorecard/vdr.ts";
+import type { VDRContext } from "../../lib/companyScorecard/vdr.ts";
 import type { PriceProjectionGraphProps } from "./PriceProjectionGraph.types.ts";
 
 type ChartPoint = {
@@ -51,6 +53,8 @@ export function PriceProjectionGraph({
   sma200,
   rollingDice,
   onScenarioChange,
+  lifecycleStage,
+  dividendYield,
 }: PriceProjectionGraphProps) {
   const body = C.body;
   const mono = C.mono;
@@ -113,11 +117,46 @@ export function PriceProjectionGraph({
       bear: currentPrice,
     };
 
+    // ── FF decay: build yearly price anchors ─────────────────────────────────
+    // projYears must come first so buildAnchors can close over it.
+    const projYears = PROJ_YEARS[viewYears];
+
+    const ffCtx: VDRContext = {
+      stage: lifecycleStage ?? null,
+      operatingMargin: null,
+      dividendYield: dividendYield ?? 0,
+      ttmEPS: 0,
+    };
+
+    // Price at each integer year y: anchors[y] = anchors[y-1] × (1 + G(y))
+    // G(y) = fixedFrictionGrowth(initialRate, y, ctx) — decays after hold period
+    const buildAnchors = (initialRatePct: number): number[] => {
+      const r0 = initialRatePct / 100;
+      const anchors = [currentPrice];
+      for (let y = 1; y <= projYears; y++) {
+        anchors.push(anchors[y - 1] * (1 + fixedFrictionGrowth(r0, y, ffCtx)));
+      }
+      return anchors;
+    };
+
+    const baseAnchors = buildAnchors(baseRate);
+    const bullAnchors = buildAnchors(bullRate);
+    const bearAnchors = buildAnchors(bearRate);
+
+    // Exponential interpolation between integer-year anchors for smooth sub-year points:
+    // price(k + α) = anchors[k] × (anchors[k+1] / anchors[k])^α
+    const priceAt = (anchors: number[], frac: number): number => {
+      const k = Math.floor(frac);
+      const k1 = Math.min(k + 1, projYears);
+      const alpha = frac - k;
+      if (alpha === 0 || anchors[k] === 0) return anchors[k];
+      return anchors[k] * Math.pow(anchors[k1] / anchors[k], alpha);
+    };
+
     // ── Projection points — sized so projections fill 3/5ths of chart width ──
     // Each recharts data point gets equal x-axis space. We want:
     //   historical (incl. join) : projections = 2 : 3
     // So projCount = 1.5 × (histCount + 1 for join point).
-    const projYears = PROJ_YEARS[viewYears];
     const projCount = Math.round(1.5 * (historical.length + 1));
     const projectionPoints: ChartPoint[] = Array.from({ length: projCount }, (_, i) => {
       const frac = ((i + 1) / projCount) * projYears; // years ahead (evenly spaced)
@@ -125,14 +164,14 @@ export function PriceProjectionGraph({
       d.setDate(d.getDate() + Math.round(frac * 365.25));
       return {
         label: formatMonthLabel(toDateStr(d)),
-        base: parseFloat((currentPrice * Math.pow(1 + baseRate / 100, frac)).toFixed(2)),
-        bull: parseFloat((currentPrice * Math.pow(1 + bullRate / 100, frac)).toFixed(2)),
-        bear: parseFloat((currentPrice * Math.pow(1 + bearRate / 100, frac)).toFixed(2)),
+        base: parseFloat(priceAt(baseAnchors, frac).toFixed(2)),
+        bull: parseFloat(priceAt(bullAnchors, frac).toFixed(2)),
+        bear: parseFloat(priceAt(bearAnchors, frac).toFixed(2)),
       };
     });
 
     return [...historical, joinPoint, ...projectionPoints];
-  }, [priceHistory, currentPrice, scenarioValues, result, viewYears]);
+  }, [priceHistory, currentPrice, scenarioValues, result, viewYears, lifecycleStage, dividendYield]);
 
   // Label of the "today" join point — used for the reference line
   const todayLabel = useMemo(() => formatMonthLabel(toDateStr(new Date())), []);
