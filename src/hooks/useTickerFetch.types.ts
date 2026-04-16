@@ -1,5 +1,6 @@
 import type { IndustryGrowthData } from "../lib/tickerSearch/api.ts";
 import type { InputState, GrowthScenario, RollFilters, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement, EpsGrowthPoint, HistoricalPricePoint } from "../lib/types.ts";
+import type { GuruRadarData } from "../lib/guruRadar/types.ts";
 
 export interface ValuationState {
   dcf: number | null;
@@ -48,6 +49,7 @@ export interface UseTickerFetchReturn {
   hasSearched: boolean;
   strongBuyPrice: number | null;
   buyPrice: number | null;
+  guruData: GuruRadarData | null;
 
   priceHistory: HistoricalPricePoint[];
 

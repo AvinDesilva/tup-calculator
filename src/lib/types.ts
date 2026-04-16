@@ -97,6 +97,7 @@ export interface FMPProfile {
   mktCap?: number;
   lastDiv?: number;
   price?: number;
+  beta?: number;
 }
 
 export interface FMPQuote {
@@ -118,6 +119,7 @@ export interface FMPBalanceSheet {
   totalCurrentLiabilities?: number;
   retainedEarnings?: number;
   totalLiabilities?: number;
+  totalStockholdersEquity?: number;
 }
 
 export interface FMPIncomeStatement {
@@ -170,6 +172,8 @@ export interface FMPEarningSurprise {
 export interface FMPCashFlow {
   operatingCashFlow?: number;
   netCashProvidedByOperatingActivities?: number;
+  freeCashFlow?: number;
+  capitalExpenditure?: number;
 }
 
 // ─── EPS growth history point ────────────────────────────────────────────────
@@ -236,4 +240,16 @@ export interface TickerData {
   description: string;
   exchange: string;
   priceHistory: HistoricalPricePoint[];
+  // Derived financial ratios (computed in lookupTicker)
+  beta: number | null;
+  currentRatio: number | null;
+  debtToEquity: number | null;
+  returnOnEquity: number | null;
+  returnOnAssets: number | null;
+  grossMargin: number | null;
+  profitMargin: number | null;
+  bookValuePerShare: number | null;
+  peRatio: number | null;
+  pbRatio: number | null;
+  freeCashFlowPerShare: number | null;
 }

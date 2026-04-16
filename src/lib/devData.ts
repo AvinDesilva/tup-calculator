@@ -70,10 +70,10 @@ export const DEV_EARNINGS: FMPEarningSurprise[] = [
 ];
 
 export const DEV_CASH_FLOWS: FMPCashFlow[] = [
-  { operatingCashFlow: 2_800_000_000 },
-  { operatingCashFlow: 2_000_000_000 },
-  { operatingCashFlow: 900_000_000 },
-  { operatingCashFlow: 500_000_000 },
+  { operatingCashFlow: 2_800_000_000, freeCashFlow: 2_600_000_000 },
+  { operatingCashFlow: 2_000_000_000, freeCashFlow: 1_850_000_000 },
+  { operatingCashFlow: 900_000_000,   freeCashFlow: 800_000_000 },
+  { operatingCashFlow: 500_000_000,   freeCashFlow: 400_000_000 },
 ];
 
 export const DEV_INCOME_HISTORY: FMPIncomeStatement[] = [
@@ -95,6 +95,21 @@ export const DEV_EPS_GROWTH_HISTORY: EpsGrowthPoint[] = [
   { year: "2020", growth: 1.667 },     // +166.7%  — emerged from losses
   { year: "2019", growth: -1.50 },     // -150.0%  — deepened losses
 ];
+
+// Derived ratio fields for GuruRadar dev mode (realistic APP values)
+export const DEV_DERIVED_RATIOS = {
+  beta: 1.8,
+  currentRatio: 1.6,
+  debtToEquity: 1.2,
+  returnOnEquity: 0.38,
+  returnOnAssets: 0.18,
+  grossMargin: 0.70,
+  profitMargin: 0.40,
+  bookValuePerShare: 4.20,
+  peRatio: 59,
+  pbRatio: 93.8,
+  freeCashFlowPerShare: 7.88,
+};
 
 export const DEV_GROWTH_VALUES = { g5: 96, g10: 96 };
 

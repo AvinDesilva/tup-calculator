@@ -14,6 +14,7 @@ import { HeroSearch } from "./components/HeroSearch";
 import { CompactTickerBar } from "./components/CompactTickerBar";
 import { DataSections } from "./components/DataSections";
 import { PriceProjectionGraph } from "./components/PriceProjectionGraph";
+import { GuruRadar } from "./components/GuruRadar";
 import { useTickerFetch } from "./hooks/useTickerFetch.ts";
 import "./App.css";
 
@@ -32,7 +33,7 @@ export default function App() {
     // Fetched data
     company, currencyMismatchWarning,
     valuation, scorecard, hasSearched,
-    strongBuyPrice, buyPrice,
+    strongBuyPrice, buyPrice, guruData,
     priceHistory,
     // Shared mutable state
     inp, setInp,
@@ -289,34 +290,43 @@ export default function App() {
             </div>
           )}
 
-          {/* Row 3: ValuationContext + Scorecard — full width */}
-          <div className="rsp-bottom-context" style={{ animation: "fadeInUp 0.5s 0.2s ease both" }}>
-            <div style={{ flex: "1 1 0", minWidth: 0, paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px" }}>
-              <ValuationContext
-                strongBuyPrice={displayStrongBuyPrice}
-                buyPrice={displayBuyPrice}
-                dcf={valuation.dcf}
-                currentPrice={inp.currentPrice}
-                adjPrice={result?.adjPrice}
-                industryGrowth={valuation.industryGrowth}
-                industryGrowthLoading={valuation.industryGrowthLoading}
-                companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
-                priceMode={priceMode}
-              />
-            </div>
-            {company && (
-              <div style={{ flex: "1 1 0", minWidth: 0, paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px", borderLeft: `1px solid ${C.borderWeak}` }}>
-                <CompanyScorecard
-                  earnings={scorecard.earnings}
-                  cashFlows={scorecard.cashFlows}
-                  incomeHistory={scorecard.incomeHistory}
-                  description={scorecard.description}
-                  exchange={scorecard.exchange}
-                  lifecycleOnly
-                  dividendYield={inp.dividendYield}
-                />
+          {/* Row 3: GuruRadar + ValuationContext + Scorecard */}
+          <div className="rsp-bottom-context" style={{ animation: "fadeInUp 0.5s 0.2s ease both", flexDirection: "column" }}>
+            {/* Guru Radar — full width */}
+            {guruData && (
+              <div style={{ padding: "28px 40px", borderBottom: `1px solid ${C.borderWeak}` }}>
+                <GuruRadar data={guruData} />
               </div>
             )}
+            {/* Compact valuation + scorecard row */}
+            <div style={{ display: "flex" }}>
+              <div style={{ flex: "1 1 0", minWidth: 0, paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px" }}>
+                <ValuationContext
+                  strongBuyPrice={displayStrongBuyPrice}
+                  buyPrice={displayBuyPrice}
+                  dcf={valuation.dcf}
+                  currentPrice={inp.currentPrice}
+                  adjPrice={result?.adjPrice}
+                  industryGrowth={valuation.industryGrowth}
+                  industryGrowthLoading={valuation.industryGrowthLoading}
+                  companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
+                  priceMode={priceMode}
+                />
+              </div>
+              {company && (
+                <div style={{ flex: "1 1 0", minWidth: 0, paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px", borderLeft: `1px solid ${C.borderWeak}` }}>
+                  <CompanyScorecard
+                    earnings={scorecard.earnings}
+                    cashFlows={scorecard.cashFlows}
+                    incomeHistory={scorecard.incomeHistory}
+                    description={scorecard.description}
+                    exchange={scorecard.exchange}
+                    lifecycleOnly
+                    dividendYield={inp.dividendYield}
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Row 5: DataSections — full width */}

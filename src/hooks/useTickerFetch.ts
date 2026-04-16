@@ -4,6 +4,8 @@ import { calcTUP } from "../lib/verdictCard/calcTUP.ts";
 import { lookupTicker, lookupTickerQuick, fetchFilteredPool, fetchIndustryGrowth } from "../lib/tickerSearch/api.ts";
 import type { InputState, GrowthScenario, RollFilters, TupRangeFilter, HistoricalPricePoint } from "../lib/types.ts";
 import * as dev from "../lib/devData.ts";
+import { computeGuruData } from "../lib/guruRadar/computeGuruData.ts";
+import type { GuruRadarData } from "../lib/guruRadar/types.ts";
 
 import type { ValuationState, ScorecardState, UseTickerFetchReturn } from "./useTickerFetch.types.ts";
 
@@ -53,6 +55,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
 
   const [hasSearched, setHasSearched] = useState(false);
   const [priceHistory, setPriceHistory] = useState<HistoricalPricePoint[]>([]);
+  const [guruData, setGuruData] = useState<GuruRadarData | null>(null);
 
   // Calculator inputs
   const [inp, setInp] = useState<InputState>({
@@ -98,13 +101,14 @@ export function useTickerFetch(): UseTickerFetchReturn {
     const t = (tickerOverride || ticker).trim().toUpperCase();
     if (!t) { setError("Enter a ticker symbol."); return null; }
     let paybackResult: number | null = null;
-    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, industryGrowth: null, industryGrowthLoading: false }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "", exchange: "" }); setStrongBuyPrice(null); setBuyPrice(null); setHasSearched(true);
+    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, industryGrowth: null, industryGrowthLoading: false }); setScorecard({ earnings: [], cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "", exchange: "" }); setStrongBuyPrice(null); setBuyPrice(null); setGuruData(null); setHasSearched(true);
     window.scrollTo(0, 0);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
     try {
       const data = await lookupTicker(t, log);
 
+      setGuruData(computeGuruData(data));
       setCompany(data.companyName);
       setMeta({ sector: data.sector, industry: data.industry });
       setIsConverted(data.isConverted || false);
@@ -250,6 +254,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
     setError("");
     setFetchLog([]);
     setPriceHistory([]);
+    setGuruData(null);
   };
 
   // ─── URL param read on mount → auto-fetch if ticker present ───────────────
@@ -287,6 +292,43 @@ export function useTickerFetch(): UseTickerFetchReturn {
         setStrongBuyPrice(sb > 0 ? sb : null);
         setBuyPrice(bp > 0 ? bp : null);
       }
+      // Build dev guru data from mock TickerData
+      setGuruData(computeGuruData({
+        ...dev.DEV_INP,
+        companyName: dev.DEV_COMPANY,
+        ticker: dev.DEV_TICKER,
+        sector: dev.DEV_META.sector,
+        industry: dev.DEV_META.industry,
+        historicalGrowth: dev.DEV_GROWTH_VALUES.g10,
+        historicalGrowth5yr: dev.DEV_GROWTH_VALUES.g5,
+        epsYearsShort: dev.DEV_GROWTH_YEARS.short,
+        epsYearsLong: dev.DEV_GROWTH_YEARS.long,
+        analystGrowth: dev.DEV_INP.analystGrowth,
+        fwdGrowthY1: dev.DEV_SCENARIO_VALUES.base.y1,
+        fwdGrowthY2: dev.DEV_SCENARIO_VALUES.base.y2,
+        fwdCAGR: dev.DEV_SCENARIO_VALUES.base.cagr,
+        fwdGrowthY1Bear: dev.DEV_SCENARIO_VALUES.bear.y1,
+        fwdGrowthY2Bear: dev.DEV_SCENARIO_VALUES.bear.y2,
+        fwdCAGRBear: dev.DEV_SCENARIO_VALUES.bear.cagr,
+        fwdGrowthY1Bull: dev.DEV_SCENARIO_VALUES.bull.y1,
+        fwdGrowthY2Bull: dev.DEV_SCENARIO_VALUES.bull.y2,
+        fwdCAGRBull: dev.DEV_SCENARIO_VALUES.bull.cagr,
+        isConverted: false,
+        currencyNote: "",
+        currencyMismatchWarning: "",
+        divNote: "",
+        peterLynchRatio: null,
+        dcfValue: dev.DEV_VALUATION.dcf,
+        piotroski: 7,
+        earningsSurprises: dev.DEV_EARNINGS,
+        cashFlowHistory: dev.DEV_CASH_FLOWS,
+        incomeHistory: dev.DEV_INCOME_HISTORY,
+        epsGrowthHistory: dev.DEV_EPS_GROWTH_HISTORY,
+        description: dev.DEV_DESCRIPTION,
+        exchange: "NASDAQ",
+        priceHistory: [],
+        ...dev.DEV_DERIVED_RATIOS,
+      }));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -321,7 +363,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
     // Fetched data
     company, meta, isConverted, currencyNote, currencyMismatchWarning,
     valuation, scorecard, hasSearched,
-    strongBuyPrice, buyPrice,
+    strongBuyPrice, buyPrice, guruData,
 
     // Shared mutable state
     inp, setInp,

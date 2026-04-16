@@ -893,6 +893,26 @@ export async function lookupTicker(
     piotroski = fs;
   }
 
+  // ── Derived financial ratios (used by GuruRadar) ──────────────────────────
+  const equity_raw = bs0.totalStockholdersEquity || 0;
+  const equity_fx  = equity_raw * fxRate;
+  const beta_val: number | null = p.beta ?? null;
+  const tcl0_r = bs0.totalCurrentLiabilities || 0;
+  const tca0_r = bs0.totalCurrentAssets || 0;
+  const currentRatio: number | null = tcl0_r > 0 ? tca0_r / tcl0_r : null;
+  const debtToEquity: number | null = equity_fx > 0 ? totalDebt / equity_fx : null;
+  const netIncomeForRatios = (inc[0] ? sanitizedNetIncome(inc[0], sharesOut) : 0) * fxRate;
+  const returnOnEquity: number | null = equity_fx > 0 ? netIncomeForRatios / equity_fx : null;
+  const returnOnAssets: number | null = ta0 > 0 ? netIncomeForRatios / (ta0 * fxRate) : null;
+  const grossMargin: number | null = latestRevenue > 0 ? ((inc[0]?.grossProfit || 0) * fxRate) / latestRevenue : null;
+  const profitMargin: number | null = latestRevenue > 0 ? netIncomeForRatios / latestRevenue : null;
+  const bookValuePerShare: number | null = adrShares > 0 ? equity_fx / adrShares : null;
+  const peRatio: number | null = ttmEPS > 0 ? price / ttmEPS : null;
+  const pbRatio: number | null = bookValuePerShare != null && bookValuePerShare > 0 ? price / bookValuePerShare : null;
+  const fcf0_val = Array.isArray(cashFlows) ? cashFlows[0] : null;
+  const freeCashFlowPerShare: number | null = adrShares > 0 && fcf0_val?.freeCashFlow != null
+    ? (fcf0_val.freeCashFlow * fxRate) / adrShares : null;
+
   // ── Target margin & breakeven ─────────────────────────────────────────────
   const netIncome    = (inc[0] ? sanitizedNetIncome(inc[0], sharesOut) : 0) * fxRate;
   const netMargin    = latestRevenue > 0 ? (netIncome / latestRevenue) * 100 : 0;
@@ -967,5 +987,16 @@ export async function lookupTicker(
     description: p.description || "",
     exchange,
     priceHistory: histData.priceHistory ?? [],
+    beta: beta_val,
+    currentRatio,
+    debtToEquity,
+    returnOnEquity,
+    returnOnAssets,
+    grossMargin,
+    profitMargin,
+    bookValuePerShare,
+    peRatio,
+    pbRatio,
+    freeCashFlowPerShare,
   };
 }

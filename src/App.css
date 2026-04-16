@@ -212,6 +212,25 @@
   }
 }
 
+/* ── Guru Radar ────────────────────────────────────────────────────────────── */
+
+/* Desktop: hide the "overflow" badges in bottom row (shown only as side column badges) */
+.rsp-guru-badge-desktop-only { display: none; }
+
+@media (max-width: 767px) {
+  /* Mobile: hide side columns, show all 9 in bottom grid */
+  .rsp-guru-badges-side {
+    display: none !important;
+  }
+  .rsp-guru-badge-desktop-only {
+    display: flex !important;
+  }
+  .rsp-guru-badges-bottom {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+  }
+}
+
 /* ── Tablet (768px – 1023px) ───────────────────────────────────────────────── */
 
 @media (min-width: 768px) and (max-width: 1023px) {
