@@ -46,11 +46,18 @@ export function GuruRadar({ data }: GuruRadarProps) {
             transform: "translateX(-50%)",
             textAlign: "center",
             pointerEvents: "none",
+            padding: "7px 12px",
+            borderLeft: `2px solid ${adviceColor}`,
+            borderTop: `1px solid ${adviceColor}33`,
+            borderRight: `1px solid ${adviceColor}33`,
+            borderBottom: `1px solid ${adviceColor}33`,
+            background: "#080808cc",
+            whiteSpace: "nowrap",
           }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: adviceColor, whiteSpace: "nowrap" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: adviceColor }}>
               {advice}
             </div>
-            <div style={{ fontSize: 11, color: C.text3 }}>{overallScore}/100</div>
+            <div style={{ fontSize: 10, color: C.text3, marginTop: 2 }}>{overallScore}/100</div>
           </div>
         </div>
 
