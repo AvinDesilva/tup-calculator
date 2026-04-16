@@ -157,7 +157,7 @@ export function PriceProjectionGraph({
     // Each recharts data point gets equal x-axis space. We want:
     //   historical (incl. join) : projections = 2 : 3
     // So projCount = 1.5 × (histCount + 1 for join point).
-    const projCount = Math.round(1.5 * (historical.length + 1));
+    const projCount = historical.length + 1;
     const projectionPoints: ChartPoint[] = Array.from({ length: projCount }, (_, i) => {
       const frac = ((i + 1) / projCount) * projYears; // years ahead (evenly spaced)
       const d = new Date(today);
