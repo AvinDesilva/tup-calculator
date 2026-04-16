@@ -23,6 +23,12 @@
 /* Grid placement */
 .rsp-left-verdict        { grid-column: 1; grid-row: 1; }
 .rsp-right-graph         { grid-column: 3; grid-row: 1; }
+
+/* Inset focus ring so it's visible inside the SVG container */
+.rsp-right-graph svg:focus-visible {
+  outline: 2px solid #C4A06E !important;
+  outline-offset: -2px !important;
+}
 .rsp-hairline-v          { grid-column: 2; grid-row: 1; }
 .rsp-hairline-h          { grid-column: 1 / span 3; grid-row: 2; }
 .rsp-bottom-context      { grid-column: 1 / span 3; grid-row: 3; display: flex; flex-direction: row; }
