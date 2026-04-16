@@ -20,14 +20,10 @@ export function GuruRadar({ data }: GuruRadarProps) {
   return (
     <div>
       {/* Header */}
-      <div style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ marginBottom: 16 }}>
         <span style={{ fontFamily: C.mono, color: C.accent, fontSize: 14, letterSpacing: "0.05em", fontWeight: 700 }}>
           Guru Radar
         </span>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 12, color: adviceColor, fontWeight: 700 }}>{advice}</span>
-          <span style={{ fontSize: 11, color: C.text3 }}>{overallScore}/100</span>
-        </div>
       </div>
 
       {/* Desktop: chart + badges side-by-side ring layout */}
