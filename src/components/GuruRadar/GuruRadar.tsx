@@ -21,7 +21,7 @@ export function GuruRadar({ data }: GuruRadarProps) {
     <div>
       {/* Header */}
       <div style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: C.text3 }}>
+        <span style={{ fontFamily: C.mono, color: C.accent, fontSize: 14, letterSpacing: "0.05em", fontWeight: 700 }}>
           Guru Radar
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
