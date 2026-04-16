@@ -229,10 +229,10 @@ export function PriceProjectionGraph({
     return (
       <div style={{
         background: "#111", border: "1px solid rgba(255,255,255,0.1)",
-        padding: "6px 10px", fontSize: "10px", fontFamily: mono,
+        padding: "7.5px 12.5px", fontSize: "12.5px", fontFamily: mono,
         pointerEvents: "none",
       }}>
-        <div style={{ color: "#666", marginBottom: "4px", letterSpacing: "0.06em" }}>{label}</div>
+        <div style={{ color: "#666", marginBottom: "5px", letterSpacing: "0.06em" }}>{label}</div>
         {entries.map((e: { dataKey: string; value: number }) => {
           const color = COLORS[e.dataKey as keyof typeof COLORS] ?? "#fff";
           const isProjection = PROJECTION_KEYS.has(e.dataKey) && currentPrice > 0;
@@ -241,10 +241,10 @@ export function PriceProjectionGraph({
             ? (pct >= 0 ? `+${pct.toFixed(1)}%` : `${pct.toFixed(1)}%`)
             : null;
           return (
-            <div key={e.dataKey} style={{ display: "flex", alignItems: "baseline", gap: "8px", color, fontWeight: 600 }}>
+            <div key={e.dataKey} style={{ display: "flex", alignItems: "baseline", gap: "10px", color, fontWeight: 600 }}>
               <span>{tickFmt(e.value)}</span>
               {pctStr != null && (
-                <span style={{ fontSize: "9px", opacity: 0.75, fontWeight: 400 }}>{pctStr}</span>
+                <span style={{ fontSize: "11.25px", opacity: 0.75, fontWeight: 400 }}>{pctStr}</span>
               )}
             </div>
           );
