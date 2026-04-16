@@ -47,10 +47,7 @@ export function GuruRadar({ data }: GuruRadarProps) {
             textAlign: "center",
             pointerEvents: "none",
             padding: "7px 12px",
-            borderLeft: `2px solid ${adviceColor}`,
-            borderTop: `1px solid ${adviceColor}33`,
-            borderRight: `1px solid ${adviceColor}33`,
-            borderBottom: `1px solid ${adviceColor}33`,
+            border: `1px solid ${adviceColor}33`,
             background: "#080808cc",
             whiteSpace: "nowrap",
           }}>
