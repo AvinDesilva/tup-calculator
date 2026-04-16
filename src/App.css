@@ -50,7 +50,7 @@
   }
   .rsp-container {
     padding-left: 16px !important;
-    padding-right: 16px !important;
+    padding-right: 8px !important;
   }
   .rsp-verdict-num { font-size: clamp(4.4rem, 17.6vw, 6.4rem) !important; }
   .rsp-hero-section {
