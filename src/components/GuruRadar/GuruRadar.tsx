@@ -66,15 +66,29 @@ export function GuruRadar({ data }: GuruRadarProps) {
         </div>
       </div>
 
-      {/* Bottom row: last 3 on desktop, all 9 on mobile (side badges hidden via CSS) */}
-      <div className="rsp-guru-badges-bottom" style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-        {gurus.map((guru, i) => (
-          <GuruBadge
-            key={guru.name}
-            guru={guru}
-            className={i < 6 ? "rsp-guru-badge-desktop-only" : undefined}
-          />
-        ))}
+      {/* Bottom: horizontal bar chart — last 3 on desktop, all 9 on mobile */}
+      <div className="rsp-guru-badges-bottom" style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 5 }}>
+        {gurus.map((guru, i) => {
+          const barColor = guru.verdict === "Yes" ? "#10d97e" : guru.verdict === "Maybe" ? "#5aad82" : "#444";
+          const pct = `${(guru.score / 10) * 100}%`;
+          return (
+            <div
+              key={guru.name}
+              className={i < 6 ? "rsp-guru-badge-desktop-only" : undefined}
+              style={{ display: "flex", alignItems: "center", gap: 8 }}
+            >
+              <span style={{ width: 72, fontSize: 10, color: C.text2, fontFamily: C.mono, flexShrink: 0, textAlign: "right" }}>
+                {guru.name}
+              </span>
+              <div style={{ flex: "1 1 0", height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ width: pct, height: "100%", background: barColor, borderRadius: 3, transition: "width 0.4s ease" }} />
+              </div>
+              <span style={{ width: 28, fontSize: 10, color: barColor, fontFamily: C.mono, flexShrink: 0, textAlign: "left" }}>
+                {guru.score}/10
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
