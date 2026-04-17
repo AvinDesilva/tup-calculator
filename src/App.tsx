@@ -14,9 +14,45 @@ import { HeroSearch } from "./components/HeroSearch";
 import { CompactTickerBar } from "./components/CompactTickerBar";
 import { DataSections } from "./components/DataSections";
 import { PriceProjectionGraph } from "./components/PriceProjectionGraph";
-import { GuruRadar } from "./components/GuruRadar";
 import { useTickerFetch } from "./hooks/useTickerFetch.ts";
+import type { IndustryGrowthData } from "./lib/tickerSearch/api.ts";
 import "./App.css";
+
+// ─── Industry Growth Panel ────────────────────────────────────────────────────
+
+function IndustryGrowthPanel({ industryGrowth, industryGrowthLoading, companyBlendedGrowth }: {
+  industryGrowth: IndustryGrowthData | null;
+  industryGrowthLoading: boolean;
+  companyBlendedGrowth: number | null;
+}) {
+  const mono = C.mono;
+  let color = "#888", value = "...", sub = "";
+  if (industryGrowthLoading) {
+    sub = "Loading";
+  } else if (industryGrowth && !industryGrowth.error && industryGrowth.median != null) {
+    value = `${industryGrowth.median.toFixed(1)}%`;
+    if (companyBlendedGrowth != null) {
+      const diff = companyBlendedGrowth - industryGrowth.median;
+      color = diff > 2 ? "#10d97e" : diff < -2 ? "#FF4D00" : "#f5a020";
+      sub = industryGrowth.industry;
+    } else {
+      sub = `n=${industryGrowth.count}`;
+    }
+  }
+  return (
+    <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.borderWeak}` }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.text3, marginBottom: 8 }}>
+        Industry Growth
+      </div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+        <span style={{ fontFamily: mono, fontSize: "20px", fontWeight: 600, color, letterSpacing: "-0.02em" }}>
+          {value}
+        </span>
+      </div>
+      <div style={{ fontSize: "11px", color: "#888", marginTop: "4px", letterSpacing: "0.06em" }}>{sub}</div>
+    </div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN APP
@@ -290,29 +326,20 @@ export default function App() {
             </div>
           )}
 
-          {/* Row 3: GuruRadar + ValuationContext + Scorecard */}
+          {/* Row 3: ValuationContext (with guru radar) + Scorecard + Industry Growth */}
           <div className="rsp-bottom-context" style={{ animation: "fadeInUp 0.5s 0.2s ease both", flexDirection: "column" }}>
-            {/* Guru Radar — full width */}
-            {guruData && (
-              <div style={{ padding: "28px 40px", borderBottom: `1px solid ${C.borderWeak}` }}>
-                <GuruRadar data={guruData} />
-              </div>
-            )}
-            {/* Valuation context row */}
+            {/* Valuation context + embedded guru radar */}
             <div style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px" }}>
               <ValuationContext
                 strongBuyPrice={displayStrongBuyPrice}
                 buyPrice={displayBuyPrice}
-                dcf={valuation.dcf}
                 currentPrice={inp.currentPrice}
                 adjPrice={result?.adjPrice}
-                industryGrowth={valuation.industryGrowth}
-                industryGrowthLoading={valuation.industryGrowthLoading}
-                companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
                 priceMode={priceMode}
+                guruData={guruData}
               />
             </div>
-            {/* Company description + lifecycle row */}
+            {/* Company description + lifecycle + industry growth */}
             {company && (
               <div style={{ paddingLeft: "40px", paddingRight: "40px", paddingBottom: "28px", borderTop: `1px solid ${C.borderWeak}` }}>
                 <CompanyScorecard
@@ -324,6 +351,13 @@ export default function App() {
                   lifecycleOnly
                   dividendYield={inp.dividendYield}
                 />
+                {(valuation.industryGrowth || valuation.industryGrowthLoading) && (
+                  <IndustryGrowthPanel
+                    industryGrowth={valuation.industryGrowth}
+                    industryGrowthLoading={valuation.industryGrowthLoading}
+                    companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
+                  />
+                )}
               </div>
             )}
           </div>
