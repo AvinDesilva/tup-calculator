@@ -298,35 +298,34 @@ export default function App() {
                 <GuruRadar data={guruData} />
               </div>
             )}
-            {/* Compact valuation + scorecard row */}
-            <div style={{ display: "flex" }}>
-              <div style={{ flex: "1 1 0", minWidth: 0, paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px" }}>
-                <ValuationContext
-                  strongBuyPrice={displayStrongBuyPrice}
-                  buyPrice={displayBuyPrice}
-                  dcf={valuation.dcf}
-                  currentPrice={inp.currentPrice}
-                  adjPrice={result?.adjPrice}
-                  industryGrowth={valuation.industryGrowth}
-                  industryGrowthLoading={valuation.industryGrowthLoading}
-                  companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
-                  priceMode={priceMode}
+            {/* Valuation context row */}
+            <div style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px" }}>
+              <ValuationContext
+                strongBuyPrice={displayStrongBuyPrice}
+                buyPrice={displayBuyPrice}
+                dcf={valuation.dcf}
+                currentPrice={inp.currentPrice}
+                adjPrice={result?.adjPrice}
+                industryGrowth={valuation.industryGrowth}
+                industryGrowthLoading={valuation.industryGrowthLoading}
+                companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
+                priceMode={priceMode}
+              />
+            </div>
+            {/* Company description + lifecycle row */}
+            {company && (
+              <div style={{ paddingLeft: "40px", paddingRight: "40px", paddingBottom: "28px", borderTop: `1px solid ${C.borderWeak}` }}>
+                <CompanyScorecard
+                  earnings={scorecard.earnings}
+                  cashFlows={scorecard.cashFlows}
+                  incomeHistory={scorecard.incomeHistory}
+                  description={scorecard.description}
+                  exchange={scorecard.exchange}
+                  lifecycleOnly
+                  dividendYield={inp.dividendYield}
                 />
               </div>
-              {company && (
-                <div style={{ flex: "1 1 0", minWidth: 0, paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px", borderLeft: `1px solid ${C.borderWeak}` }}>
-                  <CompanyScorecard
-                    earnings={scorecard.earnings}
-                    cashFlows={scorecard.cashFlows}
-                    incomeHistory={scorecard.incomeHistory}
-                    description={scorecard.description}
-                    exchange={scorecard.exchange}
-                    lifecycleOnly
-                    dividendYield={inp.dividendYield}
-                  />
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
           {/* Row 5: DataSections — full width */}
