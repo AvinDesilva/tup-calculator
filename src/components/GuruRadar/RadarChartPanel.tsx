@@ -11,6 +11,7 @@ import type { RadarMetricPoint } from "../../lib/guruRadar/types.ts";
 
 interface Props {
   radar: RadarMetricPoint[];
+  color: string;
 }
 
 interface TooltipPayload {
@@ -37,7 +38,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Toolti
   );
 }
 
-export function RadarChartPanel({ radar }: Props) {
+export function RadarChartPanel({ radar, color }: Props) {
   return (
     <ResponsiveContainer width="100%" height={320}>
       <RadarChart data={radar} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
@@ -49,10 +50,10 @@ export function RadarChartPanel({ radar }: Props) {
         <Radar
           name="Score"
           dataKey="value"
-          stroke="#4a90d9"
-          fill="#4a90d9"
+          stroke={color}
+          fill={color}
           fillOpacity={0.2}
-          dot={{ r: 3, fill: "#4a90d9", strokeWidth: 0 }}
+          dot={{ r: 3, fill: color, strokeWidth: 0 }}
         />
         <Tooltip content={<CustomTooltip />} />
       </RadarChart>

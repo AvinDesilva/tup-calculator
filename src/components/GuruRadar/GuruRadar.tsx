@@ -15,6 +15,8 @@ const ADVICE_COLOR: Record<string, string> = {
 export function GuruRadar({ data }: GuruRadarProps) {
   const { radar, gurus, overallScore, advice } = data;
   const adviceColor = ADVICE_COLOR[advice] ?? C.text2;
+  const avgGuruScore = gurus.reduce((s, g) => s + g.score, 0) / gurus.length;
+  const radarColor = avgGuruScore >= 8 ? "#10d97e" : avgGuruScore >= 4 ? "#f5a020" : "#e03030";
 
   return (
     <div>
@@ -27,7 +29,7 @@ export function GuruRadar({ data }: GuruRadarProps) {
 
       {/* Chart */}
       <div style={{ position: "relative" }}>
-        <RadarChartPanel radar={radar} />
+        <RadarChartPanel radar={radar} color={radarColor} />
         {/* Center overlay label */}
         <div style={{
           position: "absolute",
