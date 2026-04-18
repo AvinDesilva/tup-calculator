@@ -34,15 +34,6 @@ function getGuruReasoning(name: string, radar: RadarMetricPoint[]): string {
   }
 }
 
-const ADVICE_COLOR: Record<string, string> = {
-  "Strong Buy":            "#10d97e",
-  "Accumulate / Buy":      "#4a90d9",
-  "Accumulate / Weak Buy": "#7ab8f0",
-  "Hold":                  "#f5a020",
-  "Reduce / Weak Sell":    "#f06060",
-  "Sell":                  "#e03030",
-  "Strong Sell":           "#c02020",
-};
 
 const subLabel: React.CSSProperties = {
   fontSize: 11,
@@ -102,8 +93,6 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
     ? guruData!.gurus.reduce((s, g) => s + g.score, 0) / guruData!.gurus.length
     : 0;
   const radarColor = avgGuruScore >= 8 ? "#10d97e" : avgGuruScore >= 4 ? "#f5a020" : "#e03030";
-  const adviceColor = hasGuru ? (ADVICE_COLOR[guruData!.advice] ?? C.text2) : C.text2;
-
   // Industry growth (used in igNote below guru section — kept for layout reference only, removed from panels)
   void industryGrowth; void industryGrowthLoading; void companyBlendedGrowth;
 
@@ -134,19 +123,11 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
         {panels.length > 0 && dividerH}
 
         {/* Radar chart */}
-        <div style={subLabel}>Financial Health</div>
-        <RadarChartPanel radar={guruData!.radar} color={radarColor} />
-        <div style={{
-          textAlign: "center",
-          padding: "7px 12px",
-          border: `1px solid ${adviceColor}33`,
-          background: `${adviceColor}0d`,
-          whiteSpace: "nowrap",
-          marginTop: 8,
-        }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: adviceColor }}>{guruData!.advice}</div>
-          <div style={{ fontSize: 10, color: C.text3, marginTop: 2 }}>{guruData!.overallScore}/100</div>
+        <div style={{ ...subLabel, display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+          <span>Financial Health</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: radarColor, letterSpacing: "0.08em" }}>{guruData!.overallScore}/100</span>
         </div>
+        <RadarChartPanel radar={guruData!.radar} color={radarColor} />
 
         {dividerH}
 
