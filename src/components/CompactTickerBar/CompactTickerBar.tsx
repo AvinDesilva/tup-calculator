@@ -27,7 +27,15 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
           />
         </div>
         <div className="rsp-api-bar-btn" style={{ display: "flex", gap: "8px" }}>
-          {rollingDice ? (
+          {loading && !rollingDice && (
+            <div style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg aria-hidden="true" style={{ animation: "spin 1s linear infinite", width: "14px", height: "14px", color: C.text3 }} viewBox="0 0 24 24">
+                <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            </div>
+          )}
+          {rollingDice && (
             <button onClick={onCancelDice} aria-label="Cancel dice roll" style={{
               width: "32px", height: "32px",
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -42,32 +50,6 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
                 <line x1="6" y1="6" x2="18" y2="18" />
                 <line x1="18" y1="6" x2="6" y2="18" />
               </svg>
-            </button>
-          ) : (
-            <button onClick={() => onFetch()} disabled={loading} style={{
-              padding: "8px 16px",
-              background: loading ? C.text3 : C.accent,
-              color: "#080808",
-              border: "none",
-              fontSize: "11px",
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              cursor: loading ? "not-allowed" : "pointer",
-              fontFamily: C.body,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-              transition: "opacity 0.15s",
-              whiteSpace: "nowrap",
-            }}>
-              {loading ? (
-                <>
-                  <svg aria-hidden="true" style={{ animation: "spin 1s linear infinite", width: "12px", height: "12px" }} viewBox="0 0 24 24">
-                    <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                    <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                  </svg>
-                  Fetching...
-                </>
-              ) : "Fetch Data →"}
             </button>
           )}
           <button onClick={onRollDice} disabled={loading || rollingDice} style={{
