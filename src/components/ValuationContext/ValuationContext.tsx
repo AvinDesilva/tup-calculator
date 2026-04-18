@@ -123,7 +123,7 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
         {panels.length > 0 && dividerH}
 
         {/* Radar chart */}
-        <div style={{ ...subLabel, display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+        <div style={{ ...subLabel, display: "flex", alignItems: "baseline", gap: 8 }}>
           <span>Financial Health</span>
           <span style={{ fontSize: 11, fontWeight: 700, color: radarColor, letterSpacing: "0.08em" }}>{guruData!.overallScore}/100</span>
         </div>
