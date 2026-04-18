@@ -275,10 +275,6 @@ export default function App() {
                   )}
                 </div>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>EPS Base</div>
-                  <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: C.text1 }}>${f(result?.epsBase)}</div>
-                </div>
-                <div style={{ textAlign: "center" }}>
                   <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Growth</div>
                   <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: "#10d97e" }}>{result ? f(result.gr * 100) : "—"}%</div>
                 </div>
