@@ -120,7 +120,7 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
             {panels.length === 2 ? (<>
               <div style={{ paddingBottom: "14px" }}><Panel p={panels[0]} mono={mono} /></div>
               {dividerV}
-              <div style={{ paddingLeft: "14px", paddingBottom: "14px" }}><Panel p={panels[1]} mono={mono} /></div>
+              <div style={{ paddingBottom: "14px" }}><Panel p={panels[1]} mono={mono} /></div>
             </>) : (
               <div style={{ paddingBottom: "14px", gridColumn: "1 / -1" }}><Panel p={panels[0]} mono={mono} /></div>
             )}
