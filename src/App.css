@@ -81,22 +81,6 @@
     justify-content: space-between;
     margin-top: 0 !important;
   }
-  .rsp-api-bar {
-    grid-template-columns: 1fr !important;
-    gap: 14px !important;
-  }
-  .rsp-api-bar-btn {
-    width: 100%;
-  }
-  .rsp-api-bar-btn button:first-child {
-    flex: 2 !important;
-  }
-  .rsp-api-bar-btn button:last-child {
-    flex: 0 0 32px !important;
-    width: 32px !important;
-    min-width: 32px !important;
-    padding: 0 !important;
-  }
   .rsp-main-grid {
     display: flex !important;
     flex-direction: column !important;

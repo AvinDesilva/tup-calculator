@@ -9,8 +9,8 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
   const [hovered, setHovered] = useState(false);
   return (
     <section className="rsp-ticker-bar" style={{ position: "sticky", top: 0, zIndex: 100, background: C.bg, paddingTop: "12px", paddingBottom: "20px", marginBottom: "20px", borderBottom: `1px solid ${C.borderWeak}`, animation: "fadeInUp 0.4s ease both" }}>
-      <div className="rsp-api-bar" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "20px", alignItems: "center", border: `1px solid ${hovered ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)"}`, boxShadow: hovered ? "0 0 12px rgba(255,255,255,0.08)" : "none", padding: "10px 18px 6px", borderRadius: "4px", transition: "border-color 0.2s, box-shadow 0.2s" }}>
-        <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "10px" }}>
+      <div className="rsp-api-bar" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ display: "flex", alignItems: "center", gap: "8px", border: `1px solid ${hovered ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)"}`, boxShadow: hovered ? "0 0 12px rgba(255,255,255,0.08)" : "none", padding: "10px 18px", borderRadius: "4px", transition: "border-color 0.2s, box-shadow 0.2s" }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
           <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.text2} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -26,7 +26,7 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
             onBlur={e => (e.target.style.borderBottomColor = C.borderWeak)}
           />
         </div>
-        <div className="rsp-api-bar-btn" style={{ display: "flex", gap: "8px" }}>
+        <div className="rsp-api-bar-btn" style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
           {loading && !rollingDice && (
             <div style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg aria-hidden="true" style={{ animation: "spin 1s linear infinite", width: "14px", height: "14px", color: C.text3 }} viewBox="0 0 24 24">
@@ -91,10 +91,8 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
             </svg>
           </button>
         </div>
-        <div className="rsp-api-bar-status" style={{ fontSize: "11px", paddingBottom: "2px" }}>
-          {error && <ErrorDisplay error={error} style={{ fontSize: "11px" }} />}
-        </div>
       </div>
+      {error && <div style={{ marginTop: "6px", fontSize: "11px" }}><ErrorDisplay error={error} style={{ fontSize: "11px" }} /></div>}
 
       <DiceFilterBar
         isOpen={isFilterOpen}
