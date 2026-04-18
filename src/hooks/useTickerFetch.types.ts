@@ -1,5 +1,5 @@
 import type { IndustryGrowthData } from "../lib/tickerSearch/api.ts";
-import type { InputState, GrowthScenario, RollFilters, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement, EpsGrowthPoint, HistoricalPricePoint } from "../lib/types.ts";
+import type { InputState, GrowthScenario, RollFilters, FMPCashFlow, FMPIncomeStatement, EpsGrowthPoint, HistoricalPricePoint } from "../lib/types.ts";
 import type { GuruRadarData } from "../lib/guruRadar/types.ts";
 
 export interface ValuationState {
@@ -9,12 +9,10 @@ export interface ValuationState {
 }
 
 export interface ScorecardState {
-  earnings: FMPEarningSurprise[];
   cashFlows: FMPCashFlow[];
   incomeHistory: FMPIncomeStatement[];
   epsGrowthHistory: EpsGrowthPoint[];
   description: string;
-  exchange: string;
 }
 
 export interface UseTickerFetchReturn {

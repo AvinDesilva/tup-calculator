@@ -6,7 +6,7 @@ import type {
   FMPProfile, FMPQuote, FMPBalanceSheet, FMPIncomeStatement,
   FMPEstimate,
   FMPDividend, FMPDividendHistory, FMPDCF,
-  FMPEarningSurprise, FMPCashFlow, EpsGrowthPoint,
+  FMPCashFlow, EpsGrowthPoint,
 } from "../types.ts";
 
 // ─── Industry Growth ──────────────────────────────────────────────────────────
@@ -376,7 +376,7 @@ export async function lookupTicker(
 
   log(`Fetching data for ${t} from FMP endpoints...`);
 
-  const [profile, quote, balanceSheet, income, estimates, divHistory, dcfData, earningsSurprises, cashFlows, histData] = await Promise.all([
+  const [profile, quote, balanceSheet, income, estimates, divHistory, dcfData, cashFlows, histData] = await Promise.all([
     // 1) Company Profile
     fetchFMP<FMPProfile[]>(`profile?symbol=${t}`).then(d => { log("  ✓ /profile — company info, market cap"); return d; }),
 
@@ -404,12 +404,7 @@ export async function lookupTicker(
       .then(d => { log("  ✓ /discounted-cash-flow — DCF intrinsic value"); return d; })
       .catch(() => { log("  ⚠ /discounted-cash-flow — not available"); return [] as FMPDCF[]; }),
 
-    // 7) Earnings Surprises
-    fetchFMP<FMPEarningSurprise[]>(`earnings-surprises/${t}`)
-      .then(d => { log("  ✓ /earnings-surprises — analyst beat/miss history"); return d; })
-      .catch(() => { log("  ⚠ /earnings-surprises — not available (plan limit)"); return [] as FMPEarningSurprise[]; }),
-
-    // 8) Cash Flow Statement (12 years — matches income statement window)
+    // 7) Cash Flow Statement (12 years — matches income statement window)
     fetchFMP<FMPCashFlow[]>(`cash-flow-statement?symbol=${t}&limit=12`)
       .then(d => { log("  ✓ /cash-flow-statement — operating/investing/financing flows"); return d; })
       .catch(() => { log("  ⚠ /cash-flow-statement — not available"); return [] as FMPCashFlow[]; }),
@@ -981,7 +976,6 @@ export async function lookupTicker(
     isConverted,
     currencyNote,
     currencyMismatchWarning,
-    earningsSurprises: Array.isArray(earningsSurprises) ? earningsSurprises : [],
     cashFlowHistory: Array.isArray(cashFlows) ? cashFlows : [],
     incomeHistory: Array.isArray(income) ? income : [],
     epsGrowthHistory,

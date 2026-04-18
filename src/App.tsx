@@ -311,12 +311,9 @@ export default function App() {
             {company && (
               <div style={{ paddingLeft: "40px", paddingRight: "40px", paddingBottom: "28px", borderTop: `1px solid ${C.borderWeak}` }}>
                 <CompanyScorecard
-                  earnings={scorecard.earnings}
                   cashFlows={scorecard.cashFlows}
                   incomeHistory={scorecard.incomeHistory}
                   description={scorecard.description}
-                  exchange={scorecard.exchange}
-                  lifecycleOnly
                   dividendYield={inp.dividendYield}
                 />
                 {(valuation.industryGrowth || valuation.industryGrowthLoading) && (

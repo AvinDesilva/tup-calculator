@@ -1,4 +1,4 @@
-import type { InputState, FMPEarningSurprise, FMPCashFlow, FMPIncomeStatement, EpsGrowthPoint } from "./types.ts";
+import type { InputState, FMPCashFlow, FMPIncomeStatement, EpsGrowthPoint } from "./types.ts";
 
 /**
  * Dummy AppLovin (APP) data for local dev preview — no API key needed.
@@ -58,16 +58,6 @@ export const DEV_VALUATION = {
   industryGrowthLoading: false,
 };
 
-export const DEV_EARNINGS: FMPEarningSurprise[] = [
-  { actualEps: 2.10, estimatedEps: 1.85, date: "2025-09-30" },
-  { actualEps: 1.82, estimatedEps: 1.60, date: "2025-06-30" },
-  { actualEps: 1.67, estimatedEps: 1.45, date: "2025-03-31" },
-  { actualEps: 1.73, estimatedEps: 1.50, date: "2024-12-31" },
-  { actualEps: 1.25, estimatedEps: 1.08, date: "2024-09-30" },
-  { actualEps: 1.10, estimatedEps: 0.85, date: "2024-06-30" },
-  { actualEps: 0.67, estimatedEps: 0.52, date: "2024-03-31" },
-  { actualEps: 0.49, estimatedEps: 0.42, date: "2023-12-31" },
-];
 
 export const DEV_CASH_FLOWS: FMPCashFlow[] = [
   { operatingCashFlow: 2_800_000_000, freeCashFlow: 2_600_000_000 },

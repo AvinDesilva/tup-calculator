@@ -161,13 +161,6 @@ export interface FMPDCF {
   dcf?: number;
 }
 
-export interface FMPEarningSurprise {
-  actualEarningResult?: number;
-  actualEps?: number;
-  estimatedEarning?: number;
-  estimatedEps?: number;
-  date?: string;
-}
 
 export interface FMPCashFlow {
   operatingCashFlow?: number;
@@ -233,7 +226,6 @@ export interface TickerData {
   isConverted: boolean;
   currencyNote: string;
   currencyMismatchWarning: string;
-  earningsSurprises: FMPEarningSurprise[];
   cashFlowHistory: FMPCashFlow[];
   incomeHistory: FMPIncomeStatement[];
   epsGrowthHistory: EpsGrowthPoint[];
