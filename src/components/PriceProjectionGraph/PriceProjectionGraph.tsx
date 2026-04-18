@@ -70,8 +70,8 @@ export function PriceProjectionGraph({
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <ViewWindowToggle viewYears={viewYears} setViewYears={setViewYears} body={body} />
 
-      <div style={{ flex: 1, minHeight: "200px" }}>
-        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: -1, height: 1 }}>
           <ComposedChart
             key={chartKey}
             data={chartData}
