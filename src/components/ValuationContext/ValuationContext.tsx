@@ -170,6 +170,7 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
                   style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
                   onMouseEnter={() => setActiveGuru(guru.name)}
                   onMouseLeave={() => setActiveGuru(null)}
+                  onTouchEnd={e => { e.preventDefault(); setActiveGuru(isActive ? null : guru.name); }}
                   onClick={() => setActiveGuru(isActive ? null : guru.name)}
                   onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setActiveGuru(isActive ? null : guru.name); }}
                 >
