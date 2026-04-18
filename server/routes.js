@@ -241,9 +241,10 @@ router.get("/historical-price", async (req, res) => {
 router.get("/fmp/:endpoint(*)", async (req, res) => {
   const endpoint = req.params.endpoint;
 
-  // Allowlist: FMP endpoint names are lowercase letters and hyphens only.
+  // Allowlist: FMP endpoint names are lowercase letters and hyphens, optionally
+  // followed by a single path segment (ticker symbol) e.g. earnings-surprises/AAPL.
   // Reject anything else to prevent SSRF / path traversal.
-  if (!/^[a-z0-9-]+$/.test(endpoint)) {
+  if (!/^[a-z0-9-]+(\/[A-Z0-9][A-Z0-9.-]*)?$/.test(endpoint)) {
     return res.status(400).json({ error: "Invalid endpoint." });
   }
 

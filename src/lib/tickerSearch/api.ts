@@ -405,9 +405,9 @@ export async function lookupTicker(
       .catch(() => { log("  ⚠ /discounted-cash-flow — not available"); return [] as FMPDCF[]; }),
 
     // 7) Earnings Surprises
-    fetchFMP<FMPEarningSurprise[]>(`earnings-surprises?symbol=${t}`)
+    fetchFMP<FMPEarningSurprise[]>(`earnings-surprises/${t}`)
       .then(d => { log("  ✓ /earnings-surprises — analyst beat/miss history"); return d; })
-      .catch(() => { log("  ⚠ /earnings-surprises — not available"); return [] as FMPEarningSurprise[]; }),
+      .catch(() => { log("  ⚠ /earnings-surprises — not available (plan limit)"); return [] as FMPEarningSurprise[]; }),
 
     // 8) Cash Flow Statement (12 years — matches income statement window)
     fetchFMP<FMPCashFlow[]>(`cash-flow-statement?symbol=${t}&limit=12`)
