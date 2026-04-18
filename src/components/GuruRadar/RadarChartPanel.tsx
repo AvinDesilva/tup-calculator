@@ -45,7 +45,7 @@ export function RadarChartPanel({ radar, color }: Props) {
         <PolarGrid stroke={C.borderWeak} />
         <PolarAngleAxis
           dataKey="axis"
-          tick={{ fill: C.text3, fontSize: 10, fontFamily: "Space Grotesk, sans-serif" }}
+          tick={{ fill: C.text2, fontSize: 10, fontFamily: "Space Grotesk, sans-serif" }}
         />
         <Radar
           name="Score"
