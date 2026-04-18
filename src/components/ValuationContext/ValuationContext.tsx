@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Panel } from "./Panel.tsx";
 import { RadarChartPanel } from "../GuruRadar/RadarChartPanel.tsx";
 import type { ValuationContextProps, PanelData } from "./ValuationContext.types.ts";
@@ -63,6 +63,7 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
   const hasGuru      = guruData != null;
 
   const [activeGuru, setActiveGuru] = useState<string | null>(null);
+  const touchInProgressRef = useRef(false);
 
   if (!hasStrongBuy && !hasBuy && !hasGuru) return null;
 
@@ -168,9 +169,10 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
                   role="button"
                   tabIndex={0}
                   style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
-                  onMouseEnter={() => setActiveGuru(guru.name)}
-                  onMouseLeave={() => setActiveGuru(null)}
-                  onTouchEnd={e => { e.preventDefault(); setActiveGuru(isActive ? null : guru.name); }}
+                  onTouchStart={() => { touchInProgressRef.current = true; }}
+                  onTouchEnd={e => { e.preventDefault(); setActiveGuru(isActive ? null : guru.name); setTimeout(() => { touchInProgressRef.current = false; }, 300); }}
+                  onMouseEnter={() => { if (!touchInProgressRef.current) setActiveGuru(guru.name); }}
+                  onMouseLeave={() => { if (!touchInProgressRef.current) setActiveGuru(null); }}
                   onClick={() => setActiveGuru(isActive ? null : guru.name)}
                   onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setActiveGuru(isActive ? null : guru.name); }}
                 >
