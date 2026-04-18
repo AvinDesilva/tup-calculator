@@ -135,23 +135,17 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
 
         {/* Radar chart */}
         <div style={subLabel}>Financial Health</div>
-        <div style={{ position: "relative" }}>
-          <RadarChartPanel radar={guruData!.radar} color={radarColor} />
-          <div style={{
-            position: "absolute",
-            bottom: "28%",
-            left: "50%",
-            transform: "translateX(-50%)",
-            textAlign: "center",
-            pointerEvents: "none",
-            padding: "7px 12px",
-            border: `1px solid ${adviceColor}33`,
-            background: "#080808cc",
-            whiteSpace: "nowrap",
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: adviceColor }}>{guruData!.advice}</div>
-            <div style={{ fontSize: 10, color: C.text3, marginTop: 2 }}>{guruData!.overallScore}/100</div>
-          </div>
+        <RadarChartPanel radar={guruData!.radar} color={radarColor} />
+        <div style={{
+          textAlign: "center",
+          padding: "7px 12px",
+          border: `1px solid ${adviceColor}33`,
+          background: `${adviceColor}0d`,
+          whiteSpace: "nowrap",
+          marginTop: 8,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: adviceColor }}>{guruData!.advice}</div>
+          <div style={{ fontSize: 10, color: C.text3, marginTop: 2 }}>{guruData!.overallScore}/100</div>
         </div>
 
         {dividerH}
