@@ -54,22 +54,18 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
           )}
           <button onClick={onRollDice} disabled={loading || rollingDice} style={{
             position: "relative",
-            padding: "8px 16px",
+            ...(rollingDice ? { padding: "8px 12px", whiteSpace: "nowrap" as const, fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, fontFamily: C.body } : { width: "32px", height: "32px", fontSize: "16px" }),
+            display: "flex", alignItems: "center", justifyContent: "center",
             background: "transparent",
             color: C.accent,
             border: `1px solid ${C.accent}`,
-            fontSize: "11px",
-            fontWeight: 700,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
             cursor: (loading || rollingDice) ? "not-allowed" : "pointer",
-            fontFamily: C.body,
-            whiteSpace: "nowrap",
             transition: "all 0.15s",
             opacity: loading ? 0.5 : 1,
+            flexShrink: 0,
           }}>
             {hasActiveFilters && !rollingDice && <span aria-hidden="true" style={{ position: "absolute", top: "-3px", right: "-3px", width: "6px", height: "6px", borderRadius: "50%", background: "#00BFA5", boxShadow: "0 0 4px rgba(0,191,165,0.6)" }} />}
-            {rollingDice ? <>{dicePhrase} <span>🎲</span></> : <>Roll Dice <span>🎲</span></>}
+            {rollingDice ? <>{dicePhrase} <span>🎲</span></> : <span>🎲</span>}
           </button>
           <button onClick={onToggleFilter} aria-label="Dice roll filters" aria-expanded={isFilterOpen} aria-haspopup="true" style={{
             width: "32px", height: "32px",
