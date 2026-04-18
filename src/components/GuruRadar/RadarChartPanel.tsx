@@ -40,7 +40,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Toolti
 
 export function RadarChartPanel({ radar, color }: Props) {
   return (
-    <ResponsiveContainer width="100%" height={320}>
+    <ResponsiveContainer width="100%" height={320} minWidth={0}>
       <RadarChart data={radar} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
         <PolarGrid stroke={C.borderWeak} />
         <PolarAngleAxis

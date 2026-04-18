@@ -116,9 +116,10 @@ export async function fetchFMP<T = unknown>(endpoint: string): Promise<T> {
   const res = await fetch(`/api/fmp/${endpoint}`);
   if (!res.ok) {
     const body = await res.text().catch(() => "(no body)");
-    console.error(`[fetchFMP] FAIL ${res.status} /${endpoint}`, body);
     if (res.status === 401) throw new Error("Invalid API key.");
     if (res.status === 429) throw new Error("API rate limit reached. Try again later.");
+    if (res.status === 404) { console.warn(`[fetchFMP] 404 /${endpoint}`); }
+    else { console.error(`[fetchFMP] FAIL ${res.status} /${endpoint}`, body); }
     throw new Error(`Unable to fetch market data (HTTP ${res.status}: ${endpoint.split("?")[0]}). Please try again.`);
   }
   return res.json() as T;
