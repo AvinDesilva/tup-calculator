@@ -181,11 +181,6 @@
     border-top: 1px solid rgba(255,255,255,0.06);
     order: 3;
   }
-  .rsp-mobile-warnings {
-    display: block !important;
-    order: 4;
-    padding: 12px 0 0;
-  }
 }
 
 /* ── Guru Radar ────────────────────────────────────────────────────────────── */

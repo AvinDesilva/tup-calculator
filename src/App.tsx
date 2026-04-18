@@ -242,89 +242,61 @@ export default function App() {
           <div className="rsp-hairline-h" style={{ background: C.border, height: "2px" }} />
 
           {/* Mobile summary — hidden on desktop, shown on mobile between graph and context */}
-          <div className="rsp-mobile-summary" style={{ display: "none", animation: "fadeInUp 0.5s 0.2s ease both" }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>{priceMode === "adj" ? "Adj. Price" : "Listed Price"}</div>
-              <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: C.text1 }}>${f(priceMode === "adj" ? result?.adjPrice : inp.currentPrice)}</div>
-              {inp.currentPrice > 0 && (
-                <button
-                  onClick={() => setPriceMode(m => m === "adj" ? "listed" : "adj")}
-                  aria-label={`Switch to ${priceMode === "adj" ? "listed" : "adjusted"} price`}
-                  aria-pressed={priceMode === "listed"}
-                  style={{
-                    marginTop: "6px", fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em",
-                    textTransform: "uppercase", padding: "2px 6px",
-                    border: `1px solid ${priceMode === "listed" ? "#C4A06E" : "rgba(255,255,255,0.15)"}`,
-                    borderRadius: "10px",
-                    background: priceMode === "listed" ? "rgba(196,160,110,0.15)" : "transparent",
-                    color: priceMode === "listed" ? "#C4A06E" : "#555",
-                    cursor: "pointer", lineHeight: 1.4,
-                  }}
-                >
-                  {priceMode === "adj" ? "LISTED" : "ADJ"}
-                </button>
-              )}
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>EPS Base</div>
-              <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: C.text1 }}>${f(result?.epsBase)}</div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Growth</div>
-              <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: "#10d97e" }}>{result ? f(result.gr * 100) : "—"}%</div>
-            </div>
-          </div>
-
-          {/* Mobile technical indicators — hidden on desktop, shown below summary on mobile */}
-          {result && (
-            <div className="rsp-mobile-warnings" style={{ display: "none" }}>
-              {result.paybackNote && (
-                <div style={{ margin: "0 0 8px", padding: "14px 16px", borderLeft: "2px solid #888", borderTop: "1px solid rgba(136,136,136,0.2)", borderRight: "1px solid rgba(136,136,136,0.2)", borderBottom: "1px solid rgba(136,136,136,0.2)", background: "rgba(136,136,136,0.05)" }}>
-                  <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                    <span style={{ color: "#888", fontSize: "14px", fontWeight: 700, flexShrink: 0, lineHeight: 1.2, fontFamily: C.mono }}>—</span>
-                    <div>
-                      <div style={{ fontSize: "11px", fontWeight: 700, color: "#888", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>Calculation Not Applicable</div>
-                      <p style={{ fontSize: "11px", color: "rgba(136,136,136,0.7)", lineHeight: 1.75, margin: 0 }}>{result.paybackNote}</p>
-                    </div>
+          {(() => {
+            const techStatus = result ? (
+              result.paybackNote ? { label: "N/A", color: "#888", sym: "—" } :
+              (!result.fallingKnife && result.sma200 > 0) ? { label: "Sound", color: "#00BFA5", sym: "✓" } :
+              (result.fallingKnife && result.verdict === "spec_buy") ? { label: "Weak", color: "#f5a020", sym: "!" } :
+              (result.fallingKnife && result.verdict === "avoid") ? { label: "Avoid", color: "#ff4136", sym: "⚠" } :
+              null
+            ) : null;
+            return (
+              <div className="rsp-mobile-summary" style={{ display: "none", animation: "fadeInUp 0.5s 0.2s ease both" }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>{priceMode === "adj" ? "Adj. Price" : "Listed Price"}</div>
+                  <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: C.text1 }}>${f(priceMode === "adj" ? result?.adjPrice : inp.currentPrice)}</div>
+                  {inp.currentPrice > 0 && (
+                    <button
+                      onClick={() => setPriceMode(m => m === "adj" ? "listed" : "adj")}
+                      aria-label={`Switch to ${priceMode === "adj" ? "listed" : "adjusted"} price`}
+                      aria-pressed={priceMode === "listed"}
+                      style={{
+                        marginTop: "6px", fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em",
+                        textTransform: "uppercase", padding: "2px 6px",
+                        border: `1px solid ${priceMode === "listed" ? "#C4A06E" : "rgba(255,255,255,0.15)"}`,
+                        borderRadius: "10px",
+                        background: priceMode === "listed" ? "rgba(196,160,110,0.15)" : "transparent",
+                        color: priceMode === "listed" ? "#C4A06E" : "#555",
+                        cursor: "pointer", lineHeight: 1.4,
+                      }}
+                    >
+                      {priceMode === "adj" ? "LISTED" : "ADJ"}
+                    </button>
+                  )}
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>EPS Base</div>
+                  <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: C.text1 }}>${f(result?.epsBase)}</div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Growth</div>
+                  <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: "#10d97e" }}>{result ? f(result.gr * 100) : "—"}%</div>
+                </div>
+                {techStatus && (
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Technical</div>
+                    <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: techStatus.color }}>{techStatus.sym} {techStatus.label}</div>
                   </div>
-                </div>
-              )}
-              {!result.paybackNote && !result.fallingKnife && result.sma200 > 0 && (
-                <div style={{ margin: "0 0 8px", padding: "14px 16px", borderLeft: "2px solid #00BFA5", borderTop: "1px solid rgba(0,191,165,0.2)", borderRight: "1px solid rgba(0,191,165,0.2)", borderBottom: "1px solid rgba(0,191,165,0.2)", background: "rgba(0,191,165,0.05)" }}>
-                  <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                    <span style={{ color: "#00BFA5", fontSize: "14px", fontWeight: 700, flexShrink: 0, lineHeight: 1.2, fontFamily: C.mono }}>✓</span>
-                    <div>
-                      <div style={{ fontSize: "11px", fontWeight: 700, color: "#00BFA5", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>Technically Sound</div>
-                      <p style={{ fontSize: "11px", color: "rgba(0,191,165,0.7)", lineHeight: 1.75, margin: 0 }}>Price is trading above the 200-day SMA{result.sma200 > 0 ? ` of $${f(result.sma200)}` : ""}, confirming an uptrend.</p>
-                    </div>
+                )}
+                {result?.tamWarning && (
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>TAM</div>
+                    <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: "#f5a020" }}>⚠ Warn</div>
                   </div>
-                </div>
-              )}
-              {result.fallingKnife && result.verdict === "spec_buy" && (
-                <div style={{ margin: "0 0 8px", padding: "14px 16px", borderLeft: "2px solid #f5a020", borderTop: "1px solid rgba(245,160,32,0.2)", borderRight: "1px solid rgba(245,160,32,0.2)", borderBottom: "1px solid rgba(245,160,32,0.2)", background: "rgba(245,160,32,0.05)" }}>
-                  <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                    <span style={{ color: "#f5a020", fontSize: "14px", fontWeight: 700, flexShrink: 0, lineHeight: 1.2, fontFamily: C.mono }}>!</span>
-                    <div>
-                      <div style={{ fontSize: "11px", fontWeight: 700, color: "#f5a020", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>Warning: Technically Weak</div>
-                      <p style={{ fontSize: "11px", color: "#d4923c", lineHeight: 1.75, margin: 0 }}>The math suggests a Buy, but the stock is in a downtrend (trading below its 200-day SMA{result.sma200 > 0 ? ` of $${f(result.sma200)}` : ""}).{" "}<strong style={{ color: "#f5a020" }}>Consider scaling in only after price stabilizes above the 200-day SMA</strong>.</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {result.fallingKnife && result.verdict === "avoid" && (
-                <div style={{ margin: "0 0 8px", padding: "10px 14px", borderLeft: "2px solid #ff4136", borderTop: "1px solid rgba(255,65,54,0.15)", borderRight: "1px solid rgba(255,65,54,0.15)", borderBottom: "1px solid rgba(255,65,54,0.15)", display: "flex", gap: "8px", alignItems: "center" }}>
-                  <span style={{ color: "#ff4136" }}>⚠</span>
-                  <span style={{ fontSize: "11px", color: "#ff4136" }}>Falling Knife — Price below 200-day SMA. Technical avoid.</span>
-                </div>
-              )}
-              {result.tamWarning && (
-                <div style={{ padding: "10px 14px", borderLeft: "2px solid #f5a020", borderTop: "1px solid rgba(245,160,32,0.15)", borderRight: "1px solid rgba(245,160,32,0.15)", borderBottom: "1px solid rgba(245,160,32,0.15)", display: "flex", gap: "8px", alignItems: "center" }}>
-                  <span style={{ color: "#f5a020" }}>⚠</span>
-                  <span style={{ fontSize: "11px", color: "#f5a020" }}>TAM Warning — Implied Y10 revenue exceeds $5T. Growth may be unrealistic.</span>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            );
+          })()}
 
           {/* Row 3: ValuationContext (with guru radar) + Scorecard + Industry Growth */}
           <div className="rsp-bottom-context" style={{ animation: "fadeInUp 0.5s 0.2s ease both", flexDirection: "column" }}>
