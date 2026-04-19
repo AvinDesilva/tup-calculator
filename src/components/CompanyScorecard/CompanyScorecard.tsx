@@ -116,32 +116,6 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
         <div>
           <div style={label9}>Business Lifecycle</div>
 
-          {/* Legend — horizontal row between title and graph */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 14px", marginTop: "10px" }}>
-            {LC_ZONES.map(z => {
-              const isActive = z.key === currentStage;
-              return (
-                <div key={z.key} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <div style={{
-                    width: isActive ? "9px" : "7px", height: isActive ? "9px" : "7px",
-                    borderRadius: "50%", background: STAGE_META[z.key].color,
-                    opacity: isActive ? 1 : 0.35,
-                    boxShadow: isActive ? `0 0 6px ${STAGE_META[z.key].color}` : "none",
-                    flexShrink: 0,
-                  }} />
-                  <span style={{
-                    fontSize: "11px", fontFamily: body,
-                    color: isActive ? STAGE_META[z.key].color : "#555",
-                    fontWeight: isActive ? 700 : 400,
-                    whiteSpace: "nowrap",
-                  }}>
-                    {z.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
           {/* Stage explanation */}
           {stageDesc && (
             <p style={{ fontSize: "11px", color: "#666", fontFamily: body, margin: "8px 0 10px", lineHeight: 1.55 }}>
@@ -243,6 +217,32 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
                 )}
               </LineChart>
             </ResponsiveContainer>
+          </div>
+
+          {/* Legend — horizontal row below graph */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 14px", marginTop: "10px" }}>
+            {LC_ZONES.map(z => {
+              const isActive = z.key === currentStage;
+              return (
+                <div key={z.key} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div style={{
+                    width: isActive ? "9px" : "7px", height: isActive ? "9px" : "7px",
+                    borderRadius: "50%", background: STAGE_META[z.key].color,
+                    opacity: isActive ? 1 : 0.35,
+                    boxShadow: isActive ? `0 0 6px ${STAGE_META[z.key].color}` : "none",
+                    flexShrink: 0,
+                  }} />
+                  <span style={{
+                    fontSize: "11px", fontFamily: body,
+                    color: isActive ? STAGE_META[z.key].color : "#555",
+                    fontWeight: isActive ? 700 : 400,
+                    whiteSpace: "nowrap",
+                  }}>
+                    {z.label}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
