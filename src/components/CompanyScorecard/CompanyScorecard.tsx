@@ -155,7 +155,10 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
                     strokeWidth={2.2}
                     dot={false}
                     activeDot={false}
-                    isAnimationActive={false}
+                    isAnimationActive={true}
+                    animationBegin={0}
+                    animationDuration={800}
+                    animationEasing="ease-out"
                   />
                   {dotChartX !== null && dotChartY !== null && (
                     <ReferenceDot
