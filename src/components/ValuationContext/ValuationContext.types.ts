@@ -12,6 +12,7 @@ export interface ValuationContextProps {
   companyBlendedGrowth?: number | null;
   priceMode?: PriceMode;
   guruData?: GuruRadarData | null;
+  showPriceTargets?: boolean;
 }
 
 export interface PanelData {

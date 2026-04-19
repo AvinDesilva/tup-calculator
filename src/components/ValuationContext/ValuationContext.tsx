@@ -46,7 +46,7 @@ const subLabel: React.CSSProperties = {
 
 const dividerH = <div style={{ background: C.borderWeak, height: "1px", margin: "20px 0" }} />;
 
-export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPrice, industryGrowth, industryGrowthLoading = false, companyBlendedGrowth, priceMode = "adj", guruData }: ValuationContextProps) {
+export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPrice, industryGrowth, industryGrowthLoading = false, companyBlendedGrowth, priceMode = "adj", guruData, showPriceTargets = true }: ValuationContextProps) {
   const mono = C.mono;
 
   const hasStrongBuy = strongBuyPrice != null && strongBuyPrice > 0 && currentPrice > 0;
@@ -103,7 +103,7 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
       </div>
 
       {/* Price target panels */}
-      {panels.length > 0 && (
+      {showPriceTargets && panels.length > 0 && (
         <>
           <div style={subLabel}>Price Targets</div>
           <div className="rsp-valuation-grid" style={{ display: "grid", gridTemplateColumns: panels.length === 2 ? "1fr 1px 1fr" : "1fr", gap: 0 }}>
@@ -120,7 +120,7 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
 
       {/* Guru radar */}
       {hasGuru && (<>
-        {panels.length > 0 && dividerH}
+        {showPriceTargets && panels.length > 0 && dividerH}
 
         {/* Radar chart */}
         <div style={{ ...subLabel, display: "flex", alignItems: "baseline", gap: 8 }}>

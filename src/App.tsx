@@ -185,7 +185,7 @@ export default function App() {
         )}
 
         {hasSearched && activeTab === "analysis" && (
-          <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2px 2fr", gridTemplateRows: "auto 2px auto", gap: "0", alignItems: "start", paddingTop: "12px" }}>
+          <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2px 2fr", gridTemplateRows: "auto 2px auto auto", gap: "0", alignItems: "start", paddingTop: "12px" }}>
 
             {/* Col 1: Verdict */}
             <div className="rsp-left-verdict" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "12px", paddingBottom: "0", animation: "fadeInUp 0.5s 0.15s ease both" }}>
@@ -308,6 +308,36 @@ export default function App() {
                 </div>
               );
             })()}
+
+            {/* Price targets row — visible on all screen sizes */}
+            {(displayStrongBuyPrice != null || displayBuyPrice != null) && (() => {
+              const refPrice = priceMode === "listed" ? inp.currentPrice : result?.adjPrice;
+              const fmtDiff = (target: number) => {
+                if (!refPrice || refPrice <= 0) return "";
+                const pct = ((target - refPrice) / refPrice) * 100;
+                return `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`;
+              };
+              const sbColor = displayStrongBuyPrice != null && inp.currentPrice > 0 && inp.currentPrice > displayStrongBuyPrice ? "#10d97e" : "#f5a020";
+              const bColor  = displayBuyPrice != null && inp.currentPrice > 0 && inp.currentPrice > displayBuyPrice ? "#10d97e" : "#f5a020";
+              return (
+                <div className="rsp-price-targets-row" style={{ display: "flex", justifyContent: "space-around", padding: "12px 0 12px", borderTop: `1px solid ${C.borderWeak}` }}>
+                  {displayStrongBuyPrice != null && (
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Strong Buy Below</div>
+                      <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: sbColor }}>${displayStrongBuyPrice.toFixed(2)}</div>
+                      <div style={{ fontSize: "10px", color: "#666", marginTop: "2px", fontFamily: C.mono }}>{fmtDiff(displayStrongBuyPrice)}</div>
+                    </div>
+                  )}
+                  {displayBuyPrice != null && (
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Patient Buy Below</div>
+                      <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: bColor }}>${displayBuyPrice.toFixed(2)}</div>
+                      <div style={{ fontSize: "10px", color: "#666", marginTop: "2px", fontFamily: C.mono }}>{fmtDiff(displayBuyPrice)}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -320,6 +350,7 @@ export default function App() {
               adjPrice={result?.adjPrice}
               priceMode={priceMode}
               guruData={guruData}
+              showPriceTargets={false}
             />
           </div>
         )}

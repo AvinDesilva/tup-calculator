@@ -31,6 +31,7 @@
 }
 .rsp-hairline-v          { grid-column: 2; grid-row: 1; }
 .rsp-hairline-h          { grid-column: 1 / span 3; grid-row: 2; }
+.rsp-price-targets-row   { grid-column: 1 / span 3; grid-row: 4; }
 
 /* DataSections inner columns use flex sizing */
 .rsp-left-data    { flex: 3 1 0; min-width: 0; }
