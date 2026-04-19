@@ -17,6 +17,7 @@ type LabelState = "idle" | "flash" | "settled";
 export function CompanyScorecard({ incomeHistory, description, dividendYield }: CompanyScorecardProps) {
   const [descExpanded, setDescExpanded] = useState(false);
   const [labelStates, setLabelStates] = useState<Record<string, LabelState>>({});
+  const [showDot, setShowDot] = useState(false);
   const body  = C.body;
   const mono  = C.mono;
 
@@ -35,9 +36,13 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
 
   useEffect(() => {
     if (!hasLifecycle) return;
+    // ease-out quadratic inverse: given x-position p (0–1), returns the time t (0–1)
+    // at which the line (animated with ease-out) reaches that x-position.
+    // ease-out: p = 2t - t²  →  inverse: t = 1 - sqrt(1 - p)
+    const easeOutInverse = (p: number) => 1 - Math.sqrt(1 - Math.min(p, 1));
     const timers: ReturnType<typeof setTimeout>[] = [];
     LC_ZONES.forEach(zone => {
-      const flashAt = Math.round(zone.center * ANIM_DURATION);
+      const flashAt = Math.round(easeOutInverse(zone.center) * ANIM_DURATION);
       const settleAt = flashAt + FLASH_DURATION;
       timers.push(setTimeout(() => {
         setLabelStates(prev => ({ ...prev, [zone.key]: "flash" }));
@@ -46,9 +51,13 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
         setLabelStates(prev => ({ ...prev, [zone.key]: "settled" }));
       }, settleAt));
     });
+    timers.push(setTimeout(() => {
+      setShowDot(true);
+    }, ANIM_DURATION + 80));
     return () => {
       timers.forEach(clearTimeout);
       setLabelStates({});
+      setShowDot(false);
     };
   }, [hasLifecycle]);
 
@@ -239,7 +248,7 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
                   animationDuration={ANIM_DURATION}
                   animationEasing="ease-out"
                 />
-                {dotChartX !== null && dotChartY !== null && (
+                {showDot && dotChartX !== null && dotChartY !== null && (
                   <ReferenceDot
                     x={dotChartX}
                     y={dotChartY}
