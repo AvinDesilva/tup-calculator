@@ -87,16 +87,16 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
         <div>
           <div style={label9}>Business Lifecycle</div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginTop: "8px" }}>
             <div
-              style={{ width: "65%", flexShrink: 0 }}
+              style={{ width: "75%", flexShrink: 0 }}
               role="img"
               aria-label={`Business lifecycle S-curve. Current stage: ${currentStage || "unknown"}`}
             >
-              <ResponsiveContainer width="100%" height={148} minWidth={0}>
+              <ResponsiveContainer width="100%" height={140} minWidth={0}>
                 <LineChart
                   data={chartData}
-                  margin={{ top: 14, right: 12, bottom: 44, left: 30 }}
+                  margin={{ top: 10, right: 12, bottom: 36, left: 30 }}
                 >
                   <XAxis
                     dataKey="x"
@@ -182,7 +182,7 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
               </ResponsiveContainer>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignSelf: "flex-start", marginTop: "24px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {LC_ZONES.map(z => {
                 const isActive = z.key === currentStage;
                 return (
