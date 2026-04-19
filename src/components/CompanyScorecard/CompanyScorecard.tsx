@@ -42,9 +42,9 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
   }
 
   return (
-    <div style={{ marginTop: "12px" }}>
+    <div>
       {description && (
-        <div style={{ marginBottom: "16px", marginTop: "20px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ marginBottom: "16px" }}>
           <div style={label9}>Company Description</div>
           <p style={{
             fontSize: "12px", color: "#aaa", lineHeight: 1.7, margin: "8px 0 0", fontFamily: body,

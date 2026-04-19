@@ -188,7 +188,7 @@ export default function App() {
           <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2px 2fr", gridTemplateRows: "auto 2px auto", gap: "0", alignItems: "start" }}>
 
             {/* Col 1: Verdict */}
-            <div className="rsp-left-verdict" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "0", animation: "fadeInUp 0.5s 0.15s ease both" }}>
+            <div className="rsp-left-verdict" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "12px", paddingBottom: "0", animation: "fadeInUp 0.5s 0.15s ease both" }}>
 
               {hasSearched && !company && (
                 <div style={{ paddingTop: "48px" }}>
@@ -312,7 +312,7 @@ export default function App() {
         )}
 
         {hasSearched && activeTab === "metrics" && (
-          <div style={{ animation: "fadeInUp 0.5s 0.1s ease both", paddingTop: "28px", paddingBottom: "28px" }}>
+          <div style={{ animation: "fadeInUp 0.5s 0.1s ease both", paddingTop: "12px", paddingBottom: "28px" }}>
             <ValuationContext
               strongBuyPrice={displayStrongBuyPrice}
               buyPrice={displayBuyPrice}
@@ -325,7 +325,7 @@ export default function App() {
         )}
 
         {hasSearched && activeTab === "profile" && (
-          <div style={{ animation: "fadeInUp 0.5s 0.1s ease both", paddingTop: "28px", paddingBottom: "28px" }}>
+          <div style={{ animation: "fadeInUp 0.5s 0.1s ease both", paddingTop: "12px", paddingBottom: "28px" }}>
             {company ? (
               <>
                 <CompanyScorecard
