@@ -1,15 +1,17 @@
 import { useState } from "react";
 import {
-  LineChart, Line, XAxis, YAxis, ReferenceLine, ReferenceDot,
+  LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine, ReferenceDot,
   ResponsiveContainer,
 } from "recharts";
+import { C } from "../../lib/theme.ts";
 import { LC_CURVE, LC_ZONES, STAGE_META } from "../../lib/constants.ts";
 import { classifyLifecycle, lifecycleDotX, lifecycleRevGrowth } from "../../lib/companyScorecard/lifecycle.ts";
 import type { CompanyScorecardProps } from "./CompanyScorecard.types.ts";
 
 export function CompanyScorecard({ incomeHistory, description, dividendYield }: CompanyScorecardProps) {
   const [descExpanded, setDescExpanded] = useState(false);
-  const body  = "'Space Grotesk', sans-serif";
+  const body  = C.body;
+  const mono  = C.mono;
   const label9 = { fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#888", fontFamily: body };
 
   // ── Business Lifecycle S-Curve (multi-factor — Damodaran framework) ──────
@@ -96,8 +98,9 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
               <ResponsiveContainer width="100%" height={140} minWidth={0}>
                 <LineChart
                   data={chartData}
-                  margin={{ top: 10, right: 12, bottom: 36, left: 0 }}
+                  margin={{ top: 4, right: 0, bottom: 0, left: 0 }}
                 >
+                  <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
                   <XAxis
                     dataKey="x"
                     type="number"
@@ -113,40 +116,27 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
                           x={props.x}
                           y={(props.y ?? 0) + 12}
                           textAnchor="middle"
-                          fill={isActive ? STAGE_META[zone.key].color : "rgba(255,255,255,0.28)"}
-                          fontSize={8}
-                          fontFamily={body}
+                          fill={isActive ? STAGE_META[zone.key].color : "#555"}
+                          fontSize={9}
+                          fontFamily={mono}
                           fontWeight={isActive ? 700 : 400}
                         >
                           {zone.label}
                         </text>
                       );
                     }}
-                    axisLine={{ stroke: "rgba(255,255,255,0.2)", strokeWidth: 1.5 }}
+                    axisLine={false}
                     tickLine={false}
                     interval={0}
                   />
-                  <YAxis
-                    domain={[0, 100]}
-                    axisLine={{ stroke: "rgba(255,255,255,0.2)", strokeWidth: 1.5 }}
-                    tickLine={false}
-                    tick={false}
-                    width={14}
-                    label={{
-                      value: "Sales",
-                      angle: -90,
-                      position: "insideLeft",
-                      offset: 2,
-                      style: { fill: "rgba(255,255,255,0.3)", fontSize: 8, fontFamily: body },
-                    }}
-                  />
+                  <YAxis domain={[0, 100]} hide={true} />
                   {dividerXs.map((x, i) => (
                     <ReferenceLine
                       key={i}
                       x={x}
-                      stroke="rgba(255,255,255,0.18)"
+                      stroke="rgba(255,255,255,0.08)"
                       strokeWidth={1}
-                      strokeDasharray="4 4"
+                      strokeDasharray="3 3"
                     />
                   ))}
                   <Line
