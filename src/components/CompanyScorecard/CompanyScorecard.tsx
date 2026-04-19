@@ -129,7 +129,20 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
                     tickLine={false}
                     interval={0}
                   />
-                  <YAxis domain={[0, 100]} hide={true} />
+                  <YAxis
+                    domain={[0, 100]}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={false}
+                    width={18}
+                    label={{
+                      value: "Sales",
+                      angle: -90,
+                      position: "insideLeft",
+                      offset: 6,
+                      style: { fill: "#555", fontSize: 9, fontFamily: mono },
+                    }}
+                  />
                   {dividerXs.map((x, i) => (
                     <ReferenceLine
                       key={i}
