@@ -32,6 +32,26 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
   const currentStage = classifyLifecycle(lcSignals);
   const dotTx        = lifecycleDotX(lcSignals);
   const hasLifecycle = revGrowth !== null;
+
+  useEffect(() => {
+    if (!hasLifecycle) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    LC_ZONES.forEach(zone => {
+      const flashAt = Math.round(zone.center * ANIM_DURATION);
+      const settleAt = flashAt + FLASH_DURATION;
+      timers.push(setTimeout(() => {
+        setLabelStates(prev => ({ ...prev, [zone.key]: "flash" }));
+      }, flashAt));
+      timers.push(setTimeout(() => {
+        setLabelStates(prev => ({ ...prev, [zone.key]: "settled" }));
+      }, settleAt));
+    });
+    return () => {
+      timers.forEach(clearTimeout);
+      setLabelStates({});
+    };
+  }, [hasLifecycle]);
+
   if (!hasLifecycle && !description) return null;
 
   // Recharts data: x in [0, 100]; sales (y) inverted from LC_CURVE
@@ -60,24 +80,6 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
 
   const dotColor = (currentStage && STAGE_META[currentStage]?.color) || "#C4A06E";
   const dividerXs = [1/6, 2/6, 3/6, 4/6, 5/6].map(t => t * 100);
-
-  useEffect(() => {
-    if (!hasLifecycle) return;
-    setLabelStates({});
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    LC_ZONES.forEach(zone => {
-      const flashAt = Math.round(zone.center * ANIM_DURATION);
-      const settleAt = flashAt + FLASH_DURATION;
-      timers.push(setTimeout(() => {
-        setLabelStates(prev => ({ ...prev, [zone.key]: "flash" }));
-      }, flashAt));
-      timers.push(setTimeout(() => {
-        setLabelStates(prev => ({ ...prev, [zone.key]: "settled" }));
-      }, settleAt));
-    });
-    return () => timers.forEach(clearTimeout);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasLifecycle]);
 
   // Brief explanation of how the current stage was derived
   const stageDesc = (() => {
