@@ -1,14 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { VERDICT } from "../../lib/constants.ts";
 import { f } from "../../lib/utils.ts";
 import { useHoldRepeat } from "../primitives";
+import { SlotCounter } from "./SlotCounter.tsx";
 import type { VerdictCardProps } from "./VerdictCard.types.ts";
 
-export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, currentPrice, growthScenario, onScenarioChange, hasScenarioData, priceMode, onPriceModeToggle }: VerdictCardProps) {
+export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, currentPrice, growthScenario, onScenarioChange, hasScenarioData, priceMode, onPriceModeToggle, animationKey }: VerdictCardProps) {
   const holdDown = useHoldRepeat(() => onGrowthStep(-1));
   const holdUp   = useHoldRepeat(() => onGrowthStep(1));
   const [editingGrowth, setEditingGrowth] = useState(false);
   const [editGrowthVal, setEditGrowthVal] = useState("");
+  const [completedKey, setCompletedKey] = useState(0);
+  const [arrowTick, setArrowTick] = useState(0);
+
+  useEffect(() => {
+    if (animationKey === 0) return;
+    const flip = setInterval(() => setArrowTick(t => t + 1), 100);
+    const stop = setTimeout(() => { clearInterval(flip); setCompletedKey(animationKey); }, 650);
+    return () => { clearInterval(flip); clearTimeout(stop); };
+  }, [animationKey]);
+
+  const isSpinning = animationKey > 0 && animationKey !== completedKey;
+  const arrowUp = arrowTick % 2 === 0;
 
   if (!result) return null;
   const v   = VERDICT[result.verdict];
@@ -55,9 +68,9 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
         <div style={{
           fontFamily: "'DM Serif Display', serif", fontWeight: 400,
           fontSize: result.paybackNote ? "clamp(2.4rem, 8vw, 4.8rem)" : "clamp(4rem, 11.2vw, 7.2rem)", lineHeight: 1,
-          color: v.color, letterSpacing: "-0.03em",
+          letterSpacing: "-0.03em",
         }}>
-          {result.paybackNote ? "N/A" : (result.payback || "30+")}
+          <SlotCounter value={result.payback} paybackNote={result.paybackNote} color={v.color} animationKey={animationKey} />
         </div>
         <div style={{ fontSize: "13px", color: "#888888", marginTop: "12px", letterSpacing: "0.05em" }}>
           {result.paybackNote ? "Principal Uncalculable" : "Years Until Principal Returned"}
@@ -73,13 +86,13 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
         <div className="rsp-verdict-num" style={{
           fontFamily: "'DM Serif Display', serif", fontWeight: 400,
           fontSize: result.paybackNote ? "clamp(2.4rem, 8vw, 4.8rem)" : "clamp(4rem, 11.2vw, 7.2rem)", lineHeight: 1,
-          color: v.color, letterSpacing: "-0.03em",
+          letterSpacing: "-0.03em",
         }}>
-          {result.paybackNote ? "N/A" : (result.payback || "30+")}
+          <SlotCounter value={result.payback} paybackNote={result.paybackNote} color={v.color} animationKey={animationKey} />
         </div>
         <div style={{ paddingBottom: "8px" }}>
           <div className="rsp-verdict-label" style={{ fontSize: "22px", fontWeight: 700, color: v.color, letterSpacing: "-0.01em", fontFamily: "'Barlow Condensed', sans-serif" }}>
-            {v.icon} {v.label}
+            {isSpinning ? (arrowUp ? "▲" : "▼") : v.icon} {v.label}
           </div>
           <div className="rsp-verdict-sub" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888888", marginTop: "4px" }}>
             {result.paybackNote ? "Principal Uncalculable" : "Years Until Principal Returned"}

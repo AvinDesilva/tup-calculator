@@ -11,4 +11,5 @@ export interface VerdictCardProps {
   hasScenarioData: boolean;
   priceMode: PriceMode;
   onPriceModeToggle: () => void;
+  animationKey: number;
 }

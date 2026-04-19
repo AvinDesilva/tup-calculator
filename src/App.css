@@ -15,6 +15,15 @@
   50%      { box-shadow: 0 0 18px rgba(196,160,110,0.35), 0 0 40px rgba(196,160,110,0.12); border-color: #d4b882; }
 }
 
+@keyframes slotFadeIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot-strip { transition: none !important; }
+}
+
 /* ── Desktop Defaults ──────────────────────────────────────────────────────── */
 
 /* Dice filter row wrappers are invisible (flattened) */

@@ -84,6 +84,7 @@ export default function App() {
   const [showMethodology, setShowMethodology] = useState(false);
   const [priceMode, setPriceMode] = useState<PriceMode>("adj");
   const [activeTab, setActiveTab] = useState<Tab>("analysis");
+  const [animationKey, setAnimationKey] = useState(0);
   const mode: Mode = "standard";
   const result: TUPResult | null = useMemo(
     () => calcTUP(inp, mode, priceMode === "listed" && inp.currentPrice > 0 ? inp.currentPrice : undefined),
@@ -104,6 +105,7 @@ export default function App() {
   const handleFetch = (sym?: string) => {
     setPriceMode("adj");
     setActiveTab("analysis");
+    setAnimationKey(k => k + 1);
     doFetch(sym);
   };
 
@@ -144,7 +146,7 @@ export default function App() {
             onFetch={handleFetch}
             loading={loading}
             error={error}
-            onRollDice={() => { setPriceMode("adj"); rollDice(); }}
+            onRollDice={() => { setPriceMode("adj"); setAnimationKey(k => k + 1); rollDice(); }}
             onCancelDice={cancelDice}
             rollingDice={rollingDice}
             dicePhrase={dicePhrase}
@@ -168,7 +170,7 @@ export default function App() {
               loading={loading}
               error={error}
               fetchLog={fetchLog}
-              onRollDice={() => { setPriceMode("adj"); rollDice(); }}
+              onRollDice={() => { setPriceMode("adj"); setAnimationKey(k => k + 1); rollDice(); }}
               onCancelDice={cancelDice}
               rollingDice={rollingDice}
               dicePhrase={dicePhrase}
@@ -199,7 +201,7 @@ export default function App() {
                 </div>
               )}
 
-              <VerdictCard result={result} noiseFilter={false} currentPrice={inp.currentPrice}
+              <VerdictCard result={result} noiseFilter={false} currentPrice={inp.currentPrice} animationKey={animationKey}
                 growthScenario={growthScenario}
                 onScenarioChange={onScenarioChange}
                 hasScenarioData={hasScenarioData}
