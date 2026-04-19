@@ -1,7 +1,10 @@
 import { useState } from "react";
+import {
+  LineChart, Line, XAxis, YAxis, ReferenceLine, ReferenceDot,
+  ResponsiveContainer,
+} from "recharts";
 import { LC_CURVE, LC_ZONES, STAGE_META } from "../../lib/constants.ts";
 import { classifyLifecycle, lifecycleDotX, lifecycleRevGrowth } from "../../lib/companyScorecard/lifecycle.ts";
-import { crPath, sampleCR, findTForX } from "./CompanyScorecard.helpers.ts";
 import type { CompanyScorecardProps } from "./CompanyScorecard.types.ts";
 
 export function CompanyScorecard({ incomeHistory, description, dividendYield }: CompanyScorecardProps) {
@@ -23,23 +26,32 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
   const hasLifecycle = revGrowth !== null;
   if (!hasLifecycle && !description) return null;
 
-  // SVG geometry
-  const W = 310, H = 148, PL = 30, PR = 12, PT = 14, PB = 44;
-  const plotW = W - PL - PR, plotH = H - PT - PB;
+  // Recharts data: x in [0, 100]; sales (y) inverted from LC_CURVE
+  // LC_CURVE y=0 → top of SVG (high sales), y=1 → bottom (low sales)
+  // Recharts y=0 → bottom of chart, y=100 → top → invert: sales = (1 - y) * 100
+  const chartData = LC_CURVE.map(([x, y]) => ({
+    x: x * 100,
+    sales: (1 - y) * 100,
+  }));
 
-  const svgPts    = LC_CURVE.map(([tx, ty]): [number, number] => [PL + tx * plotW, PT + ty * plotH]);
-  const pathD     = crPath(svgPts);
-  const dividerXs = [1/6, 2/6, 3/6, 4/6, 5/6].map(t => PL + t * plotW);
-
-  let dotX: number | null = null, dotY: number | null = null, dotColor: string | null = null;
+  // Linearly interpolate curve y at dotTx for ReferenceDot placement
+  let dotChartX: number | null = null;
+  let dotChartY: number | null = null;
   if (dotTx !== null) {
-    const targetX  = PL + dotTx * plotW;
-    const t        = findTForX(svgPts, targetX);
-    const [dx, dy] = sampleCR(svgPts, t);
-    dotX     = dx;
-    dotY     = dy;
-    dotColor = (currentStage && STAGE_META[currentStage]?.color) || "#C4A06E";
+    dotChartX = dotTx * 100;
+    const targetX = dotChartX;
+    let loIdx = 0;
+    for (let i = 0; i < chartData.length - 1; i++) {
+      if (chartData[i].x <= targetX) loIdx = i;
+    }
+    const lo = chartData[loIdx];
+    const hi = chartData[Math.min(loIdx + 1, chartData.length - 1)];
+    const t = hi.x === lo.x ? 0 : (targetX - lo.x) / (hi.x - lo.x);
+    dotChartY = lo.sales + t * (hi.sales - lo.sales);
   }
+
+  const dotColor = (currentStage && STAGE_META[currentStage]?.color) || "#C4A06E";
+  const dividerXs = [1/6, 2/6, 3/6, 4/6, 5/6].map(t => t * 100);
 
   return (
     <div>
@@ -76,36 +88,96 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
           <div style={label9}>Business Lifecycle</div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
-            <svg width="65%" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Business lifecycle S-curve. Current stage: ${currentStage || "unknown"}`} style={{ display: "block", overflow: "visible", flexShrink: 0 }}>
-              <line x1={PL} y1={PT} x2={PL} y2={PT + plotH} stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
-              <line x1={PL} y1={PT + plotH} x2={PL + plotW} y2={PT + plotH} stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
-              <text
-                x={PL - 8} y={PT + plotH / 2}
-                textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="8" fontFamily={body}
-                transform={`rotate(-90, ${PL - 8}, ${PT + plotH / 2})`}
-              >Sales</text>
-              {dividerXs.map((x, i) => (
-                <line key={i} x1={x} y1={PT} x2={x} y2={PT + plotH}
-                  stroke="rgba(255,255,255,0.18)" strokeWidth="1" strokeDasharray="4,4" />
-              ))}
-              <path d={pathD} fill="none" stroke="rgba(255,255,255,0.72)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              {LC_ZONES.map(z => {
-                const zx = PL + z.center * plotW;
-                const isActive = z.key === currentStage;
-                return (
-                  <text key={z.key} x={zx} y={PT + plotH + 16} textAnchor="middle"
-                    fill={isActive ? STAGE_META[z.key].color : "rgba(255,255,255,0.28)"}
-                    fontSize="8" fontFamily={body} fontWeight={isActive ? "700" : "400"}
-                  >{z.label}</text>
-                );
-              })}
-              {dotX != null && dotY != null && (
-                <g>
-                  <circle cx={dotX} cy={dotY} r="9" fill="none" stroke={dotColor ?? undefined} strokeWidth="1" opacity="0.3" />
-                  <circle cx={dotX} cy={dotY} r="5.5" fill={dotColor ?? undefined} stroke="#080808" strokeWidth="1.5" />
-                </g>
-              )}
-            </svg>
+            <div
+              style={{ width: "65%", flexShrink: 0 }}
+              role="img"
+              aria-label={`Business lifecycle S-curve. Current stage: ${currentStage || "unknown"}`}
+            >
+              <ResponsiveContainer width="100%" height={148} minWidth={0}>
+                <LineChart
+                  data={chartData}
+                  margin={{ top: 14, right: 12, bottom: 44, left: 30 }}
+                >
+                  <XAxis
+                    dataKey="x"
+                    type="number"
+                    domain={[0, 100]}
+                    ticks={LC_ZONES.map(z => z.center * 100)}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    tick={(props: any) => {
+                      const zone = LC_ZONES.find(z => Math.abs(z.center * 100 - (props.payload?.value ?? 0)) < 0.1);
+                      if (!zone) return <g />;
+                      const isActive = zone.key === currentStage;
+                      return (
+                        <text
+                          x={props.x}
+                          y={(props.y ?? 0) + 12}
+                          textAnchor="middle"
+                          fill={isActive ? STAGE_META[zone.key].color : "rgba(255,255,255,0.28)"}
+                          fontSize={8}
+                          fontFamily={body}
+                          fontWeight={isActive ? 700 : 400}
+                        >
+                          {zone.label}
+                        </text>
+                      );
+                    }}
+                    axisLine={{ stroke: "rgba(255,255,255,0.2)", strokeWidth: 1.5 }}
+                    tickLine={false}
+                    interval={0}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    axisLine={{ stroke: "rgba(255,255,255,0.2)", strokeWidth: 1.5 }}
+                    tickLine={false}
+                    tick={false}
+                    width={22}
+                    label={{
+                      value: "Sales",
+                      angle: -90,
+                      position: "insideLeft",
+                      style: { fill: "rgba(255,255,255,0.3)", fontSize: 8, fontFamily: body },
+                    }}
+                  />
+                  {dividerXs.map((x, i) => (
+                    <ReferenceLine
+                      key={i}
+                      x={x}
+                      stroke="rgba(255,255,255,0.18)"
+                      strokeWidth={1}
+                      strokeDasharray="4 4"
+                    />
+                  ))}
+                  <Line
+                    type="monotone"
+                    dataKey="sales"
+                    stroke="rgba(255,255,255,0.72)"
+                    strokeWidth={2.2}
+                    dot={false}
+                    activeDot={false}
+                    isAnimationActive={false}
+                  />
+                  {dotChartX !== null && dotChartY !== null && (
+                    <ReferenceDot
+                      x={dotChartX}
+                      y={dotChartY}
+                      r={0}
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      shape={(props: any) => {
+                        const { cx, cy } = props;
+                        if (cx == null || cy == null) return <g />;
+                        return (
+                          <g>
+                            <circle cx={cx} cy={cy} r={9} fill="none" stroke={dotColor} strokeWidth={1} opacity={0.3} />
+                            <circle cx={cx} cy={cy} r={5.5} fill={dotColor} stroke="#080808" strokeWidth={1.5} />
+                          </g>
+                        );
+                      }}
+                    />
+                  )}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignSelf: "flex-start", marginTop: "24px" }}>
               {LC_ZONES.map(z => {
