@@ -294,13 +294,13 @@ export default function App() {
                   <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Growth</div>
                     <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: "#10d97e" }}>{result ? f(result.gr * 100) : "—"}%</div>
-                    <div style={{ display: "flex", gap: "4px", justifyContent: "center", marginTop: "6px" }}>
+                    <div style={{ display: "flex", gap: "4px", justifyContent: "center", marginTop: "4px" }}>
                       <button
                         onClick={() => { setGrowthScenario("base"); setInp(p => ({ ...p, historicalGrowth: Math.max(0, p.historicalGrowth - 1), analystGrowth: Math.max(0, p.analystGrowth - 1), fwdGrowthY1: Math.max(0, p.fwdGrowthY1 - 1), fwdGrowthY2: p.fwdGrowthY2 != null ? Math.max(0, p.fwdGrowthY2 - 1) : null, fwdCAGR: p.fwdCAGR != null ? Math.max(0, p.fwdCAGR - 1) : null, growthOverrides: {} })); }}
                         aria-label="Decrease growth rate"
                         style={{
-                          fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em",
-                          padding: "2px 8px",
+                          fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em",
+                          padding: "3px 10px",
                           border: "1px solid rgba(255,77,0,0.3)",
                           borderRadius: "10px",
                           background: "transparent",
@@ -314,8 +314,8 @@ export default function App() {
                         onClick={() => { setGrowthScenario("base"); setInp(p => ({ ...p, historicalGrowth: Math.max(0, p.historicalGrowth + 1), analystGrowth: Math.max(0, p.analystGrowth + 1), fwdGrowthY1: Math.max(0, p.fwdGrowthY1 + 1), fwdGrowthY2: p.fwdGrowthY2 != null ? Math.max(0, p.fwdGrowthY2 + 1) : null, fwdCAGR: p.fwdCAGR != null ? Math.max(0, p.fwdCAGR + 1) : null, growthOverrides: {} })); }}
                         aria-label="Increase growth rate"
                         style={{
-                          fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em",
-                          padding: "2px 8px",
+                          fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em",
+                          padding: "3px 10px",
                           border: "1px solid rgba(16,217,126,0.3)",
                           borderRadius: "10px",
                           background: "transparent",
