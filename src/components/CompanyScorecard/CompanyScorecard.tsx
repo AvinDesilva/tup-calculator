@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine, ReferenceDot,
   ResponsiveContainer,
@@ -9,15 +9,45 @@ import { classifyLifecycle, lifecycleDotX, lifecycleRevGrowth } from "../../lib/
 import { SectionLabel } from "../primitives";
 import type { CompanyScorecardProps } from "./CompanyScorecard.types.ts";
 
+// Single variable: controls line draw speed AND label highlight timing
 const ANIM_DURATION = 1600;
-const FLASH_DURATION = 520;
+// Width of the flash window in progress-space (0–1). ~190ms at mid-curve.
+const FLASH_WIDTH = 0.12;
 
 type LabelState = "idle" | "flash" | "settled";
 
+// RAF-based ease-out progress (0→1 over `duration` ms). Syncs with the browser
+// paint cycle — same cycle Recharts uses internally — so label flashes and line
+// draw track together without drift.
+function useEaseOutProgress(duration: number, active: boolean): number {
+  const [progress, setProgress] = useState(0);
+  const rafRef = useRef(0);
+  useEffect(() => {
+    if (!active) return;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 2 * t - t * t; // ease-out quadratic: p = 2t − t²
+      setProgress(eased);
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      setProgress(0);
+    };
+  }, [active, duration]);
+  return progress;
+}
+
+function getLabelState(center: number, progress: number): LabelState {
+  if (progress < center) return "idle";
+  if (progress < center + FLASH_WIDTH) return "flash";
+  return "settled";
+}
+
 export function CompanyScorecard({ incomeHistory, description, dividendYield }: CompanyScorecardProps) {
   const [descExpanded, setDescExpanded] = useState(false);
-  const [labelStates, setLabelStates] = useState<Record<string, LabelState>>({});
-  const [showDot, setShowDot] = useState(false);
   const body  = C.body;
   const mono  = C.mono;
 
@@ -34,32 +64,8 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
   const dotTx        = lifecycleDotX(lcSignals);
   const hasLifecycle = revGrowth !== null;
 
-  useEffect(() => {
-    if (!hasLifecycle) return;
-    // ease-out quadratic inverse: given x-position p (0–1), returns the time t (0–1)
-    // at which the line (animated with ease-out) reaches that x-position.
-    // ease-out: p = 2t - t²  →  inverse: t = 1 - sqrt(1 - p)
-    const easeOutInverse = (p: number) => 1 - Math.sqrt(1 - Math.min(p, 1));
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    LC_ZONES.forEach(zone => {
-      const flashAt = Math.round(easeOutInverse(zone.center) * ANIM_DURATION);
-      const settleAt = flashAt + FLASH_DURATION;
-      timers.push(setTimeout(() => {
-        setLabelStates(prev => ({ ...prev, [zone.key]: "flash" }));
-      }, flashAt));
-      timers.push(setTimeout(() => {
-        setLabelStates(prev => ({ ...prev, [zone.key]: "settled" }));
-      }, settleAt));
-    });
-    timers.push(setTimeout(() => {
-      setShowDot(true);
-    }, ANIM_DURATION + 80));
-    return () => {
-      timers.forEach(clearTimeout);
-      setLabelStates({});
-      setShowDot(false);
-    };
-  }, [hasLifecycle]);
+  const progress = useEaseOutProgress(ANIM_DURATION, hasLifecycle);
+  const showDot  = progress >= 1;
 
   if (!hasLifecycle && !description) return null;
 
@@ -180,7 +186,7 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
                     if (!zone) return <g />;
                     const isActive = zone.key === currentStage;
                     const stageColor = STAGE_META[zone.key].color;
-                    const state: LabelState = labelStates[zone.key] || "idle";
+                    const state: LabelState = getLabelState(zone.center, progress);
                     let opacity: number;
                     let fontWeight: number;
                     if (state === "flash") {
