@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine, ReferenceDot,
   ResponsiveContainer,
@@ -9,8 +9,14 @@ import { classifyLifecycle, lifecycleDotX, lifecycleRevGrowth } from "../../lib/
 import { SectionLabel } from "../primitives";
 import type { CompanyScorecardProps } from "./CompanyScorecard.types.ts";
 
+const ANIM_DURATION = 2200;
+const FLASH_DURATION = 520;
+
+type LabelState = "idle" | "flash" | "settled";
+
 export function CompanyScorecard({ incomeHistory, description, dividendYield }: CompanyScorecardProps) {
   const [descExpanded, setDescExpanded] = useState(false);
+  const [labelStates, setLabelStates] = useState<Record<string, LabelState>>({});
   const body  = C.body;
   const mono  = C.mono;
 
@@ -54,6 +60,24 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
 
   const dotColor = (currentStage && STAGE_META[currentStage]?.color) || "#C4A06E";
   const dividerXs = [1/6, 2/6, 3/6, 4/6, 5/6].map(t => t * 100);
+
+  useEffect(() => {
+    if (!hasLifecycle) return;
+    setLabelStates({});
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    LC_ZONES.forEach(zone => {
+      const flashAt = Math.round(zone.center * ANIM_DURATION);
+      const settleAt = flashAt + FLASH_DURATION;
+      timers.push(setTimeout(() => {
+        setLabelStates(prev => ({ ...prev, [zone.key]: "flash" }));
+      }, flashAt));
+      timers.push(setTimeout(() => {
+        setLabelStates(prev => ({ ...prev, [zone.key]: "settled" }));
+      }, settleAt));
+    });
+    return () => timers.forEach(clearTimeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasLifecycle]);
 
   // Brief explanation of how the current stage was derived
   const stageDesc = (() => {
@@ -144,15 +168,31 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
                     const zone = LC_ZONES.find(z => Math.abs(z.center * 100 - (props.payload?.value ?? 0)) < 0.1);
                     if (!zone) return <g />;
                     const isActive = zone.key === currentStage;
+                    const stageColor = STAGE_META[zone.key].color;
+                    const state: LabelState = labelStates[zone.key] || "idle";
+                    let opacity: number;
+                    let fontWeight: number;
+                    if (state === "flash") {
+                      opacity = 1;
+                      fontWeight = 700;
+                    } else if (state === "settled") {
+                      opacity = isActive ? 1 : 0.35;
+                      fontWeight = isActive ? 700 : 400;
+                    } else {
+                      opacity = 0.1;
+                      fontWeight = 400;
+                    }
                     return (
                       <text
                         x={props.x}
                         y={(props.y ?? 0) + 12}
                         textAnchor="middle"
-                        fill={isActive ? STAGE_META[zone.key].color : "#555"}
+                        fill={stageColor}
+                        opacity={opacity}
                         fontSize={9}
                         fontFamily={mono}
-                        fontWeight={isActive ? 700 : 400}
+                        fontWeight={fontWeight}
+                        style={{ transition: "opacity 0.45s ease" }}
                       >
                         {zone.label}
                       </text>
@@ -194,7 +234,7 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
                   activeDot={false}
                   isAnimationActive={true}
                   animationBegin={0}
-                  animationDuration={800}
+                  animationDuration={ANIM_DURATION}
                   animationEasing="ease-out"
                 />
                 {dotChartX !== null && dotChartY !== null && (
