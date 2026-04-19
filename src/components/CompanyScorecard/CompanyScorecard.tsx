@@ -9,7 +9,7 @@ import { classifyLifecycle, lifecycleDotX, lifecycleRevGrowth } from "../../lib/
 import { SectionLabel } from "../primitives";
 import type { CompanyScorecardProps } from "./CompanyScorecard.types.ts";
 
-const ANIM_DURATION = 2200;
+const ANIM_DURATION = 1600;
 const FLASH_DURATION = 520;
 
 type LabelState = "idle" | "flash" | "settled";
