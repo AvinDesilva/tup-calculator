@@ -2,12 +2,13 @@ import { useState, useMemo } from "react";
 
 import { calcTUP } from "./lib/verdictCard/calcTUP.ts";
 import { C } from "./lib/theme.ts";
-import { f } from "./lib/utils.ts";
-import type { InputState, Mode, TUPResult, GrowthScenario, PriceMode } from "./lib/types.ts";
+import type { Mode, TUPResult, GrowthScenario, PriceMode } from "./lib/types.ts";
 
 import { VerdictCard } from "./components/VerdictCard";
 import { ValuationContext } from "./components/ValuationContext";
 import { CompanyScorecard } from "./components/CompanyScorecard";
+import { IndustryGrowthPanel } from "./components/IndustryGrowthPanel";
+import { MobileSummary } from "./components/MobileSummary";
 import { MethodologyPage } from "./components/MethodologyPage";
 import { Masthead } from "./components/Masthead";
 import { HeroSearch } from "./components/HeroSearch";
@@ -17,48 +18,7 @@ import { PriceProjectionGraph } from "./components/PriceProjectionGraph";
 import { TabNav } from "./components/TabNav";
 import type { Tab } from "./components/TabNav";
 import { useTickerFetch } from "./hooks/useTickerFetch.ts";
-import type { IndustryGrowthData } from "./lib/tickerSearch/api.ts";
 import "./App.css";
-
-// ─── Industry Growth Panel ────────────────────────────────────────────────────
-
-function IndustryGrowthPanel({ industryGrowth, industryGrowthLoading, companyBlendedGrowth }: {
-  industryGrowth: IndustryGrowthData | null;
-  industryGrowthLoading: boolean;
-  companyBlendedGrowth: number | null;
-}) {
-  const mono = C.mono;
-  let color = "#888", value = "...", sub = "";
-  if (industryGrowthLoading) {
-    sub = "Loading";
-  } else if (industryGrowth && !industryGrowth.error && industryGrowth.median != null) {
-    value = `${industryGrowth.median.toFixed(1)}%`;
-    if (companyBlendedGrowth != null) {
-      const diff = companyBlendedGrowth - industryGrowth.median;
-      color = diff > 2 ? "#10d97e" : diff < -2 ? "#FF4D00" : "#f5a020";
-      sub = industryGrowth.industry;
-    } else {
-      sub = `n=${industryGrowth.count}`;
-    }
-  }
-  return (
-    <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.borderWeak}` }}>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.text3, marginBottom: 8 }}>
-        Industry Growth
-      </div>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-        <span style={{ fontFamily: mono, fontSize: "20px", fontWeight: 600, color, letterSpacing: "-0.02em" }}>
-          {value}
-        </span>
-      </div>
-      <div style={{ fontSize: "11px", color: "#888", marginTop: "4px", letterSpacing: "0.06em" }}>{sub}</div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN APP
-// ═══════════════════════════════════════════════════════════════════════════════
 
 export default function App() {
   const {
@@ -112,6 +72,33 @@ export default function App() {
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: "instant" });
+  };
+
+  const handleGrowthStep = (d: number) => {
+    setGrowthScenario("base");
+    setInp(p => ({
+      ...p,
+      historicalGrowth: Math.max(0, p.historicalGrowth + d),
+      analystGrowth: Math.max(0, p.analystGrowth + d),
+      fwdGrowthY1: Math.max(0, p.fwdGrowthY1 + d),
+      fwdGrowthY2: p.fwdGrowthY2 != null ? Math.max(0, p.fwdGrowthY2 + d) : null,
+      fwdCAGR: p.fwdCAGR != null ? Math.max(0, p.fwdCAGR + d) : null,
+      growthOverrides: {},
+    }));
+  };
+
+  const handleGrowthSet = (val: number) => {
+    setGrowthScenario("base");
+    const adjusted = Math.max(0, val - (inp.dividendYield || 0));
+    setInp(p => ({
+      ...p,
+      historicalGrowth: adjusted,
+      analystGrowth: adjusted,
+      fwdGrowthY1: adjusted,
+      fwdGrowthY2: p.fwdGrowthY2 != null ? adjusted : null,
+      fwdCAGR: p.fwdCAGR != null ? adjusted : null,
+      growthOverrides: {},
+    }));
   };
 
   const onScenarioChange = (s: GrowthScenario) => {
@@ -207,31 +194,8 @@ export default function App() {
                 hasScenarioData={hasScenarioData}
                 priceMode={priceMode}
                 onPriceModeToggle={() => setPriceMode(m => m === "adj" ? "listed" : "adj")}
-                onGrowthStep={(d: number) => {
-                setGrowthScenario("base");
-                setInp(p => ({
-                  ...p,
-                  historicalGrowth: Math.max(0, p.historicalGrowth + d),
-                  analystGrowth: Math.max(0, p.analystGrowth + d),
-                  fwdGrowthY1: Math.max(0, p.fwdGrowthY1 + d),
-                  fwdGrowthY2: p.fwdGrowthY2 != null ? Math.max(0, p.fwdGrowthY2 + d) : null,
-                  fwdCAGR: p.fwdCAGR != null ? Math.max(0, p.fwdCAGR + d) : null,
-                  growthOverrides: {},
-                }));
-              }}
-                onGrowthSet={(val: number) => {
-                setGrowthScenario("base");
-                const adjusted = Math.max(0, val - (inp.dividendYield || 0));
-                setInp(p => ({
-                  ...p,
-                  historicalGrowth: adjusted,
-                  analystGrowth: adjusted,
-                  fwdGrowthY1: adjusted,
-                  fwdGrowthY2: p.fwdGrowthY2 != null ? adjusted : null,
-                  fwdCAGR: p.fwdCAGR != null ? adjusted : null,
-                  growthOverrides: {},
-                }));
-              }} />
+                onGrowthStep={handleGrowthStep}
+                onGrowthSet={handleGrowthSet} />
 
             </div>
 
@@ -259,89 +223,14 @@ export default function App() {
             <div className="rsp-hairline-h" style={{ background: C.border, height: "2px" }} />
 
             {/* Mobile summary — hidden on desktop, shown on mobile */}
-            {(() => {
-              const techStatus = result ? (
-                result.paybackNote ? { label: "N/A", color: "#888", sym: "—" } :
-                (!result.fallingKnife && result.sma200 > 0) ? { label: "Sound", color: "#00BFA5", sym: "✓" } :
-                (result.fallingKnife && result.verdict === "spec_buy") ? { label: "Weak", color: "#f5a020", sym: "!" } :
-                (result.fallingKnife && result.verdict === "avoid") ? { label: "Avoid", color: "#ff4136", sym: "⚠" } :
-                null
-              ) : null;
-              return (
-                <div className="rsp-mobile-summary" style={{ display: "none", animation: "fadeInUp 0.5s 0.2s ease both" }}>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>{priceMode === "adj" ? "Adj. Price" : "Listed Price"}</div>
-                    <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: C.text1 }}>${f(priceMode === "adj" ? result?.adjPrice : inp.currentPrice)}</div>
-                    {inp.currentPrice > 0 && (
-                      <button
-                        onClick={() => setPriceMode(m => m === "adj" ? "listed" : "adj")}
-                        aria-label={`Switch to ${priceMode === "adj" ? "listed" : "adjusted"} price`}
-                        aria-pressed={priceMode === "listed"}
-                        style={{
-                          marginTop: "6px", fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em",
-                          textTransform: "uppercase", padding: "2px 6px",
-                          border: `1px solid ${priceMode === "listed" ? "#C4A06E" : "rgba(255,255,255,0.15)"}`,
-                          borderRadius: "10px",
-                          background: priceMode === "listed" ? "rgba(196,160,110,0.15)" : "transparent",
-                          color: priceMode === "listed" ? "#C4A06E" : "#555",
-                          cursor: "pointer", lineHeight: 1.4,
-                        }}
-                      >
-                        {priceMode === "adj" ? "LISTED" : "ADJ"}
-                      </button>
-                    )}
-                  </div>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Growth</div>
-                    <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: "#10d97e" }}>{result ? f(result.gr * 100) : "—"}%</div>
-                    <div style={{ display: "flex", gap: "4px", justifyContent: "center", marginTop: "4px" }}>
-                      <button
-                        onClick={() => { setGrowthScenario("base"); setInp(p => ({ ...p, historicalGrowth: Math.max(0, p.historicalGrowth - 1), analystGrowth: Math.max(0, p.analystGrowth - 1), fwdGrowthY1: Math.max(0, p.fwdGrowthY1 - 1), fwdGrowthY2: p.fwdGrowthY2 != null ? Math.max(0, p.fwdGrowthY2 - 1) : null, fwdCAGR: p.fwdCAGR != null ? Math.max(0, p.fwdCAGR - 1) : null, growthOverrides: {} })); }}
-                        aria-label="Decrease growth rate"
-                        style={{
-                          fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em",
-                          padding: "3px 10px",
-                          border: "1px solid rgba(255,77,0,0.3)",
-                          borderRadius: "10px",
-                          background: "transparent",
-                          color: "#FF4D00",
-                          cursor: "pointer", lineHeight: 1.4,
-                        }}
-                      >
-                        −
-                      </button>
-                      <button
-                        onClick={() => { setGrowthScenario("base"); setInp(p => ({ ...p, historicalGrowth: Math.max(0, p.historicalGrowth + 1), analystGrowth: Math.max(0, p.analystGrowth + 1), fwdGrowthY1: Math.max(0, p.fwdGrowthY1 + 1), fwdGrowthY2: p.fwdGrowthY2 != null ? Math.max(0, p.fwdGrowthY2 + 1) : null, fwdCAGR: p.fwdCAGR != null ? Math.max(0, p.fwdCAGR + 1) : null, growthOverrides: {} })); }}
-                        aria-label="Increase growth rate"
-                        style={{
-                          fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em",
-                          padding: "3px 10px",
-                          border: "1px solid rgba(16,217,126,0.3)",
-                          borderRadius: "10px",
-                          background: "transparent",
-                          color: "#10d97e",
-                          cursor: "pointer", lineHeight: 1.4,
-                        }}
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                  {techStatus && (
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Technical</div>
-                      <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: techStatus.color }}>{techStatus.sym} {techStatus.label}</div>
-                    </div>
-                  )}
-                  {result?.tamWarning && (
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>TAM</div>
-                      <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: "#f5a020" }}>⚠ Warn</div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+            <MobileSummary
+              result={result}
+              currentPrice={inp.currentPrice}
+              adjPrice={result?.adjPrice}
+              priceMode={priceMode}
+              onPriceModeToggle={() => setPriceMode(m => m === "adj" ? "listed" : "adj")}
+              onGrowthStep={handleGrowthStep}
+            />
 
             {/* Price targets row — visible on all screen sizes */}
             {(displayStrongBuyPrice != null || displayBuyPrice != null) && (() => {
