@@ -20,7 +20,7 @@
 /* Dice filter row wrappers are invisible (flattened) */
 .rsp-dice-row { display: contents; }
 
-/* Grid placement */
+/* Grid placement — Analysis tab only (2-column layout) */
 .rsp-left-verdict        { grid-column: 1; grid-row: 1; }
 .rsp-right-graph         { grid-column: 3; grid-row: 1; }
 
@@ -31,8 +31,6 @@
 }
 .rsp-hairline-v          { grid-column: 2; grid-row: 1; }
 .rsp-hairline-h          { grid-column: 1 / span 3; grid-row: 2; }
-.rsp-bottom-context      { grid-column: 1 / span 3; grid-row: 3; display: flex; flex-direction: row; }
-.rsp-data-sections-wrap  { grid-column: 1 / span 3; grid-row: 5; }
 
 /* DataSections inner columns use flex sizing */
 .rsp-left-data    { flex: 3 1 0; min-width: 0; }
@@ -92,35 +90,18 @@
   }
   .rsp-ticker-bar {
     padding-bottom: 12px !important;
-    margin-bottom: 4px !important;
   }
   .rsp-left-verdict {
-    order: 1;
     padding-left: 0 !important;
     padding-right: 0 !important;
     padding-top: 0px !important;
   }
   .rsp-right-graph {
-    order: 2;
     padding-left: 0 !important;
     padding-right: 0 !important;
     padding-top: 7px !important;
     padding-bottom: 20px !important;
     height: 320px;
-  }
-  .rsp-bottom-context {
-    order: 5;
-    flex-direction: column !important;
-    border-top: 1px solid rgba(255,255,255,0.06);
-  }
-  .rsp-bottom-context > div {
-    border-left: none !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-  }
-  .rsp-data-sections-wrap {
-    order: 6;
-    border-top: 1px solid rgba(255,255,255,0.06);
   }
   .rsp-data-wrap {
     flex-direction: column !important;
@@ -179,7 +160,6 @@
     justify-content: space-around;
     padding: 16px 0;
     border-top: 1px solid rgba(255,255,255,0.06);
-    order: 3;
   }
 }
 

@@ -14,6 +14,8 @@ import { HeroSearch } from "./components/HeroSearch";
 import { CompactTickerBar } from "./components/CompactTickerBar";
 import { DataSections } from "./components/DataSections";
 import { PriceProjectionGraph } from "./components/PriceProjectionGraph";
+import { TabNav } from "./components/TabNav";
+import type { Tab } from "./components/TabNav";
 import { useTickerFetch } from "./hooks/useTickerFetch.ts";
 import type { IndustryGrowthData } from "./lib/tickerSearch/api.ts";
 import "./App.css";
@@ -81,6 +83,7 @@ export default function App() {
 
   const [showMethodology, setShowMethodology] = useState(false);
   const [priceMode, setPriceMode] = useState<PriceMode>("adj");
+  const [activeTab, setActiveTab] = useState<Tab>("analysis");
   const mode: Mode = "standard";
   const result: TUPResult | null = useMemo(
     () => calcTUP(inp, mode, priceMode === "listed" && inp.currentPrice > 0 ? inp.currentPrice : undefined),
@@ -98,7 +101,16 @@ export default function App() {
     return { displayStrongBuyPrice: strongBuyPrice, displayBuyPrice: buyPrice };
   }, [priceMode, result, strongBuyPrice, buyPrice]);
 
-  const handleFetch = (sym?: string) => { setPriceMode("adj"); doFetch(sym); };
+  const handleFetch = (sym?: string) => {
+    setPriceMode("adj");
+    setActiveTab("analysis");
+    doFetch(sym);
+  };
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
 
   const onScenarioChange = (s: GrowthScenario) => {
     setGrowthScenario(s);
@@ -146,170 +158,176 @@ export default function App() {
           />
         )}
 
-        {hasSearched && (<>
-          <CompactTickerBar
-            ticker={ticker}
-            onTickerChange={setTicker}
-            onTickerSelect={(sym: string) => { setTicker(sym); handleFetch(sym); }}
-            onFetch={handleFetch}
-            loading={loading}
-            error={error}
-            fetchLog={fetchLog}
-            onRollDice={() => { setPriceMode("adj"); rollDice(); }}
-            onCancelDice={cancelDice}
-            rollingDice={rollingDice}
-            dicePhrase={dicePhrase}
-
-            isFilterOpen={isFilterOpen}
-            onToggleFilter={() => setIsFilterOpen(o => !o)}
-            rollFilters={rollFilters}
-            onApplyFilters={setRollFilters}
-            onResetFilters={() => setRollFilters({ marketCap: [], sector: "", exchange: [], indexEtf: "", tupRange: [] })}
-            hasActiveFilters={hasActiveFilters}
-          />
-        </>)}
-
-        {hasSearched && (<>
-        <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2px 2fr", gridTemplateRows: "auto 2px auto 2px auto", gap: "0", alignItems: "start" }}>
-
-          {/* Row 1, col 1: Verdict */}
-          <div className="rsp-left-verdict" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "0", animation: "fadeInUp 0.5s 0.15s ease both" }}>
-
-            {hasSearched && !company && (
-              <div style={{ paddingTop: "48px" }}>
-                <div style={{ fontFamily: C.serif, color: C.accent, fontSize: "28px", marginBottom: "16px", lineHeight: 1 }}>→</div>
-                <p style={{ fontSize: "11px", color: "#505050", lineHeight: 1.9, margin: 0 }}>
-                  Enter a ticker above<br />and click Fetch Data —<br />all values load automatically.
-                </p>
-              </div>
-            )}
-
-            <VerdictCard result={result} noiseFilter={false} currentPrice={inp.currentPrice}
-              growthScenario={growthScenario}
-              onScenarioChange={onScenarioChange}
-              hasScenarioData={hasScenarioData}
-              priceMode={priceMode}
-              onPriceModeToggle={() => setPriceMode(m => m === "adj" ? "listed" : "adj")}
-              onGrowthStep={(d: number) => {
-              setGrowthScenario("base");
-              setInp(p => ({
-                ...p,
-                historicalGrowth: Math.max(0, p.historicalGrowth + d),
-                analystGrowth: Math.max(0, p.analystGrowth + d),
-                fwdGrowthY1: Math.max(0, p.fwdGrowthY1 + d),
-                fwdGrowthY2: p.fwdGrowthY2 != null ? Math.max(0, p.fwdGrowthY2 + d) : null,
-                fwdCAGR: p.fwdCAGR != null ? Math.max(0, p.fwdCAGR + d) : null,
-                growthOverrides: {},
-              }));
-            }}
-              onGrowthSet={(val: number) => {
-              setGrowthScenario("base");
-              const adjusted = Math.max(0, val - (inp.dividendYield || 0));
-              setInp(p => ({
-                ...p,
-                historicalGrowth: adjusted,
-                analystGrowth: adjusted,
-                fwdGrowthY1: adjusted,
-                fwdGrowthY2: p.fwdGrowthY2 != null ? adjusted : null,
-                fwdCAGR: p.fwdCAGR != null ? adjusted : null,
-                growthOverrides: {},
-              }));
-            }} />
-
-          </div>
-
-          {/* Row 1, col 3: Price Projection Graph */}
-          <div className="rsp-right-graph" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "7px", paddingBottom: "28px", animation: "fadeInUp 0.5s 0.2s ease both", alignSelf: "stretch", display: "flex", flexDirection: "column" }}>
-            <PriceProjectionGraph
-              priceHistory={priceHistory}
-              currentPrice={inp.currentPrice}
+        {hasSearched && (
+          <div style={{ position: "sticky", top: 0, zIndex: 100, background: C.bg }}>
+            <CompactTickerBar
               ticker={ticker}
-              scenarioValues={scenarioValues}
-              growthScenario={growthScenario}
-              result={result}
-              sma200={inp.sma200}
+              onTickerChange={setTicker}
+              onTickerSelect={(sym: string) => { setTicker(sym); handleFetch(sym); }}
+              onFetch={handleFetch}
+              loading={loading}
+              error={error}
+              fetchLog={fetchLog}
+              onRollDice={() => { setPriceMode("adj"); rollDice(); }}
+              onCancelDice={cancelDice}
               rollingDice={rollingDice}
-              onScenarioChange={onScenarioChange}
-              lifecycleStage={inp.lifecycleStage}
-              dividendYield={inp.dividendYield}
+              dicePhrase={dicePhrase}
+
+              isFilterOpen={isFilterOpen}
+              onToggleFilter={() => setIsFilterOpen(o => !o)}
+              rollFilters={rollFilters}
+              onApplyFilters={setRollFilters}
+              onResetFilters={() => setRollFilters({ marketCap: [], sector: "", exchange: [], indexEtf: "", tupRange: [] })}
+              hasActiveFilters={hasActiveFilters}
             />
+            <TabNav activeTab={activeTab} onTabChange={handleTabChange} />
           </div>
+        )}
 
-          {/* Hairline vertical — top row only */}
-          <div className="rsp-hairline-v" style={{ background: C.border, width: "2px" }} />
+        {hasSearched && activeTab === "analysis" && (
+          <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2px 2fr", gridTemplateRows: "auto 2px auto", gap: "0", alignItems: "start" }}>
 
-          {/* Hairline horizontal — after top row */}
-          <div className="rsp-hairline-h" style={{ background: C.border, height: "2px" }} />
+            {/* Col 1: Verdict */}
+            <div className="rsp-left-verdict" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "0", animation: "fadeInUp 0.5s 0.15s ease both" }}>
 
-          {/* Mobile summary — hidden on desktop, shown on mobile between graph and context */}
-          {(() => {
-            const techStatus = result ? (
-              result.paybackNote ? { label: "N/A", color: "#888", sym: "—" } :
-              (!result.fallingKnife && result.sma200 > 0) ? { label: "Sound", color: "#00BFA5", sym: "✓" } :
-              (result.fallingKnife && result.verdict === "spec_buy") ? { label: "Weak", color: "#f5a020", sym: "!" } :
-              (result.fallingKnife && result.verdict === "avoid") ? { label: "Avoid", color: "#ff4136", sym: "⚠" } :
-              null
-            ) : null;
-            return (
-              <div className="rsp-mobile-summary" style={{ display: "none", animation: "fadeInUp 0.5s 0.2s ease both" }}>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>{priceMode === "adj" ? "Adj. Price" : "Listed Price"}</div>
-                  <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: C.text1 }}>${f(priceMode === "adj" ? result?.adjPrice : inp.currentPrice)}</div>
-                  {inp.currentPrice > 0 && (
-                    <button
-                      onClick={() => setPriceMode(m => m === "adj" ? "listed" : "adj")}
-                      aria-label={`Switch to ${priceMode === "adj" ? "listed" : "adjusted"} price`}
-                      aria-pressed={priceMode === "listed"}
-                      style={{
-                        marginTop: "6px", fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em",
-                        textTransform: "uppercase", padding: "2px 6px",
-                        border: `1px solid ${priceMode === "listed" ? "#C4A06E" : "rgba(255,255,255,0.15)"}`,
-                        borderRadius: "10px",
-                        background: priceMode === "listed" ? "rgba(196,160,110,0.15)" : "transparent",
-                        color: priceMode === "listed" ? "#C4A06E" : "#555",
-                        cursor: "pointer", lineHeight: 1.4,
-                      }}
-                    >
-                      {priceMode === "adj" ? "LISTED" : "ADJ"}
-                    </button>
-                  )}
+              {hasSearched && !company && (
+                <div style={{ paddingTop: "48px" }}>
+                  <div style={{ fontFamily: C.serif, color: C.accent, fontSize: "28px", marginBottom: "16px", lineHeight: 1 }}>→</div>
+                  <p style={{ fontSize: "11px", color: "#505050", lineHeight: 1.9, margin: 0 }}>
+                    Enter a ticker above<br />and click Fetch Data —<br />all values load automatically.
+                  </p>
                 </div>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Growth</div>
-                  <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: "#10d97e" }}>{result ? f(result.gr * 100) : "—"}%</div>
-                </div>
-                {techStatus && (
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Technical</div>
-                    <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: techStatus.color }}>{techStatus.sym} {techStatus.label}</div>
-                  </div>
-                )}
-                {result?.tamWarning && (
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>TAM</div>
-                    <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: "#f5a020" }}>⚠ Warn</div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+              )}
 
-          {/* Row 3: ValuationContext (with guru radar) + Scorecard + Industry Growth */}
-          <div className="rsp-bottom-context" style={{ animation: "fadeInUp 0.5s 0.2s ease both", flexDirection: "column" }}>
-            {/* Valuation context + embedded guru radar */}
-            <div style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "28px", paddingBottom: "28px" }}>
-              <ValuationContext
-                strongBuyPrice={displayStrongBuyPrice}
-                buyPrice={displayBuyPrice}
-                currentPrice={inp.currentPrice}
-                adjPrice={result?.adjPrice}
+              <VerdictCard result={result} noiseFilter={false} currentPrice={inp.currentPrice}
+                growthScenario={growthScenario}
+                onScenarioChange={onScenarioChange}
+                hasScenarioData={hasScenarioData}
                 priceMode={priceMode}
-                guruData={guruData}
+                onPriceModeToggle={() => setPriceMode(m => m === "adj" ? "listed" : "adj")}
+                onGrowthStep={(d: number) => {
+                setGrowthScenario("base");
+                setInp(p => ({
+                  ...p,
+                  historicalGrowth: Math.max(0, p.historicalGrowth + d),
+                  analystGrowth: Math.max(0, p.analystGrowth + d),
+                  fwdGrowthY1: Math.max(0, p.fwdGrowthY1 + d),
+                  fwdGrowthY2: p.fwdGrowthY2 != null ? Math.max(0, p.fwdGrowthY2 + d) : null,
+                  fwdCAGR: p.fwdCAGR != null ? Math.max(0, p.fwdCAGR + d) : null,
+                  growthOverrides: {},
+                }));
+              }}
+                onGrowthSet={(val: number) => {
+                setGrowthScenario("base");
+                const adjusted = Math.max(0, val - (inp.dividendYield || 0));
+                setInp(p => ({
+                  ...p,
+                  historicalGrowth: adjusted,
+                  analystGrowth: adjusted,
+                  fwdGrowthY1: adjusted,
+                  fwdGrowthY2: p.fwdGrowthY2 != null ? adjusted : null,
+                  fwdCAGR: p.fwdCAGR != null ? adjusted : null,
+                  growthOverrides: {},
+                }));
+              }} />
+
+            </div>
+
+            {/* Hairline vertical */}
+            <div className="rsp-hairline-v" style={{ background: C.border, width: "2px" }} />
+
+            {/* Col 3: Price Projection Graph */}
+            <div className="rsp-right-graph" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "7px", paddingBottom: "28px", animation: "fadeInUp 0.5s 0.2s ease both", alignSelf: "stretch", display: "flex", flexDirection: "column" }}>
+              <PriceProjectionGraph
+                priceHistory={priceHistory}
+                currentPrice={inp.currentPrice}
+                ticker={ticker}
+                scenarioValues={scenarioValues}
+                growthScenario={growthScenario}
+                result={result}
+                sma200={inp.sma200}
+                rollingDice={rollingDice}
+                onScenarioChange={onScenarioChange}
+                lifecycleStage={inp.lifecycleStage}
+                dividendYield={inp.dividendYield}
               />
             </div>
-            {/* Company description + lifecycle + industry growth */}
-            {company && (
-              <div style={{ paddingLeft: "40px", paddingRight: "40px", paddingBottom: "28px", borderTop: `1px solid ${C.borderWeak}` }}>
+
+            {/* Hairline horizontal */}
+            <div className="rsp-hairline-h" style={{ background: C.border, height: "2px" }} />
+
+            {/* Mobile summary — hidden on desktop, shown on mobile */}
+            {(() => {
+              const techStatus = result ? (
+                result.paybackNote ? { label: "N/A", color: "#888", sym: "—" } :
+                (!result.fallingKnife && result.sma200 > 0) ? { label: "Sound", color: "#00BFA5", sym: "✓" } :
+                (result.fallingKnife && result.verdict === "spec_buy") ? { label: "Weak", color: "#f5a020", sym: "!" } :
+                (result.fallingKnife && result.verdict === "avoid") ? { label: "Avoid", color: "#ff4136", sym: "⚠" } :
+                null
+              ) : null;
+              return (
+                <div className="rsp-mobile-summary" style={{ display: "none", animation: "fadeInUp 0.5s 0.2s ease both" }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>{priceMode === "adj" ? "Adj. Price" : "Listed Price"}</div>
+                    <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: C.text1 }}>${f(priceMode === "adj" ? result?.adjPrice : inp.currentPrice)}</div>
+                    {inp.currentPrice > 0 && (
+                      <button
+                        onClick={() => setPriceMode(m => m === "adj" ? "listed" : "adj")}
+                        aria-label={`Switch to ${priceMode === "adj" ? "listed" : "adjusted"} price`}
+                        aria-pressed={priceMode === "listed"}
+                        style={{
+                          marginTop: "6px", fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em",
+                          textTransform: "uppercase", padding: "2px 6px",
+                          border: `1px solid ${priceMode === "listed" ? "#C4A06E" : "rgba(255,255,255,0.15)"}`,
+                          borderRadius: "10px",
+                          background: priceMode === "listed" ? "rgba(196,160,110,0.15)" : "transparent",
+                          color: priceMode === "listed" ? "#C4A06E" : "#555",
+                          cursor: "pointer", lineHeight: 1.4,
+                        }}
+                      >
+                        {priceMode === "adj" ? "LISTED" : "ADJ"}
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Growth</div>
+                    <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: "#10d97e" }}>{result ? f(result.gr * 100) : "—"}%</div>
+                  </div>
+                  {techStatus && (
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Technical</div>
+                      <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: techStatus.color }}>{techStatus.sym} {techStatus.label}</div>
+                    </div>
+                  )}
+                  {result?.tamWarning && (
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>TAM</div>
+                      <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: "#f5a020" }}>⚠ Warn</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {hasSearched && activeTab === "metrics" && (
+          <div style={{ animation: "fadeInUp 0.5s 0.1s ease both", paddingTop: "28px", paddingBottom: "28px" }}>
+            <ValuationContext
+              strongBuyPrice={displayStrongBuyPrice}
+              buyPrice={displayBuyPrice}
+              currentPrice={inp.currentPrice}
+              adjPrice={result?.adjPrice}
+              priceMode={priceMode}
+              guruData={guruData}
+            />
+          </div>
+        )}
+
+        {hasSearched && activeTab === "profile" && (
+          <div style={{ animation: "fadeInUp 0.5s 0.1s ease both", paddingTop: "28px", paddingBottom: "28px" }}>
+            {company ? (
+              <>
                 <CompanyScorecard
                   cashFlows={scorecard.cashFlows}
                   incomeHistory={scorecard.incomeHistory}
@@ -323,12 +341,20 @@ export default function App() {
                     companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
                   />
                 )}
+              </>
+            ) : (
+              <div style={{ paddingTop: "48px" }}>
+                <div style={{ fontFamily: C.serif, color: C.accent, fontSize: "28px", marginBottom: "16px", lineHeight: 1 }}>→</div>
+                <p style={{ fontSize: "11px", color: "#505050", lineHeight: 1.9, margin: 0 }}>
+                  Enter a ticker above<br />and click Fetch Data —<br />all values load automatically.
+                </p>
               </div>
             )}
           </div>
+        )}
 
-          {/* Row 5: DataSections — full width */}
-          <div className="rsp-data-sections-wrap">
+        {hasSearched && activeTab === "logic" && (
+          <div className="rsp-data-sections-wrap" style={{ animation: "fadeInUp 0.5s 0.1s ease both" }}>
             <DataSections
               inp={inp}
               company={company}
@@ -354,15 +380,15 @@ export default function App() {
               }}
             />
           </div>
-        </div>
+        )}
 
-        {/* Footer */}
-        <footer style={{ marginTop: "32px", paddingTop: "16px", borderTop: `1px solid ${C.borderWeak}`, paddingBottom: "32px" }}>
-          <p style={{ fontSize: "10px", color: C.text3, margin: 0, textAlign: "center" }}>
-            TUP Calculator — For educational purposes only. Not financial advice. Data via Financial Modeling Prep API.
-          </p>
-        </footer>
-        </>)}
+        {hasSearched && (
+          <footer style={{ marginTop: "32px", paddingTop: "16px", borderTop: `1px solid ${C.borderWeak}`, paddingBottom: "32px" }}>
+            <p style={{ fontSize: "10px", color: C.text3, margin: 0, textAlign: "center" }}>
+              TUP Calculator — For educational purposes only. Not financial advice. Data via Financial Modeling Prep API.
+            </p>
+          </footer>
+        )}
 
       </main>
     </div>
