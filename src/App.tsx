@@ -185,7 +185,7 @@ export default function App() {
         )}
 
         {hasSearched && activeTab === "analysis" && (
-          <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2px 2fr", gridTemplateRows: "auto 2px auto", gap: "0", alignItems: "start" }}>
+          <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2px 2fr", gridTemplateRows: "auto 2px auto", gap: "0", alignItems: "start", paddingTop: "12px" }}>
 
             {/* Col 1: Verdict */}
             <div className="rsp-left-verdict" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "12px", paddingBottom: "0", animation: "fadeInUp 0.5s 0.15s ease both" }}>
