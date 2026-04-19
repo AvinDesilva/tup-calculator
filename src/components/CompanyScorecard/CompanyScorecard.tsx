@@ -96,7 +96,7 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
               <ResponsiveContainer width="100%" height={140} minWidth={0}>
                 <LineChart
                   data={chartData}
-                  margin={{ top: 10, right: 12, bottom: 36, left: 30 }}
+                  margin={{ top: 10, right: 12, bottom: 36, left: 0 }}
                 >
                   <XAxis
                     dataKey="x"
@@ -131,11 +131,12 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
                     axisLine={{ stroke: "rgba(255,255,255,0.2)", strokeWidth: 1.5 }}
                     tickLine={false}
                     tick={false}
-                    width={22}
+                    width={14}
                     label={{
                       value: "Sales",
                       angle: -90,
                       position: "insideLeft",
+                      offset: 2,
                       style: { fill: "rgba(255,255,255,0.3)", fontSize: 8, fontFamily: body },
                     }}
                   />
