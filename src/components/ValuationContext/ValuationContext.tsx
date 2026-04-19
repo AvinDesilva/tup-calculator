@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Panel } from "./Panel.tsx";
 import { RadarChartPanel } from "../GuruRadar/RadarChartPanel.tsx";
+import { SectionLabel } from "../primitives";
 import type { ValuationContextProps, PanelData } from "./ValuationContext.types.ts";
 import type { RadarMetricPoint } from "../../lib/guruRadar/types.ts";
 import { C } from "../../lib/theme.ts";
@@ -34,15 +35,6 @@ function getGuruReasoning(name: string, radar: RadarMetricPoint[]): string {
   }
 }
 
-
-const subLabel: React.CSSProperties = {
-  fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  color: C.text3,
-  marginBottom: 12,
-};
 
 const dividerH = <div style={{ background: C.borderWeak, height: "1px", margin: "20px 0" }} />;
 
@@ -98,14 +90,12 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
 
   return (
     <div style={{ paddingTop: "8px" }}>
-      <div style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888", marginBottom: "10px" }}>
-        Valuation Context
-      </div>
+      <SectionLabel title="Valuation Context" />
 
       {/* Price target panels */}
       {showPriceTargets && panels.length > 0 && (
         <>
-          <div style={subLabel}>Price Targets</div>
+          <SectionLabel title="Price Targets" />
           <div className="rsp-valuation-grid" style={{ display: "grid", gridTemplateColumns: panels.length === 2 ? "1fr 1px 1fr" : "1fr", gap: 0 }}>
             {panels.length === 2 ? (<>
               <div style={{ paddingBottom: "14px" }}><Panel p={panels[0]} mono={mono} /></div>
@@ -123,16 +113,16 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
         {showPriceTargets && panels.length > 0 && dividerH}
 
         {/* Radar chart */}
-        <div style={{ ...subLabel, display: "flex", alignItems: "baseline", gap: 8 }}>
-          <span>Financial Health</span>
-          <span style={{ fontSize: 11, fontWeight: 700, color: radarColor, letterSpacing: "0.08em" }}>{guruData!.overallScore}/100</span>
-        </div>
+        <SectionLabel
+          title="Financial Health"
+          badge={<span style={{ fontSize: 11, fontWeight: 700, color: radarColor, fontFamily: C.mono, letterSpacing: "0.05em" }}>{guruData!.overallScore}/100</span>}
+        />
         <RadarChartPanel radar={guruData!.radar} color={radarColor} />
 
         {dividerH}
 
         {/* Bar chart */}
-        <div style={subLabel}>Guru Scores</div>
+        <SectionLabel title="Guru Scores" />
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           {guruData!.gurus.map(guru => {
             const barColor = guru.score >= 8 ? "#10d97e" : guru.score >= 4 ? "#f5a020" : "#e03030";

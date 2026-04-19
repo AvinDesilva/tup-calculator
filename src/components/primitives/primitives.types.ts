@@ -1,8 +1,9 @@
 import type React from "react";
 
 export interface SectionLabelProps {
-  num: string;
+  num?: string;
   title: string;
+  badge?: React.ReactNode;
 }
 
 export interface DataRowProps {

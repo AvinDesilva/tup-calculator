@@ -6,13 +6,13 @@ import {
 import { C } from "../../lib/theme.ts";
 import { LC_CURVE, LC_ZONES, STAGE_META } from "../../lib/constants.ts";
 import { classifyLifecycle, lifecycleDotX, lifecycleRevGrowth } from "../../lib/companyScorecard/lifecycle.ts";
+import { SectionLabel } from "../primitives";
 import type { CompanyScorecardProps } from "./CompanyScorecard.types.ts";
 
 export function CompanyScorecard({ incomeHistory, description, dividendYield }: CompanyScorecardProps) {
   const [descExpanded, setDescExpanded] = useState(false);
   const body  = C.body;
   const mono  = C.mono;
-  const label9 = { fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, color: "#888", fontFamily: body };
 
   // ── Business Lifecycle S-Curve (multi-factor — Damodaran framework) ──────
   const inc       = incomeHistory || [];
@@ -86,7 +86,7 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
     <div>
       {description && (
         <div style={{ marginBottom: "16px" }}>
-          <div style={label9}>Company Description</div>
+          <SectionLabel title="Company Description" />
           <p style={{
             fontSize: "12px", color: "#aaa", lineHeight: 1.7, margin: "8px 0 0", fontFamily: body,
             ...(!descExpanded ? {
@@ -114,7 +114,7 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
 
       {hasLifecycle && (
         <div>
-          <div style={label9}>Business Lifecycle</div>
+          <SectionLabel title="Business Lifecycle" />
 
           {/* Stage explanation */}
           {stageDesc && (

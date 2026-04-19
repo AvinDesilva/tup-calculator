@@ -1,4 +1,5 @@
 import { C } from "../../lib/theme.ts";
+import { SectionLabel } from "../primitives";
 import type { IndustryGrowthData } from "../../lib/tickerSearch/api.ts";
 
 export interface IndustryGrowthPanelProps {
@@ -23,10 +24,8 @@ export function IndustryGrowthPanel({ industryGrowth, industryGrowthLoading, com
     }
   }
   return (
-    <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.borderWeak}` }}>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.text3, marginBottom: 8 }}>
-        Industry Growth
-      </div>
+    <div style={{ marginTop: 20 }}>
+      <SectionLabel title="Industry Growth" />
       <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
         <span style={{ fontFamily: mono, fontSize: "20px", fontWeight: 600, color, letterSpacing: "-0.02em" }}>
           {value}

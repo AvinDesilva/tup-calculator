@@ -1,10 +1,11 @@
 import type { SectionLabelProps, DataRowProps, DerivedStatProps } from "./primitives.types.ts";
 
-export function SectionLabel({ num, title }: SectionLabelProps) {
+export function SectionLabel({ num, title, badge }: SectionLabelProps) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#C4A06E", fontSize: "14px", letterSpacing: "0.05em", fontWeight: 700 }}>{num}</span>
+      {num && <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#C4A06E", fontSize: "14px", letterSpacing: "0.05em", fontWeight: 700 }}>{num}</span>}
       <h3 style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888", margin: 0 }}>{title}</h3>
+      {badge}
       <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.06)" }} aria-hidden="true" />
     </div>
   );
