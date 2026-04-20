@@ -82,7 +82,7 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
             fontSize: "12px", color: "#aaa", lineHeight: 1.7, margin: "8px 0 0", fontFamily: C.body,
             ...(!descExpanded ? {
               display: "-webkit-box",
-              WebkitLineClamp: 2,
+              WebkitLineClamp: 4,
               WebkitBoxOrient: "vertical" as const,
               overflow: "hidden",
             } : {}),
@@ -121,6 +121,7 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
             style={{
               "--lc-len": dashLen,
               "--lc-offset": dashLen * (1 - easedFraction),
+              paddingRight: "12px",
             } as React.CSSProperties}
           >
             <style>{DASH_STYLE}</style>
