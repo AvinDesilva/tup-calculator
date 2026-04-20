@@ -84,8 +84,7 @@ function getLabelState(center: number, nextCenter: number | null, xPos: number, 
 
 export function CompanyScorecard({ incomeHistory, description, dividendYield }: CompanyScorecardProps) {
   const [descExpanded, setDescExpanded] = useState(false);
-  const lineRef = useRef<SVGPathElement | null>(null);
-  const pathLengthRef = useRef(0);
+  const [pathLen, setPathLen] = useState(0);
   const body  = C.body;
   const mono  = C.mono;
 
@@ -111,24 +110,20 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
   const done = t >= 1;
   const showDot = done;
 
-  // Find the Recharts <path> via a container ref and drive stroke-dashoffset ourselves.
-  // The CSS rule below hides the line from the instant it enters the DOM (before paint),
-  // then our effect overrides with precise offset values once the path is measured.
+  // Measure the SVG path length once it appears.
+  // We use CSS custom properties (set on the container div) + a CSS rule to control
+  // stroke-dashoffset. This survives React re-renders (no imperative DOM manipulation).
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (pathLen > 0) return;
     const container = containerRef.current;
     if (!container) return;
     const path = container.querySelector<SVGPathElement>(".recharts-line-curve");
-    if (!path) return;
-    if (!lineRef.current) {
-      lineRef.current = path;
-      pathLengthRef.current = path.getTotalLength();
-    }
-    const len = pathLengthRef.current;
-    path.style.strokeDasharray = `${len}`;
-    path.style.strokeDashoffset = `${len * (1 - easedFraction)}`;
-  }, [easedFraction]);
+    if (path) setPathLen(path.getTotalLength());
+  }, [pathLen, easedFraction]);
+
+  const dashLen = pathLen || 9999;
 
   if (!hasLifecycle && !description) return null;
 
@@ -233,10 +228,14 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
             className="lc-graph"
             role="img"
             aria-label={`Business lifecycle S-curve. Current stage: ${currentStage || "unknown"}`}
+            style={{
+              "--lc-len": dashLen,
+              "--lc-offset": dashLen * (1 - easedFraction),
+            } as React.CSSProperties}
           >
-            {/* Hide line from the instant the path enters the DOM, before JS can measure it.
-                Once the effect measures getTotalLength(), inline styles override this. */}
-            <style>{".lc-graph .recharts-line-curve { stroke-dasharray: 9999; stroke-dashoffset: 9999; }"}</style>
+            {/* CSS drives stroke-dashoffset via custom properties on the container.
+                Survives React re-renders — no imperative DOM manipulation needed. */}
+            <style>{".lc-graph .recharts-line-curve { stroke-dasharray: var(--lc-len); stroke-dashoffset: var(--lc-offset); }"}</style>
             <ResponsiveContainer width="100%" height={140} minWidth={0}>
               <LineChart
                 data={chartData}
