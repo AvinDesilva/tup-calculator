@@ -11,8 +11,6 @@ import type { CompanyScorecardProps } from "./CompanyScorecard.types.ts";
 
 // Single variable: controls line draw speed AND label highlight timing
 const ANIM_DURATION = 1600;
-// Width of the flash window in progress-space (0–1). ~190ms at mid-curve.
-const FLASH_WIDTH = 0.12;
 
 type LabelState = "idle" | "flash" | "settled";
 
@@ -40,9 +38,13 @@ function useEaseOutProgress(duration: number, active: boolean): number {
   return progress;
 }
 
-function getLabelState(center: number, progress: number): LabelState {
+// A label is lit while the line is in its zone: from when the line crosses
+// this zone's midpoint until the line crosses the NEXT zone's midpoint.
+// Once animation ends (progress >= 1) all labels settle to their final state.
+function getLabelState(center: number, nextCenter: number | null, progress: number): LabelState {
+  if (progress >= 1) return "settled";
   if (progress < center) return "idle";
-  if (progress < center + FLASH_WIDTH) return "flash";
+  if (nextCenter === null || progress < nextCenter) return "flash";
   return "settled";
 }
 
@@ -186,7 +188,9 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
                     if (!zone) return <g />;
                     const isActive = zone.key === currentStage;
                     const stageColor = STAGE_META[zone.key].color;
-                    const state: LabelState = getLabelState(zone.center, progress);
+                    const zoneIdx = LC_ZONES.findIndex(z => z.key === zone.key);
+                    const nextCenter = LC_ZONES[zoneIdx + 1]?.center ?? null;
+                    const state: LabelState = getLabelState(zone.center, nextCenter, progress);
                     let opacity: number;
                     let fontWeight: number;
                     if (state === "flash") {
