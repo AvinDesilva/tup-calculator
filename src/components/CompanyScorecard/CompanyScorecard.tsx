@@ -12,24 +12,30 @@ import type { CompanyScorecardProps } from "./CompanyScorecard.types.ts";
 // ─── Single control variable ────────────────────────────────────────────────
 // Controls BOTH line draw speed and label highlight timing.
 const ANIM_DURATION = 1600;
+const ANIM_DELAY = 400;
 
 type LabelState = "idle" | "lit" | "settled";
 
-// RAF-based linear progress 0→1 over `duration` ms.
+// RAF-based linear progress 0→1 over `duration` ms, after an initial `delay`.
 // We apply easing ONLY to the stroke-dashoffset (the visual line draw),
 // while using the raw linear progress to determine x-position — because
 // stroke-dashoffset maps to arc-length, not x-position.
 //
 // Instead we track which x-position the line has reached by computing
 // cumulative arc-lengths of the LC_CURVE segments.
-function useLineProgress(duration: number, active: boolean) {
+function useLineProgress(duration: number, delay: number, active: boolean) {
   const [t, setT] = useState(0); // linear 0→1
   const rafRef = useRef(0);
   useEffect(() => {
     if (!active) return;
-    const start = performance.now();
+    const start = performance.now() + delay;
     const tick = (now: number) => {
-      const raw = Math.min((now - start) / duration, 1);
+      const elapsed = now - start;
+      if (elapsed < 0) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      const raw = Math.min(elapsed / duration, 1);
       setT(raw);
       if (raw < 1) rafRef.current = requestAnimationFrame(tick);
     };
@@ -38,7 +44,7 @@ function useLineProgress(duration: number, active: boolean) {
       cancelAnimationFrame(rafRef.current);
       setT(0);
     };
-  }, [active, duration]);
+  }, [active, duration, delay]);
   return t;
 }
 
@@ -102,7 +108,7 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
   const hasLifecycle = revGrowth !== null;
 
   // Single linear progress 0→1 drives everything
-  const t = useLineProgress(ANIM_DURATION, hasLifecycle);
+  const t = useLineProgress(ANIM_DURATION, ANIM_DELAY, hasLifecycle);
   // Ease-out for visual stroke reveal: how much of the path length is visible
   const easedFraction = 2 * t - t * t;
   // Convert arc-fraction drawn → x-position on the chart (accounts for curve shape)
