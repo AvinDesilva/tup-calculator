@@ -111,7 +111,9 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
   const done = t >= 1;
   const showDot = done;
 
-  // Find the Recharts <path> via a container ref and drive stroke-dashoffset ourselves
+  // Find the Recharts <path> via a container ref and drive stroke-dashoffset ourselves.
+  // The CSS rule below hides the line from the instant it enters the DOM (before paint),
+  // then our effect overrides with precise offset values once the path is measured.
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -122,11 +124,10 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
     if (!lineRef.current) {
       lineRef.current = path;
       pathLengthRef.current = path.getTotalLength();
-      path.style.strokeDasharray = `${pathLengthRef.current}`;
-      path.style.strokeDashoffset = `${pathLengthRef.current}`;
     }
-    const offset = pathLengthRef.current * (1 - easedFraction);
-    path.style.strokeDashoffset = `${offset}`;
+    const len = pathLengthRef.current;
+    path.style.strokeDasharray = `${len}`;
+    path.style.strokeDashoffset = `${len * (1 - easedFraction)}`;
   }, [easedFraction]);
 
   if (!hasLifecycle && !description) return null;
@@ -229,9 +230,13 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
           {/* Graph — full width */}
           <div
             ref={containerRef}
+            className="lc-graph"
             role="img"
             aria-label={`Business lifecycle S-curve. Current stage: ${currentStage || "unknown"}`}
           >
+            {/* Hide line from the instant the path enters the DOM, before JS can measure it.
+                Once the effect measures getTotalLength(), inline styles override this. */}
+            <style>{".lc-graph .recharts-line-curve { stroke-dasharray: 9999; stroke-dashoffset: 9999; }"}</style>
             <ResponsiveContainer width="100%" height={140} minWidth={0}>
               <LineChart
                 data={chartData}
