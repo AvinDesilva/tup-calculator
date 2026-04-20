@@ -9,47 +9,83 @@ import { classifyLifecycle, lifecycleDotX, lifecycleRevGrowth } from "../../lib/
 import { SectionLabel } from "../primitives";
 import type { CompanyScorecardProps } from "./CompanyScorecard.types.ts";
 
-// Single variable: controls line draw speed AND label highlight timing
+// ─── Single control variable ────────────────────────────────────────────────
+// Controls BOTH line draw speed and label highlight timing.
 const ANIM_DURATION = 1600;
 
-type LabelState = "idle" | "flash" | "settled";
+type LabelState = "idle" | "lit" | "settled";
 
-// RAF-based ease-out progress (0→1 over `duration` ms). Syncs with the browser
-// paint cycle — same cycle Recharts uses internally — so label flashes and line
-// draw track together without drift.
-function useEaseOutProgress(duration: number, active: boolean): number {
-  const [progress, setProgress] = useState(0);
+// RAF-based linear progress 0→1 over `duration` ms.
+// We apply easing ONLY to the stroke-dashoffset (the visual line draw),
+// while using the raw linear progress to determine x-position — because
+// stroke-dashoffset maps to arc-length, not x-position.
+//
+// Instead we track which x-position the line has reached by computing
+// cumulative arc-lengths of the LC_CURVE segments.
+function useLineProgress(duration: number, active: boolean) {
+  const [t, setT] = useState(0); // linear 0→1
   const rafRef = useRef(0);
   useEffect(() => {
     if (!active) return;
     const start = performance.now();
     const tick = (now: number) => {
-      const t = Math.min((now - start) / duration, 1);
-      const eased = 2 * t - t * t; // ease-out quadratic: p = 2t − t²
-      setProgress(eased);
-      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+      const raw = Math.min((now - start) / duration, 1);
+      setT(raw);
+      if (raw < 1) rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(rafRef.current);
-      setProgress(0);
+      setT(0);
     };
   }, [active, duration]);
-  return progress;
+  return t;
 }
 
-// A label is lit while the line is in its zone: from when the line crosses
-// this zone's midpoint until the line crosses the NEXT zone's midpoint.
-// Once animation ends (progress >= 1) all labels settle to their final state.
-function getLabelState(center: number, nextCenter: number | null, progress: number): LabelState {
-  if (progress >= 1) return "settled";
-  if (progress < center) return "idle";
-  if (nextCenter === null || progress < nextCenter) return "flash";
+// Precompute cumulative arc-length fractions for the S-curve so we can
+// convert "fraction of path drawn" → "x-position reached".
+const ARC_LENGTHS: number[] = (() => {
+  const pts = LC_CURVE.map(([x, y]) => ({ x: x * 100, y: (1 - y) * 100 }));
+  const segs: number[] = [0];
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i].x - pts[i - 1].x;
+    const dy = pts[i].y - pts[i - 1].y;
+    segs.push(Math.sqrt(dx * dx + dy * dy));
+  }
+  const total = segs.reduce((a, b) => a + b, 0);
+  const cumulative: number[] = [];
+  let sum = 0;
+  for (const s of segs) {
+    sum += s;
+    cumulative.push(sum / total);
+  }
+  return cumulative;
+})();
+
+// Given a fraction of total arc-length drawn (0→1), return the x-position (0→1).
+function arcFractionToX(fraction: number): number {
+  const pts = LC_CURVE.map(([x]) => x);
+  for (let i = 1; i < ARC_LENGTHS.length; i++) {
+    if (fraction <= ARC_LENGTHS[i]) {
+      const prev = ARC_LENGTHS[i - 1];
+      const segFrac = (fraction - prev) / (ARC_LENGTHS[i] - prev);
+      return pts[i - 1] + segFrac * (pts[i] - pts[i - 1]);
+    }
+  }
+  return 1;
+}
+
+function getLabelState(center: number, nextCenter: number | null, xPos: number, done: boolean): LabelState {
+  if (done) return "settled";
+  if (xPos < center) return "idle";
+  if (nextCenter === null || xPos < nextCenter) return "lit";
   return "settled";
 }
 
 export function CompanyScorecard({ incomeHistory, description, dividendYield }: CompanyScorecardProps) {
   const [descExpanded, setDescExpanded] = useState(false);
+  const lineRef = useRef<SVGPathElement | null>(null);
+  const pathLengthRef = useRef(0);
   const body  = C.body;
   const mono  = C.mono;
 
@@ -66,8 +102,32 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
   const dotTx        = lifecycleDotX(lcSignals);
   const hasLifecycle = revGrowth !== null;
 
-  const progress = useEaseOutProgress(ANIM_DURATION, hasLifecycle);
-  const showDot  = progress >= 1;
+  // Single linear progress 0→1 drives everything
+  const t = useLineProgress(ANIM_DURATION, hasLifecycle);
+  // Ease-out for visual stroke reveal: how much of the path length is visible
+  const easedFraction = 2 * t - t * t;
+  // Convert arc-fraction drawn → x-position on the chart (accounts for curve shape)
+  const xPos = arcFractionToX(easedFraction);
+  const done = t >= 1;
+  const showDot = done;
+
+  // Find the Recharts <path> via a container ref and drive stroke-dashoffset ourselves
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const path = container.querySelector<SVGPathElement>(".recharts-line-curve");
+    if (!path) return;
+    if (!lineRef.current) {
+      lineRef.current = path;
+      pathLengthRef.current = path.getTotalLength();
+      path.style.strokeDasharray = `${pathLengthRef.current}`;
+      path.style.strokeDashoffset = `${pathLengthRef.current}`;
+    }
+    const offset = pathLengthRef.current * (1 - easedFraction);
+    path.style.strokeDashoffset = `${offset}`;
+  }, [easedFraction]);
 
   if (!hasLifecycle && !description) return null;
 
@@ -168,6 +228,7 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
 
           {/* Graph — full width */}
           <div
+            ref={containerRef}
             role="img"
             aria-label={`Business lifecycle S-curve. Current stage: ${currentStage || "unknown"}`}
           >
@@ -190,10 +251,10 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
                     const stageColor = STAGE_META[zone.key].color;
                     const zoneIdx = LC_ZONES.findIndex(z => z.key === zone.key);
                     const nextCenter = LC_ZONES[zoneIdx + 1]?.center ?? null;
-                    const state: LabelState = getLabelState(zone.center, nextCenter, progress);
+                    const state: LabelState = getLabelState(zone.center, nextCenter, xPos, done);
                     let opacity: number;
                     let fontWeight: number;
-                    if (state === "flash") {
+                    if (state === "lit") {
                       opacity = 1;
                       fontWeight = 700;
                     } else if (state === "settled") {
@@ -253,10 +314,7 @@ export function CompanyScorecard({ incomeHistory, description, dividendYield }: 
                   strokeWidth={2.2}
                   dot={false}
                   activeDot={false}
-                  isAnimationActive={true}
-                  animationBegin={0}
-                  animationDuration={ANIM_DURATION}
-                  animationEasing="ease-out"
+                  isAnimationActive={false}
                 />
                 {showDot && dotChartX !== null && dotChartY !== null && (
                   <ReferenceDot
