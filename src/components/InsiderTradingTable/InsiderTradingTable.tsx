@@ -1,5 +1,6 @@
+import { useState, useEffect } from "react";
 import { C } from "../../lib/theme.ts";
-import { SectionLabel } from "../primitives";
+import { SectionLabel, DataRow, DerivedStat } from "../primitives";
 import type { InsiderTradingData, InsiderTrade } from "../../lib/insiderTrading/types.ts";
 
 export interface InsiderTradingTableProps {
@@ -24,10 +25,12 @@ const thStyle: React.CSSProperties = {
 const tdStyle: React.CSSProperties = {
   padding: "6px 8px",
   fontSize: "11px",
-  fontFamily: mono,
   borderBottom: "1px solid rgba(255,255,255,0.04)",
   verticalAlign: "middle",
 };
+
+// C-suite roles that get highlighted in the table
+const HIGH_SIGNAL_ROLES = new Set(["CEO", "CFO", "COO", "CTO", "President"]);
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return "—";
@@ -65,25 +68,30 @@ const ROLE_ABBREV: Record<string, string> = {
   "executive vice president": "EVP",
   "vice president": "VP",
   "ten percent owner": "10%",
+  "president": "Pres",
 };
 
 function abbreviateRole(raw: string): string {
   if (!raw) return "—";
   const lower = raw.toLowerCase().replace(/^officer:\s*/, "").replace(/^director$/, "Dir").trim();
   if (lower === "dir") return "Dir";
-  // Check for exact or substring match in abbreviation table
   for (const [pattern, abbr] of Object.entries(ROLE_ABBREV)) {
     if (lower.includes(pattern)) return abbr;
   }
-  // Truncate if still long
   return lower.length > 8 ? lower.slice(0, 7) + "…" : lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
-function sharesChangeLabel(trade: InsiderTrade): string {
+function txCode(transactionType: string): string {
+  if (transactionType === "P-Purchase") return "P";
+  if (transactionType === "S-Sale+OE") return "S·OE";
+  if (transactionType.startsWith("S")) return "S";
+  return transactionType.split("-")[0];
+}
+
+function stakeChangePct(trade: InsiderTrade): string {
   const owned = trade.securitiesOwned;
   const transacted = trade.securitiesTransacted;
   if (!owned || !transacted) return "—";
-  // Compute shares before this transaction
   const before = trade.isBuy ? owned - transacted : owned + transacted;
   if (before <= 0) return "new";
   const pct = ((owned - before) / before) * 100;
@@ -92,7 +100,6 @@ function sharesChangeLabel(trade: InsiderTrade): string {
 }
 
 function shortName(name: string): string {
-  // "DOE JOHN" → "J. Doe" style
   const parts = name.trim().split(/\s+/);
   if (parts.length >= 2) {
     const last = parts[0];
@@ -131,44 +138,42 @@ function FlagBadge({ label, color, title }: { label: string; color: string; titl
 
 function TradeRow({ trade }: { trade: InsiderTrade }) {
   const isBuy = trade.isBuy;
-  const typeColor = isBuy ? "#10d97e" : "#e8e4dc";
-  const typeLabel = isBuy ? "BUY" : "SELL";
   const { flags } = trade;
+  const roleAbbr = abbreviateRole(trade.typeOfOwner);
+  const isHighSignalRole = HIGH_SIGNAL_ROLES.has(roleAbbr);
+  const typeColor = isBuy ? "#10d97e" : flags.clusterSell ? "#FF4D00" : "#e8e4dc";
+  const code = txCode(trade.transactionType);
   const isFlagged = !isBuy && (flags.discretionary || flags.clusterSell);
 
   return (
     <tr style={{ opacity: 1 }}>
-      <td style={{ ...tdStyle, color: "#888" }}>
+      <td style={{ ...tdStyle, fontFamily: mono, color: "#666", fontSize: "10px" }}>
         {formatDate(trade.transactionDate)}
       </td>
       <td style={{ ...tdStyle, color: "#e8e4dc", maxWidth: 100 }}>
         <span title={trade.reportingName}>{shortName(trade.reportingName)}</span>
       </td>
-      <td style={{ ...tdStyle, color: "#888", fontSize: "10px" }} title={trade.typeOfOwner}>
-        {abbreviateRole(trade.typeOfOwner)}
+      <td
+        style={{ ...tdStyle, fontSize: "10px", fontWeight: isHighSignalRole ? 700 : 400, color: isHighSignalRole ? C.accent : "#666" }}
+        title={trade.typeOfOwner}
+      >
+        {roleAbbr}
       </td>
-      <td style={{ ...tdStyle, color: typeColor, fontWeight: 700 }}>
-        {typeLabel}
+      <td style={{ ...tdStyle, fontFamily: mono, color: typeColor, fontWeight: 700, fontSize: "10px" }}>
+        {code}
       </td>
-      <td style={{ ...tdStyle, color: "#e8e4dc", textAlign: "right" }}>
+      <td style={{ ...tdStyle, fontFamily: mono, color: "#e8e4dc", textAlign: "right" }}>
         {formatShares(trade.securitiesTransacted)}
       </td>
-      <td style={{ ...tdStyle, color: "#888", textAlign: "right" }}>
+      <td style={{ ...tdStyle, fontFamily: mono, color: "#888", textAlign: "right" }}>
         {trade.totalValue > 0 ? formatValue(trade.totalValue) : "—"}
       </td>
-      <td style={{ ...tdStyle, textAlign: "right", color: trade.isBuy ? "#10d97e" : "#FF4D00", fontSize: "10px" }}>
-        {sharesChangeLabel(trade)}
+      <td style={{ ...tdStyle, fontFamily: mono, textAlign: "right", fontWeight: 600, color: isBuy ? "#10d97e" : "#FF4D00", fontSize: "10px" }}>
+        {stakeChangePct(trade)}
       </td>
       <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
         {isFlagged && (
           <>
-            {flags.discretionary && (
-              <FlagBadge
-                label="D"
-                color="#f5a020"
-                title="Discretionary sell — voluntary, not tax-related or exercise"
-              />
-            )}
             {flags.clusterSell && (
               <FlagBadge
                 label="C"
@@ -176,11 +181,11 @@ function TradeRow({ trade }: { trade: InsiderTrade }) {
                 title={`Cluster: 3+ insiders sold within 30 days${flags.clusterIncludesCFO ? " — includes CFO" : ""}`}
               />
             )}
-            {flags.likelyNon10b51 && !flags.clusterSell && (
+            {flags.discretionary && !flags.clusterSell && (
               <FlagBadge
-                label="!"
-                color="#FF4D00"
-                title="Likely not a pre-scheduled 10b5-1 plan (heuristic)"
+                label="D"
+                color="#f5a020"
+                title="Discretionary sell — voluntary open-market sale"
               />
             )}
           </>
@@ -190,42 +195,113 @@ function TradeRow({ trade }: { trade: InsiderTrade }) {
   );
 }
 
-export function InsiderTradingTable({ data, loading }: InsiderTradingTableProps) {
-  const displayTrades = data?.trades.slice(0, 20) ?? [];
-  const { summary } = data ?? {};
+const toggleBtnStyle = (active: boolean): React.CSSProperties => ({
+  fontSize: "9px",
+  fontWeight: 700,
+  fontFamily: mono,
+  letterSpacing: "0.05em",
+  padding: "2px 6px",
+  background: active ? "rgba(196,160,110,0.2)" : "transparent",
+  border: `1px solid ${active ? "#C4A06E" : "rgba(255,255,255,0.1)"}`,
+  color: active ? "#C4A06E" : "#666",
+  cursor: "pointer",
+});
 
-  const directionColor = summary?.netDirection === "buying"
-    ? "#10d97e"
-    : summary?.netDirection === "selling"
-      ? "#FF4D00"
-      : "#888";
+const PAGE_SIZE = 10;
+
+export function InsiderTradingTable({ data, loading }: InsiderTradingTableProps) {
+  const [windowDays, setWindowDays] = useState<180 | 730>(180);
+  const [page, setPage] = useState(0);
+
+  useEffect(() => { setPage(0); }, [windowDays]);
+
+  // Filter trades to selected time window
+  const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const windowTrades = (data?.trades ?? []).filter(
+    t => new Date(t.transactionDate).getTime() >= cutoffMs
+  );
+
+  // Recompute summary for the active window
+  const wBuys = windowTrades.filter(t => t.isBuy);
+  const wSells = windowTrades.filter(t => !t.isBuy);
+  const wDisc = windowTrades.filter(t => t.flags.discretionary);
+  const wClusterAlert = windowTrades.some(t => t.flags.clusterSell);
+  const wNetDir: "buying" | "selling" | "neutral" =
+    wBuys.length > wSells.length * 1.5 ? "buying" :
+    wSells.length > wBuys.length * 1.5 ? "selling" : "neutral";
+  const wDirColor = wNetDir === "buying" ? "#10d97e" : wNetDir === "selling" ? "#FF4D00" : "#888";
+
+  // Select display trades: cluster sells first, then non-cluster disc sells, then buys
+  const clusterTrades = windowTrades.filter(t => t.flags.clusterSell);
+  const discNonCluster = windowTrades.filter(t => t.flags.discretionary && !t.flags.clusterSell);
+  const buyTrades = windowTrades.filter(t => t.isBuy);
+
+  const seen = new Set<string>();
+  const displayTrades: InsiderTrade[] = [];
+  for (const group of [clusterTrades, discNonCluster, buyTrades]) {
+    for (const t of group) {
+      const k = `${t.transactionDate}-${t.reportingCik || t.reportingName}`;
+      if (!seen.has(k)) { seen.add(k); displayTrades.push(t); }
+    }
+  }
+  displayTrades.sort((a, b) => {
+    const pa = a.flags.clusterSell ? 0 : a.flags.discretionary ? 1 : 2;
+    const pb = b.flags.clusterSell ? 0 : b.flags.discretionary ? 1 : 2;
+    if (pa !== pb) return pa - pb;
+    return new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime();
+  });
+
+  const totalTrades = displayTrades.length;
+  const totalPages = Math.max(1, Math.ceil(totalTrades / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageTrades = displayTrades.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+  const rangeStart = totalTrades === 0 ? 0 : safePage * PAGE_SIZE + 1;
+  const rangeEnd = Math.min((safePage + 1) * PAGE_SIZE, totalTrades);
+
+  const hasData = data !== null;
+  const windowLabel = windowDays === 180 ? "6 months" : "2 years";
+
+  const windowToggle = (
+    <div style={{ display: "flex" }}>
+      <button
+        aria-pressed={windowDays === 180}
+        onClick={() => setWindowDays(180)}
+        style={{ ...toggleBtnStyle(windowDays === 180), borderRadius: "3px 0 0 3px" }}
+      >6m</button>
+      <button
+        aria-pressed={windowDays === 730}
+        onClick={() => setWindowDays(730)}
+        style={{ ...toggleBtnStyle(windowDays === 730), borderRadius: "0 3px 3px 0", marginLeft: "-1px" }}
+      >2y</button>
+    </div>
+  );
 
   return (
     <div style={{ marginTop: 20 }}>
-      <SectionLabel title="Insider Activity" />
+      <SectionLabel title="Insider Activity" badge={windowToggle} />
 
-      {/* Summary line */}
-      {summary && (
-        <div style={{ display: "flex", gap: 16, marginBottom: 10, flexWrap: "wrap" }}>
-          <span style={{ fontSize: "11px", fontFamily: mono, color: "#10d97e" }}>
-            {summary.totalBuys} {summary.totalBuys === 1 ? "buy" : "buys"}
-          </span>
-          <span style={{ fontSize: "11px", fontFamily: mono, color: summary.totalSells > 0 ? "#e8e4dc" : "#505050" }}>
-            {summary.totalSells} {summary.totalSells === 1 ? "sell" : "sells"}
-          </span>
-          {summary.discretionarySells > 0 && (
-            <span style={{ fontSize: "11px", fontFamily: mono, color: "#f5a020" }}>
-              {summary.discretionarySells} discretionary
-            </span>
+      {/* Summary rows */}
+      {hasData && (
+        <div style={{ marginBottom: 20 }}>
+          <DataRow label="Buys" value={wBuys.length} accent="#10d97e" />
+          <DataRow
+            label="Sells"
+            value={wSells.length}
+            accent={wSells.length > 0 ? "#e8e4dc" : "#505050"}
+          />
+          {wDisc.length > 0 && (
+            <DataRow label="Discretionary" value={wDisc.length} accent="#f5a020" />
           )}
-          <span style={{ fontSize: "11px", fontFamily: mono, color: directionColor, marginLeft: "auto" }}>
-            {summary.netDirection === "buying" ? "net buying" : summary.netDirection === "selling" ? "net selling" : "neutral"}
-          </span>
+          <DerivedStat
+            label={`Net (${windowLabel})`}
+            value={wNetDir === "buying" ? "net buying" : wNetDir === "selling" ? "net selling" : "neutral"}
+            accent={wDirColor}
+          />
         </div>
       )}
 
-      {/* Alert banner for cluster */}
-      {summary?.clusterAlert && (
+      {/* Cluster alert banner */}
+      {wClusterAlert && (
         <div style={{
           marginBottom: 10,
           padding: "6px 10px",
@@ -243,34 +319,63 @@ export function InsiderTradingTable({ data, loading }: InsiderTradingTableProps)
         <div style={{ fontSize: "11px", color: "#505050", padding: "12px 0" }}>Loading insider trades…</div>
       )}
 
-      {!loading && displayTrades.length === 0 && (
-        <div style={{ fontSize: "11px", color: "#505050", padding: "12px 0" }}>No insider trades found.</div>
+      {!loading && hasData && displayTrades.length === 0 && (
+        <div style={{ fontSize: "11px", color: "#505050", padding: "12px 0" }}>No meaningful trades in the last {windowLabel}.</div>
       )}
 
       {!loading && displayTrades.length > 0 && (
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
-            <caption className="sr-only">Insider trading activity with suspicious sell indicators</caption>
+            <caption className="sr-only">Insider trading activity — cluster and discretionary sells prioritized</caption>
             <thead>
               <tr>
                 <th scope="col" style={thStyle}>Date</th>
                 <th scope="col" style={thStyle}>Insider</th>
                 <th scope="col" style={thStyle}>Role</th>
-                <th scope="col" style={thStyle}>Type</th>
+                <th scope="col" style={thStyle} title="P = purchase · S = open-market sell · S·OE = sell on option exercise">Code</th>
                 <th scope="col" style={{ ...thStyle, textAlign: "right" }}>Shares</th>
                 <th scope="col" style={{ ...thStyle, textAlign: "right" }}>Value</th>
-                <th scope="col" style={{ ...thStyle, textAlign: "right" }} title="Change in total shares owned">Chg</th>
-                <th scope="col" style={{ ...thStyle }} title="D = Discretionary, C = Cluster sell, ! = Likely non-10b5-1">Flags</th>
+                <th scope="col" style={{ ...thStyle, textAlign: "right" }} title="% change in total shares held">% Stake</th>
+                <th scope="col" style={thStyle} title="C = Cluster sell · D = Discretionary">Flags</th>
               </tr>
             </thead>
             <tbody>
-              {displayTrades.map((trade, i) => (
+              {pageTrades.map((trade, i) => (
                 <TradeRow key={`${trade.transactionDate}-${trade.reportingCik || i}`} trade={trade} />
               ))}
             </tbody>
           </table>
+
+          {totalPages > 1 && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, gap: 8 }}>
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={safePage === 0}
+                style={{
+                  ...toggleBtnStyle(false),
+                  borderRadius: 3,
+                  opacity: safePage === 0 ? 0.3 : 1,
+                  cursor: safePage === 0 ? "default" : "pointer",
+                }}
+              >← prev</button>
+              <span style={{ fontFamily: mono, fontSize: "10px", color: "#666" }}>
+                {rangeStart}–{rangeEnd} of {totalTrades}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                disabled={safePage === totalPages - 1}
+                style={{
+                  ...toggleBtnStyle(false),
+                  borderRadius: 3,
+                  opacity: safePage === totalPages - 1 ? 0.3 : 1,
+                  cursor: safePage === totalPages - 1 ? "default" : "pointer",
+                }}
+              >next →</button>
+            </div>
+          )}
+
           <div style={{ marginTop: 8, fontSize: "10px", color: "#505050", lineHeight: 1.6 }}>
-            D = discretionary sell · C = cluster (3+ insiders / 30d) · ! = likely non-10b5-1
+            C = cluster (3+ insiders / 30d) · D = discretionary open-market sell · <span style={{ color: C.accent }}>gold role</span> = C-suite
           </div>
         </div>
       )}

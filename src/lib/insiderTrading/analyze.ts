@@ -3,6 +3,9 @@ import type { FMPInsiderTrade, InsiderTrade, InsiderTradingData, SuspiciousFlags
 // Transaction types that are automatic/obligatory (not discretionary sells)
 const NON_DISCRETIONARY_TYPES = new Set(["F-InKind", "M-Exempt", "A-Award", "G-Gift", "J-Other"]);
 
+// Only these transaction types are meaningful to display
+const DISPLAY_TYPES = new Set(["P-Purchase", "S-Sale", "S-Sale+OE"]);
+
 function isCFO(name: string, typeOfOwner: string): boolean {
   const combined = `${name} ${typeOfOwner}`.toUpperCase();
   return combined.includes("CFO") || combined.includes("CHIEF FINANCIAL");
@@ -44,8 +47,8 @@ export function analyzeInsiderTrades(raw: FMPInsiderTrade[]): InsiderTradingData
     }
   }
 
-  // ── Map each trade to InsiderTrade with flags
-  const mapped: InsiderTrade[] = sorted.map(t => {
+  // ── Map each trade to InsiderTrade with flags (display-worthy types only)
+  const mapped: InsiderTrade[] = sorted.filter(t => DISPLAY_TYPES.has(t.transactionType)).map(t => {
     const isBuy = t.acquisitionOrDisposition === "A" && t.transactionType === "P-Purchase";
     const isSell = t.acquisitionOrDisposition === "D";
     const isDiscretionary = isSell && !NON_DISCRETIONARY_TYPES.has(t.transactionType);
