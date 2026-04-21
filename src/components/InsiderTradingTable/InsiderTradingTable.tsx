@@ -252,9 +252,6 @@ export function InsiderTradingTable({ data, loading, fetchedAt }: InsiderTrading
       if (t.flags.discretionary) disc++;
       if (t.flags.clusterSell) hasCluster = true;
     }
-    const netDir: "buying" | "selling" | "neutral" =
-      buys > sells * 1.5 ? "buying" : sells > buys * 1.5 ? "selling" : "neutral";
-
     // Collect by priority group, dedup, then build a single sorted array
     const seen = new Set<string>();
     const grouped: [number, InsiderTrade][] = [];
@@ -272,13 +269,12 @@ export function InsiderTradingTable({ data, loading, fetchedAt }: InsiderTrading
     );
 
     return {
-      windowSummary: { buys, sells, disc, hasCluster, netDir },
+      windowSummary: { buys, sells, disc, hasCluster },
       displayTrades: grouped.map(g => g[1]),
     };
   }, [data, fetchedAt, windowDays]);
 
-  const { buys, sells, disc, hasCluster, netDir } = windowSummary;
-  const dirColor = netDir === "buying" ? "#10d97e" : netDir === "selling" ? "#FF4D00" : "#888";
+  const { buys, sells, disc, hasCluster } = windowSummary;
 
   const totalTrades = displayTrades.length;
   const totalPages = Math.max(1, Math.ceil(totalTrades / PAGE_SIZE));
@@ -310,26 +306,20 @@ export function InsiderTradingTable({ data, loading, fetchedAt }: InsiderTrading
       {/* Summary stats — horizontal columns, label on top, value below */}
       {hasData && (
         <div style={{ display: "flex", gap: 0, marginBottom: 20, borderBottom: `1px solid ${C.borderWeak}`, paddingBottom: 14 }}>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, textAlign: "center" }}>
             <div style={summaryLabel}>Buys</div>
             <div style={{ ...summaryValue, color: "#10d97e" }}>{buys}</div>
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, textAlign: "center" }}>
             <div style={summaryLabel}>Sells</div>
             <div style={{ ...summaryValue, color: sells > 0 ? C.text1 : "#505050" }}>{sells}</div>
           </div>
           {disc > 0 && (
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, textAlign: "center" }}>
               <div style={summaryLabel}>Disc.</div>
               <div style={{ ...summaryValue, color: "#f5a020" }}>{disc}</div>
             </div>
           )}
-          <div style={{ flex: 1, textAlign: "right" }}>
-            <div style={{ ...summaryLabel, textAlign: "right" }}>Net ({windowLabel})</div>
-            <div style={{ ...summaryValue, color: dirColor, textAlign: "right" }}>
-              {netDir === "buying" ? "Buying" : netDir === "selling" ? "Selling" : "Neutral"}
-            </div>
-          </div>
         </div>
       )}
 
