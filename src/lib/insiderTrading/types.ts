@@ -1,25 +1,27 @@
-// Raw FMP API response shape for /insider-trading endpoint
+// Raw FMP API response shape for /stable/insider-trading/search endpoint
 export interface FMPInsiderTrade {
   symbol: string;
   filingDate: string;
   transactionDate: string;
   reportingName: string;
   reportingCik: string;
-  typeOfOwner: string;             // "officer", "director", "ten percent owner"
-  acquistionOrDisposition: string; // "A" (acquisition/buy) or "D" (disposition/sell)
-  transactionType: string;         // "P-Purchase", "S-Sale", "A-Award", "F-Tax", "M-Exercise", "G-Gift"
+  companyCik: string;
+  typeOfOwner: string;              // "officer: CEO", "director", "ten percent owner", etc.
+  acquisitionOrDisposition: string; // "A" (acquisition/buy) or "D" (disposition/sell)
+  transactionType: string;          // "P-Purchase", "S-Sale", "S-Sale+OE", "A-Award", "F-InKind", "M-Exempt", "G-Gift"
   securitiesOwned: number;
   securitiesTransacted: number;
   price: number;
-  link: string;
-  formType: string;                // "4", "3", "5"
+  securityName: string;
+  url: string;                      // SEC filing URL
+  formType: string;                 // "4", "3", "5"
 }
 
 export interface SuspiciousFlags {
   discretionary: boolean;       // S-Sale (voluntary, not tax/exercise/award)
   clusterSell: boolean;         // part of a 30-day window with 3+ unique insider sellers
   clusterIncludesCFO: boolean;  // cluster window includes a CFO-role seller
-  likelyNon10b51: boolean;      // best-effort: true for all discretionary sells (FMP doesn't expose 10b5-1 status)
+  likelyNon10b51: boolean;      // best-effort: true for all discretionary sells
 }
 
 export interface InsiderTrade extends FMPInsiderTrade {

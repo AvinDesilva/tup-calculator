@@ -102,7 +102,7 @@ function TradeRow({ trade }: { trade: InsiderTrade }) {
         <span title={trade.reportingName}>{shortName(trade.reportingName)}</span>
       </td>
       <td style={{ ...tdStyle, color: "#888", fontSize: "10px" }}>
-        {trade.typeOfOwner?.toLowerCase().replace("ten percent owner", "10% owner") || "—"}
+        {(trade.typeOfOwner || "—").toLowerCase().replace("ten percent owner", "10% owner").replace("officer: ", "")}
       </td>
       <td style={{ ...tdStyle, color: typeColor, fontWeight: 700 }}>
         {typeLabel}

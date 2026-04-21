@@ -194,6 +194,33 @@ router.get("/industry-growth", async (req, res) => {
   }
 });
 
+// ── Insider Trading ──────────────────────────────────────────────────────────
+router.get("/insider-trading", async (req, res) => {
+  const symbol = (req.query.symbol || "").toString().toUpperCase().trim();
+  if (!/^[A-Z0-9.\-]{1,10}$/.test(symbol)) {
+    return res.status(400).json({ error: "Invalid symbol." });
+  }
+  const limit = Math.min(parseInt(req.query.limit || "40", 10) || 40, 100);
+
+  const cacheKey = `insider:${symbol}:${limit}`;
+  const cached = fmpCache.get(cacheKey);
+  if (cached !== undefined) return res.json(cached);
+
+  try {
+    const url = fmpUrl("insider-trading/search", { symbol, limit });
+    const upstream = await fetch(url);
+    if (!upstream.ok) {
+      return res.status(upstream.status).json({ error: "Insider trading data unavailable." });
+    }
+    const data = await upstream.json();
+    fmpCache.set(cacheKey, data);
+    res.json(data);
+  } catch (err) {
+    console.error("[tup-proxy] insider-trading error:", err.message);
+    res.status(502).json({ error: "Unable to fetch insider trading data." });
+  }
+});
+
 // ── Historical Price ─────────────────────────────────────────────────────────
 router.get("/historical-price", async (req, res) => {
   const symbol = (req.query.symbol || "").toString().toUpperCase().trim();
