@@ -291,6 +291,7 @@ export default function App() {
                 <InsiderTradingTable
                   data={valuation.insiderTrading}
                   loading={valuation.insiderTradingLoading}
+                  fetchedAt={valuation.insiderTradingFetchedAt}
                 />
               </>
             ) : (

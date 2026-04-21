@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { C } from "../../lib/theme.ts";
 import { SectionLabel, DataRow, DerivedStat } from "../primitives";
 import type { InsiderTradingData, InsiderTrade } from "../../lib/insiderTrading/types.ts";
@@ -6,6 +6,7 @@ import type { InsiderTradingData, InsiderTrade } from "../../lib/insiderTrading/
 export interface InsiderTradingTableProps {
   data: InsiderTradingData | null;
   loading: boolean;
+  fetchedAt: number; // ms timestamp from async fetch callback — not Date.now() in render
 }
 
 const mono = C.mono;
@@ -209,14 +210,11 @@ const toggleBtnStyle = (active: boolean): React.CSSProperties => ({
 
 const PAGE_SIZE = 10;
 
-export function InsiderTradingTable({ data, loading }: InsiderTradingTableProps) {
+export function InsiderTradingTable({ data, loading, fetchedAt }: InsiderTradingTableProps) {
   const [windowDays, setWindowDays] = useState<180 | 730>(180);
   const [page, setPage] = useState(0);
 
-  useEffect(() => { setPage(0); }, [windowDays]);
-
-  // Filter trades to selected time window
-  const cutoffMs = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+  const cutoffMs = fetchedAt - windowDays * 24 * 60 * 60 * 1000;
   const windowTrades = (data?.trades ?? []).filter(
     t => new Date(t.transactionDate).getTime() >= cutoffMs
   );
@@ -265,12 +263,12 @@ export function InsiderTradingTable({ data, loading }: InsiderTradingTableProps)
     <div style={{ display: "flex" }}>
       <button
         aria-pressed={windowDays === 180}
-        onClick={() => setWindowDays(180)}
+        onClick={() => { setWindowDays(180); setPage(0); }}
         style={{ ...toggleBtnStyle(windowDays === 180), borderRadius: "3px 0 0 3px" }}
       >6m</button>
       <button
         aria-pressed={windowDays === 730}
-        onClick={() => setWindowDays(730)}
+        onClick={() => { setWindowDays(730); setPage(0); }}
         style={{ ...toggleBtnStyle(windowDays === 730), borderRadius: "0 3px 3px 0", marginLeft: "-1px" }}
       >2y</button>
     </div>

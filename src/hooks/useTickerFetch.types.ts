@@ -5,6 +5,7 @@ import type { InsiderTradingData } from "../lib/insiderTrading/types.ts";
 export interface ValuationState {
   insiderTrading: InsiderTradingData | null;
   insiderTradingLoading: boolean;
+  insiderTradingFetchedAt: number; // ms timestamp captured in async callback, not render
 }
 
 export interface ScorecardState {

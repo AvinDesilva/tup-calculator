@@ -109,6 +109,7 @@ const DEV_INSIDER_TRADING: InsiderTradingData = {
 export const DEV_VALUATION = {
   insiderTrading: DEV_INSIDER_TRADING,
   insiderTradingLoading: false,
+  insiderTradingFetchedAt: 0,
 };
 
 

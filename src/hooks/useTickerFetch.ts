@@ -51,7 +51,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
   const [isConverted, setIsConverted] = useState(false);
   const [currencyNote, setCurrencyNote] = useState("");
   const [currencyMismatchWarning, setCurrencyMismatchWarning] = useState("");
-  const [valuation, setValuation] = useState<ValuationState>({ insiderTrading: null, insiderTradingLoading: false });
+  const [valuation, setValuation] = useState<ValuationState>({ insiderTrading: null, insiderTradingLoading: false, insiderTradingFetchedAt: 0 });
   const [scorecard, setScorecard] = useState<ScorecardState>({ cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "" });
 
   const [hasSearched, setHasSearched] = useState(false);
@@ -102,7 +102,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
     const t = (tickerOverride || ticker).trim().toUpperCase();
     if (!t) { setError("Enter a ticker symbol."); return null; }
     let paybackResult: number | null = null;
-    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ insiderTrading: null, insiderTradingLoading: false }); setScorecard({ cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "" }); setStrongBuyPrice(null); setBuyPrice(null); setGuruData(null); setHasSearched(true);
+    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ insiderTrading: null, insiderTradingLoading: false, insiderTradingFetchedAt: 0 }); setScorecard({ cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "" }); setStrongBuyPrice(null); setBuyPrice(null); setGuruData(null); setHasSearched(true);
     window.scrollTo(0, 0);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
@@ -118,7 +118,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
       // Fire insider trading fetch asynchronously (non-blocking)
       setValuation(prev => ({ ...prev, insiderTradingLoading: true }));
       fetchInsiderTrading(t).then(it => {
-        setValuation(prev => ({ ...prev, insiderTrading: it, insiderTradingLoading: false }));
+        setValuation(prev => ({ ...prev, insiderTrading: it, insiderTradingLoading: false, insiderTradingFetchedAt: Date.now() }));
       });
       setScorecard({ cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory, epsGrowthHistory: data.epsGrowthHistory, description: data.description });
       setPriceHistory(data.priceHistory ?? []);
