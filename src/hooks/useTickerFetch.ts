@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 
 import { calcTUP } from "../lib/verdictCard/calcTUP.ts";
-import { lookupTicker, lookupTickerQuick, fetchFilteredPool, fetchIndustryGrowth } from "../lib/tickerSearch/api.ts";
+import { lookupTicker, lookupTickerQuick, fetchFilteredPool } from "../lib/tickerSearch/api.ts";
+import { fetchInsiderTrading } from "../lib/insiderTrading/fetch.ts";
 import type { InputState, GrowthScenario, RollFilters, TupRangeFilter, HistoricalPricePoint } from "../lib/types.ts";
 import * as dev from "../lib/devData.ts";
 import { computeGuruData } from "../lib/guruRadar/computeGuruData.ts";
@@ -50,7 +51,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
   const [isConverted, setIsConverted] = useState(false);
   const [currencyNote, setCurrencyNote] = useState("");
   const [currencyMismatchWarning, setCurrencyMismatchWarning] = useState("");
-  const [valuation, setValuation] = useState<ValuationState>({ dcf: null, industryGrowth: null, industryGrowthLoading: false });
+  const [valuation, setValuation] = useState<ValuationState>({ dcf: null, insiderTrading: null, insiderTradingLoading: false });
   const [scorecard, setScorecard] = useState<ScorecardState>({ cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "" });
 
   const [hasSearched, setHasSearched] = useState(false);
@@ -101,7 +102,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
     const t = (tickerOverride || ticker).trim().toUpperCase();
     if (!t) { setError("Enter a ticker symbol."); return null; }
     let paybackResult: number | null = null;
-    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, industryGrowth: null, industryGrowthLoading: false }); setScorecard({ cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "" }); setStrongBuyPrice(null); setBuyPrice(null); setGuruData(null); setHasSearched(true);
+    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, insiderTrading: null, insiderTradingLoading: false }); setScorecard({ cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "" }); setStrongBuyPrice(null); setBuyPrice(null); setGuruData(null); setHasSearched(true);
     window.scrollTo(0, 0);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
@@ -116,13 +117,11 @@ export function useTickerFetch(): UseTickerFetchReturn {
       setCurrencyMismatchWarning(data.currencyMismatchWarning || "");
       setValuation(prev => ({ ...prev, dcf: data.dcfValue }));
 
-      // Fire industry growth fetch asynchronously (non-blocking)
-      if (data.industry) {
-        setValuation(prev => ({ ...prev, industryGrowthLoading: true }));
-        fetchIndustryGrowth(data.industry, t).then(ig => {
-          setValuation(prev => ({ ...prev, industryGrowth: ig, industryGrowthLoading: false }));
-        });
-      }
+      // Fire insider trading fetch asynchronously (non-blocking)
+      setValuation(prev => ({ ...prev, insiderTradingLoading: true }));
+      fetchInsiderTrading(t).then(it => {
+        setValuation(prev => ({ ...prev, insiderTrading: it, insiderTradingLoading: false }));
+      });
       setScorecard({ cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory, epsGrowthHistory: data.epsGrowthHistory, description: data.description });
       setPriceHistory(data.priceHistory ?? []);
 

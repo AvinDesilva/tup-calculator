@@ -7,7 +7,7 @@ import type { Mode, TUPResult, GrowthScenario, PriceMode } from "./lib/types.ts"
 import { VerdictCard } from "./components/VerdictCard";
 import { ValuationContext } from "./components/ValuationContext";
 import { CompanyScorecard } from "./components/CompanyScorecard";
-import { IndustryGrowthPanel } from "./components/IndustryGrowthPanel";
+import { InsiderTradingTable } from "./components/InsiderTradingTable";
 import { MobileSummary } from "./components/MobileSummary";
 import { MethodologyPage } from "./components/MethodologyPage";
 import { Masthead } from "./components/Masthead";
@@ -279,7 +279,7 @@ export default function App() {
         )}
 
         {hasSearched && activeTab === "profile" && (
-          <div style={{ animation: "fadeInUp 0.5s 0.1s ease both", paddingTop: "12px", paddingBottom: "28px" }}>
+          <div style={{ animation: "fadeInUp 0.5s 0.1s ease both", paddingTop: "16px", paddingBottom: "28px" }}>
             {company ? (
               <>
                 <CompanyScorecard
@@ -288,13 +288,10 @@ export default function App() {
                   description={scorecard.description}
                   dividendYield={inp.dividendYield}
                 />
-                {(valuation.industryGrowth || valuation.industryGrowthLoading) && (
-                  <IndustryGrowthPanel
-                    industryGrowth={valuation.industryGrowth}
-                    industryGrowthLoading={valuation.industryGrowthLoading}
-                    companyBlendedGrowth={result?.grTerminal != null ? result.grTerminal * 100 : null}
-                  />
-                )}
+                <InsiderTradingTable
+                  data={valuation.insiderTrading}
+                  loading={valuation.insiderTradingLoading}
+                />
               </>
             ) : (
               <div style={{ paddingTop: "48px" }}>

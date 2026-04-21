@@ -38,7 +38,7 @@ function getGuruReasoning(name: string, radar: RadarMetricPoint[]): string {
 
 const dividerH = <div style={{ background: C.borderWeak, height: "1px", margin: "20px 0" }} />;
 
-export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPrice, industryGrowth, industryGrowthLoading = false, companyBlendedGrowth, priceMode = "adj", guruData, showPriceTargets = true }: ValuationContextProps) {
+export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPrice, priceMode = "adj", guruData, showPriceTargets = true }: ValuationContextProps) {
   const mono = C.mono;
 
   const hasStrongBuy = strongBuyPrice != null && strongBuyPrice > 0 && currentPrice > 0;
@@ -85,9 +85,6 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
     ? guruData!.gurus.reduce((s, g) => s + g.score, 0) / guruData!.gurus.length
     : 0;
   const radarColor = avgGuruScore >= 8 ? "#10d97e" : avgGuruScore >= 4 ? "#f5a020" : "#e03030";
-  // Industry growth (used in igNote below guru section — kept for layout reference only, removed from panels)
-  void industryGrowth; void industryGrowthLoading; void companyBlendedGrowth;
-
   return (
     <div style={{ paddingTop: "8px" }}>
       <SectionLabel title="Valuation Context" />

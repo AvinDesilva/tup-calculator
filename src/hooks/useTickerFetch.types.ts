@@ -1,11 +1,11 @@
-import type { IndustryGrowthData } from "../lib/tickerSearch/api.ts";
 import type { InputState, GrowthScenario, RollFilters, FMPCashFlow, FMPIncomeStatement, EpsGrowthPoint, HistoricalPricePoint } from "../lib/types.ts";
 import type { GuruRadarData } from "../lib/guruRadar/types.ts";
+import type { InsiderTradingData } from "../lib/insiderTrading/types.ts";
 
 export interface ValuationState {
   dcf: number | null;
-  industryGrowth: IndustryGrowthData | null;
-  industryGrowthLoading: boolean;
+  insiderTrading: InsiderTradingData | null;
+  insiderTradingLoading: boolean;
 }
 
 export interface ScorecardState {

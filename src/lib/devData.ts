@@ -1,4 +1,5 @@
 import type { InputState, FMPCashFlow, FMPIncomeStatement, EpsGrowthPoint } from "./types.ts";
+import type { InsiderTradingData } from "./insiderTrading/types.ts";
 
 /**
  * Dummy AppLovin (APP) data for local dev preview — no API key needed.
@@ -45,17 +46,70 @@ export const DEV_INP: InputState = {
   decayMode: "ff",
 };
 
+const DEV_INSIDER_TRADING: InsiderTradingData = {
+  trades: [
+    {
+      symbol: "APP", filingDate: "2025-03-15", transactionDate: "2025-03-14",
+      reportingName: "KRAMER ADAM", reportingCik: "0001234501", typeOfOwner: "officer",
+      acquistionOrDisposition: "A", transactionType: "P-Purchase",
+      securitiesOwned: 500000, securitiesTransacted: 25000, price: 312.5, link: "", formType: "4",
+      totalValue: 7812500, isBuy: true,
+      flags: { discretionary: false, clusterSell: false, clusterIncludesCFO: false, likelyNon10b51: false },
+    },
+    {
+      symbol: "APP", filingDate: "2025-02-20", transactionDate: "2025-02-19",
+      reportingName: "HUANG DAVID", reportingCik: "0001234502", typeOfOwner: "officer",
+      acquistionOrDisposition: "D", transactionType: "S-Sale",
+      securitiesOwned: 180000, securitiesTransacted: 40000, price: 328.0, link: "", formType: "4",
+      totalValue: 13120000, isBuy: false,
+      flags: { discretionary: true, clusterSell: true, clusterIncludesCFO: true, likelyNon10b51: true },
+    },
+    {
+      symbol: "APP", filingDate: "2025-02-18", transactionDate: "2025-02-17",
+      reportingName: "CHEN SARAH CFO", reportingCik: "0001234503", typeOfOwner: "officer",
+      acquistionOrDisposition: "D", transactionType: "S-Sale",
+      securitiesOwned: 90000, securitiesTransacted: 15000, price: 325.0, link: "", formType: "4",
+      totalValue: 4875000, isBuy: false,
+      flags: { discretionary: true, clusterSell: true, clusterIncludesCFO: true, likelyNon10b51: true },
+    },
+    {
+      symbol: "APP", filingDate: "2025-02-15", transactionDate: "2025-02-14",
+      reportingName: "PATEL RAJ", reportingCik: "0001234504", typeOfOwner: "director",
+      acquistionOrDisposition: "D", transactionType: "S-Sale",
+      securitiesOwned: 60000, securitiesTransacted: 8000, price: 321.0, link: "", formType: "4",
+      totalValue: 2568000, isBuy: false,
+      flags: { discretionary: true, clusterSell: true, clusterIncludesCFO: true, likelyNon10b51: true },
+    },
+    {
+      symbol: "APP", filingDate: "2025-01-10", transactionDate: "2025-01-09",
+      reportingName: "MILLER JAMES", reportingCik: "0001234505", typeOfOwner: "officer",
+      acquistionOrDisposition: "D", transactionType: "F-Tax",
+      securitiesOwned: 220000, securitiesTransacted: 5200, price: 298.0, link: "", formType: "4",
+      totalValue: 1549600, isBuy: false,
+      flags: { discretionary: false, clusterSell: false, clusterIncludesCFO: false, likelyNon10b51: false },
+    },
+    {
+      symbol: "APP", filingDate: "2024-12-05", transactionDate: "2024-12-04",
+      reportingName: "LEE JESSICA", reportingCik: "0001234506", typeOfOwner: "director",
+      acquistionOrDisposition: "A", transactionType: "P-Purchase",
+      securitiesOwned: 45000, securitiesTransacted: 10000, price: 280.0, link: "", formType: "4",
+      totalValue: 2800000, isBuy: true,
+      flags: { discretionary: false, clusterSell: false, clusterIncludesCFO: false, likelyNon10b51: false },
+    },
+  ],
+  summary: {
+    totalBuys: 2,
+    totalSells: 4,
+    discretionarySells: 3,
+    clusterAlert: true,
+    netDirection: "selling",
+  },
+};
+
 export const DEV_VALUATION = {
   dcf: 300,
-  industryGrowth: {
-    industry: "Software - Application",
-    median: 18.2,
-    p25: 10.5,
-    p75: 28.0,
-    count: 24,
-    constituents: ["U", "RBLX", "TTD", "SNAP", "PINS"],
-  },
-  industryGrowthLoading: false,
+  insiderTrading: DEV_INSIDER_TRADING,
+  insiderTradingLoading: false,
 };
 
 
