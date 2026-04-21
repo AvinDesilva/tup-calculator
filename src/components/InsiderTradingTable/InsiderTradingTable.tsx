@@ -48,6 +48,49 @@ function formatShares(n: number): string {
   return String(n);
 }
 
+const ROLE_ABBREV: Record<string, string> = {
+  "chief executive officer": "CEO",
+  "chief financial officer": "CFO",
+  "chief operating officer": "COO",
+  "chief technology officer": "CTO",
+  "chief information officer": "CIO",
+  "chief marketing officer": "CMO",
+  "chief legal officer": "CLO",
+  "chief product officer": "CPO",
+  "chief revenue officer": "CRO",
+  "chief people officer": "CPO",
+  "principal accounting officer": "PAO",
+  "general counsel": "GC",
+  "senior vice president": "SVP",
+  "executive vice president": "EVP",
+  "vice president": "VP",
+  "ten percent owner": "10%",
+};
+
+function abbreviateRole(raw: string): string {
+  if (!raw) return "—";
+  const lower = raw.toLowerCase().replace(/^officer:\s*/, "").replace(/^director$/, "Dir").trim();
+  if (lower === "dir") return "Dir";
+  // Check for exact or substring match in abbreviation table
+  for (const [pattern, abbr] of Object.entries(ROLE_ABBREV)) {
+    if (lower.includes(pattern)) return abbr;
+  }
+  // Truncate if still long
+  return lower.length > 8 ? lower.slice(0, 7) + "…" : lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+function sharesChangeLabel(trade: InsiderTrade): string {
+  const owned = trade.securitiesOwned;
+  const transacted = trade.securitiesTransacted;
+  if (!owned || !transacted) return "—";
+  // Compute shares before this transaction
+  const before = trade.isBuy ? owned - transacted : owned + transacted;
+  if (before <= 0) return "new";
+  const pct = ((owned - before) / before) * 100;
+  const sign = pct > 0 ? "+" : "";
+  return `${sign}${pct.toFixed(0)}%`;
+}
+
 function shortName(name: string): string {
   // "DOE JOHN" → "J. Doe" style
   const parts = name.trim().split(/\s+/);
@@ -101,8 +144,8 @@ function TradeRow({ trade }: { trade: InsiderTrade }) {
       <td style={{ ...tdStyle, color: "#e8e4dc", maxWidth: 100 }}>
         <span title={trade.reportingName}>{shortName(trade.reportingName)}</span>
       </td>
-      <td style={{ ...tdStyle, color: "#888", fontSize: "10px" }}>
-        {(trade.typeOfOwner || "—").toLowerCase().replace("ten percent owner", "10% owner").replace("officer: ", "")}
+      <td style={{ ...tdStyle, color: "#888", fontSize: "10px" }} title={trade.typeOfOwner}>
+        {abbreviateRole(trade.typeOfOwner)}
       </td>
       <td style={{ ...tdStyle, color: typeColor, fontWeight: 700 }}>
         {typeLabel}
@@ -112,6 +155,9 @@ function TradeRow({ trade }: { trade: InsiderTrade }) {
       </td>
       <td style={{ ...tdStyle, color: "#888", textAlign: "right" }}>
         {trade.totalValue > 0 ? formatValue(trade.totalValue) : "—"}
+      </td>
+      <td style={{ ...tdStyle, textAlign: "right", color: trade.isBuy ? "#10d97e" : "#FF4D00", fontSize: "10px" }}>
+        {sharesChangeLabel(trade)}
       </td>
       <td style={{ ...tdStyle, whiteSpace: "nowrap" }}>
         {isFlagged && (
@@ -213,6 +259,7 @@ export function InsiderTradingTable({ data, loading }: InsiderTradingTableProps)
                 <th scope="col" style={thStyle}>Type</th>
                 <th scope="col" style={{ ...thStyle, textAlign: "right" }}>Shares</th>
                 <th scope="col" style={{ ...thStyle, textAlign: "right" }}>Value</th>
+                <th scope="col" style={{ ...thStyle, textAlign: "right" }} title="Change in total shares owned">Chg</th>
                 <th scope="col" style={{ ...thStyle }} title="D = Discretionary, C = Cluster sell, ! = Likely non-10b5-1">Flags</th>
               </tr>
             </thead>
