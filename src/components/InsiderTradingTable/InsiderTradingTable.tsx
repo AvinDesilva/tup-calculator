@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { C } from "../../lib/theme.ts";
-import { SectionLabel, DataRow, DerivedStat } from "../primitives";
+import { SectionLabel } from "../primitives";
 import type { InsiderTradingData, InsiderTrade } from "../../lib/insiderTrading/types.ts";
 
 export interface InsiderTradingTableProps {
@@ -28,6 +28,22 @@ const tdStyle: React.CSSProperties = {
   fontSize: "11px",
   borderBottom: "1px solid rgba(255,255,255,0.04)",
   verticalAlign: "middle",
+};
+
+const summaryLabel: React.CSSProperties = {
+  fontSize: "11px",
+  fontWeight: 700,
+  letterSpacing: "0.15em",
+  textTransform: "uppercase",
+  color: "#888",
+  marginBottom: 4,
+};
+
+const summaryValue: React.CSSProperties = {
+  fontFamily: mono,
+  fontSize: "22px",
+  fontWeight: 600,
+  lineHeight: 1.2,
 };
 
 // C-suite roles that get highlighted in the table
@@ -268,8 +284,6 @@ export function InsiderTradingTable({ data, loading, fetchedAt }: InsiderTrading
   const totalPages = Math.max(1, Math.ceil(totalTrades / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
   const pageTrades = displayTrades.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
-  const rangeStart = totalTrades === 0 ? 0 : safePage * PAGE_SIZE + 1;
-  const rangeEnd = Math.min((safePage + 1) * PAGE_SIZE, totalTrades);
 
   const hasData = data !== null;
   const windowLabel = windowDays === 180 ? "6 months" : "2 years";
@@ -293,23 +307,29 @@ export function InsiderTradingTable({ data, loading, fetchedAt }: InsiderTrading
     <div style={{ marginTop: 20 }}>
       <SectionLabel title="Insider Activity" badge={windowToggle} />
 
-      {/* Summary rows */}
+      {/* Summary stats — horizontal columns, label on top, value below */}
       {hasData && (
-        <div style={{ marginBottom: 20 }}>
-          <DataRow label="Buys" value={buys} accent="#10d97e" />
-          <DataRow
-            label="Sells"
-            value={sells}
-            accent={sells > 0 ? "#e8e4dc" : "#505050"}
-          />
+        <div style={{ display: "flex", gap: 0, marginBottom: 20, borderBottom: `1px solid ${C.borderWeak}`, paddingBottom: 14 }}>
+          <div style={{ flex: 1 }}>
+            <div style={summaryLabel}>Buys</div>
+            <div style={{ ...summaryValue, color: "#10d97e" }}>{buys}</div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={summaryLabel}>Sells</div>
+            <div style={{ ...summaryValue, color: sells > 0 ? C.text1 : "#505050" }}>{sells}</div>
+          </div>
           {disc > 0 && (
-            <DataRow label="Discretionary" value={disc} accent="#f5a020" />
+            <div style={{ flex: 1 }}>
+              <div style={summaryLabel}>Disc.</div>
+              <div style={{ ...summaryValue, color: "#f5a020" }}>{disc}</div>
+            </div>
           )}
-          <DerivedStat
-            label={`Net (${windowLabel})`}
-            value={netDir === "buying" ? "net buying" : netDir === "selling" ? "net selling" : "neutral"}
-            accent={dirColor}
-          />
+          <div style={{ flex: 1, textAlign: "right" }}>
+            <div style={{ ...summaryLabel, textAlign: "right" }}>Net ({windowLabel})</div>
+            <div style={{ ...summaryValue, color: dirColor, textAlign: "right" }}>
+              {netDir === "buying" ? "Buying" : netDir === "selling" ? "Selling" : "Neutral"}
+            </div>
+          </div>
         </div>
       )}
 
@@ -360,30 +380,55 @@ export function InsiderTradingTable({ data, loading, fetchedAt }: InsiderTrading
           </table>
 
           {totalPages > 1 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12, gap: 12 }}>
               <button
                 onClick={() => setPage(p => Math.max(0, p - 1))}
                 disabled={safePage === 0}
+                aria-label="Previous page"
                 style={{
-                  ...toggleBtnStyle(false),
-                  borderRadius: 3,
-                  opacity: safePage === 0 ? 0.3 : 1,
+                  background: "none",
+                  border: "none",
+                  fontFamily: mono,
+                  fontSize: "14px",
+                  color: safePage === 0 ? "#333" : C.text2,
                   cursor: safePage === 0 ? "default" : "pointer",
+                  padding: "4px 8px",
                 }}
-              >← prev</button>
-              <span style={{ fontFamily: mono, fontSize: "10px", color: "#666" }}>
-                {rangeStart}–{rangeEnd} of {totalTrades}
-              </span>
+              >←</button>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setPage(i)}
+                    aria-label={`Page ${i + 1}`}
+                    aria-current={i === safePage ? "page" : undefined}
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      border: "none",
+                      background: i === safePage ? C.accent : "rgba(255,255,255,0.12)",
+                      cursor: "pointer",
+                      padding: 0,
+                      transition: "background 0.15s",
+                    }}
+                  />
+                ))}
+              </div>
               <button
                 onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                 disabled={safePage === totalPages - 1}
+                aria-label="Next page"
                 style={{
-                  ...toggleBtnStyle(false),
-                  borderRadius: 3,
-                  opacity: safePage === totalPages - 1 ? 0.3 : 1,
+                  background: "none",
+                  border: "none",
+                  fontFamily: mono,
+                  fontSize: "14px",
+                  color: safePage === totalPages - 1 ? "#333" : C.text2,
                   cursor: safePage === totalPages - 1 ? "default" : "pointer",
+                  padding: "4px 8px",
                 }}
-              >next →</button>
+              >→</button>
             </div>
           )}
 
