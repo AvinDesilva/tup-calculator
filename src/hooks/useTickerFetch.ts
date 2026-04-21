@@ -51,7 +51,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
   const [isConverted, setIsConverted] = useState(false);
   const [currencyNote, setCurrencyNote] = useState("");
   const [currencyMismatchWarning, setCurrencyMismatchWarning] = useState("");
-  const [valuation, setValuation] = useState<ValuationState>({ dcf: null, insiderTrading: null, insiderTradingLoading: false });
+  const [valuation, setValuation] = useState<ValuationState>({ insiderTrading: null, insiderTradingLoading: false });
   const [scorecard, setScorecard] = useState<ScorecardState>({ cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "" });
 
   const [hasSearched, setHasSearched] = useState(false);
@@ -102,7 +102,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
     const t = (tickerOverride || ticker).trim().toUpperCase();
     if (!t) { setError("Enter a ticker symbol."); return null; }
     let paybackResult: number | null = null;
-    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ dcf: null, insiderTrading: null, insiderTradingLoading: false }); setScorecard({ cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "" }); setStrongBuyPrice(null); setBuyPrice(null); setGuruData(null); setHasSearched(true);
+    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ insiderTrading: null, insiderTradingLoading: false }); setScorecard({ cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "" }); setStrongBuyPrice(null); setBuyPrice(null); setGuruData(null); setHasSearched(true);
     window.scrollTo(0, 0);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
@@ -115,8 +115,6 @@ export function useTickerFetch(): UseTickerFetchReturn {
       setIsConverted(data.isConverted || false);
       setCurrencyNote(data.currencyNote || "");
       setCurrencyMismatchWarning(data.currencyMismatchWarning || "");
-      setValuation(prev => ({ ...prev, dcf: data.dcfValue }));
-
       // Fire insider trading fetch asynchronously (non-blocking)
       setValuation(prev => ({ ...prev, insiderTradingLoading: true }));
       fetchInsiderTrading(t).then(it => {
@@ -317,7 +315,6 @@ export function useTickerFetch(): UseTickerFetchReturn {
         currencyMismatchWarning: "",
         divNote: "",
         peterLynchRatio: null,
-        dcfValue: dev.DEV_VALUATION.dcf,
         piotroski: 7,
         cashFlowHistory: dev.DEV_CASH_FLOWS,
         incomeHistory: dev.DEV_INCOME_HISTORY,

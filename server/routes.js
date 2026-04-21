@@ -2,12 +2,11 @@
 
 const { Router }  = require("express");
 const TTLCache    = require("./lib/cache");
-const { fmpUrl, fmpFetch, median } = require("./lib/fmp");
+const { fmpUrl, fmpFetch } = require("./lib/fmp");
 
 const router = Router();
 
 const fmpCache          = new TTLCache(5 * 60 * 1000,      500);  // 5 min
-const industryCache     = new TTLCache(6 * 60 * 60 * 1000,  200);  // 6 hrs
 const priceHistoryCache = new TTLCache(60 * 60 * 1000,     200);  // 1 hr
 
 // ── Search — parallel symbol + name search, merged & ranked ─────────────────
@@ -53,144 +52,6 @@ router.get("/search", async (req, res) => {
   } catch (err) {
     console.error("[tup-proxy] search error:", err.message);
     res.status(502).json({ error: "Unable to reach data provider." });
-  }
-});
-
-// ── Industry Blended Growth Rate ─────────────────────────────────────────────
-
-function computeForwardCAGR(estimates, baseEPS) {
-  if (!estimates.length || !baseEPS || baseEPS <= 0) return null;
-
-  const sorted = [...estimates].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-
-  if (sorted.length >= 3 && sorted[2].epsAvg > 0) {
-    return Math.pow(sorted[2].epsAvg / baseEPS, 1 / 3) - 1;
-  }
-  if (sorted.length >= 2 && sorted[1].epsAvg > 0) {
-    return Math.sqrt(sorted[1].epsAvg / baseEPS) - 1;
-  }
-  if (sorted[0].epsAvg > 0) {
-    return (sorted[0].epsAvg / baseEPS) - 1;
-  }
-  return null;
-}
-
-async function fetchConstituentGrowth(symbol) {
-  const [growthRes, estimatesRes, quoteRes] = await Promise.allSettled([
-    fmpFetch("financial-growth",  { symbol, limit: "10" }),
-    fmpFetch("analyst-estimates", { symbol, period: "annual", limit: "5" }),
-    fmpFetch("quote",             { symbol }),
-  ]);
-
-  const growthData    = growthRes.status    === "fulfilled" ? growthRes.value    : [];
-  const estimatesData = estimatesRes.status === "fulfilled" ? estimatesRes.value : [];
-  const quoteData     = quoteRes.status     === "fulfilled" ? quoteRes.value     : [];
-
-  // Historical EPS growth — median of YoY rates, winsorized to ±100%
-  // so extreme years (turnarounds, low-base spikes) contribute directional
-  // drag without dominating the average
-  const epsGrowthRates = (Array.isArray(growthData) ? growthData : [])
-    .map(g => g.epsgrowth || g.epsGrowth || 0)
-    .filter(g => typeof g === "number" && isFinite(g))
-    .map(g => Math.max(-1, Math.min(1, g)));
-
-  if (epsGrowthRates.length === 0) return null;
-
-  const historicalGrowth = median(epsGrowthRates);
-  const fwdCAGR = computeForwardCAGR(
-    Array.isArray(estimatesData) ? estimatesData : [],
-    quoteData?.[0]?.eps,
-  );
-
-  // Dividend yield
-  let dividendYield = 0;
-  const qd = quoteData?.[0]?.dividendYield;
-  if (typeof qd === "number" && isFinite(qd) && qd >= 0 && qd <= 25) {
-    dividendYield = qd / 100;
-  }
-
-  // Blended growth (same formula as calcTUP.ts:47-49)
-  const blended = fwdCAGR != null
-    ? (historicalGrowth + fwdCAGR) / 2 + dividendYield
-    : historicalGrowth + dividendYield;
-
-  if (!isFinite(blended) || Math.abs(blended) > 2) return null;
-
-  return { symbol, blended };
-}
-
-router.get("/industry-growth", async (req, res) => {
-  const industry = (req.query.industry || "").toString().trim();
-  if (!industry) {
-    return res.status(400).json({ error: "Missing 'industry' parameter." });
-  }
-  const exclude  = (req.query.exclude || "").toString().trim().toUpperCase();
-  const cacheKey = industry.toLowerCase();
-
-  const cached = industryCache.get(cacheKey);
-  if (cached !== undefined) return res.json(cached);
-
-  try {
-    // 1. Fetch industry constituents via company-screener
-    const screenerRes = await fetch(fmpUrl("company-screener", {
-      industry, isActivelyTrading: "true", limit: "50",
-    }));
-    if (!screenerRes.ok) {
-      return res.status(502).json({ error: "Unable to fetch industry constituents." });
-    }
-    const screenerData = await screenerRes.json();
-    if (!Array.isArray(screenerData) || screenerData.length === 0) {
-      return res.json({ industry, error: "Insufficient data", count: 0 });
-    }
-
-    // 2. Top 25 by market cap, excluding the target company
-    const peers = screenerData
-      .filter(c => c.symbol && c.symbol.toUpperCase() !== exclude)
-      .sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0))
-      .slice(0, 25);
-
-    if (peers.length < 3) {
-      return res.json({ industry, error: "Insufficient data", count: peers.length });
-    }
-
-    // 3. Fetch growth data in batches of 10
-    const BATCH_SIZE  = 10;
-    const BATCH_DELAY = 100;
-    const allResults  = [];
-
-    for (let i = 0; i < peers.length; i += BATCH_SIZE) {
-      if (i > 0) await new Promise(r => setTimeout(r, BATCH_DELAY));
-      const batch = peers.slice(i, i + BATCH_SIZE);
-      const results = await Promise.all(
-        batch.map(c => fetchConstituentGrowth(c.symbol).catch(() => null))
-      );
-      allResults.push(...results);
-    }
-
-    // 4. Compute stats
-    const valid = allResults.filter(Boolean);
-    if (valid.length < 3) {
-      return res.json({ industry, error: "Insufficient data", count: valid.length });
-    }
-
-    const rates = valid.map(r => r.blended * 100).sort((a, b) => a - b);
-    const p25   = rates[Math.floor(rates.length * 0.25)];
-    const p75   = rates[Math.min(Math.floor(rates.length * 0.75), rates.length - 1)];
-
-    const result = {
-      industry,
-      median: parseFloat(median(rates).toFixed(1)),
-      p25:    parseFloat(p25.toFixed(1)),
-      p75:    parseFloat(p75.toFixed(1)),
-      count:  valid.length,
-      constituents: valid.map(r => r.symbol),
-    };
-
-    industryCache.set(cacheKey, result);
-    res.json(result);
-  } catch (err) {
-    console.error("[tup-proxy] industry-growth error:", err.message);
-    res.status(502).json({ error: "Unable to compute industry growth." });
   }
 });
 

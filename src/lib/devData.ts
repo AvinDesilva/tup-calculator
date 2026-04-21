@@ -107,7 +107,6 @@ const DEV_INSIDER_TRADING: InsiderTradingData = {
 };
 
 export const DEV_VALUATION = {
-  dcf: 300,
   insiderTrading: DEV_INSIDER_TRADING,
   insiderTradingLoading: false,
 };

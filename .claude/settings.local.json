@@ -4,7 +4,10 @@
       "Bash(lsof:*)",
       "Bash(npm run typecheck 2>&1 && npm run lint 2>&1)",
       "Bash(git checkout:*)",
-      "WebFetch(domain:dev.tupcalculator.org)"
+      "WebFetch(domain:dev.tupcalculator.org)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)"
     ]
   }
 }

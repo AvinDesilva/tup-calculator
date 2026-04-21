@@ -146,20 +146,6 @@ export interface FMPEstimate {
   numAnalystsEps?: number;
 }
 
-export interface FMPDividend {
-  adjDividend?: number;
-  dividend?: number;
-  frequency?: string;
-  date?: string;
-}
-
-export interface FMPDividendHistory {
-  historical?: FMPDividend[];
-}
-
-export interface FMPDCF {
-  dcf?: number;
-}
 
 
 export interface FMPCashFlow {
@@ -221,7 +207,6 @@ export interface TickerData {
   lifecycleStage: LifecycleStage | null;
   divNote: string;
   peterLynchRatio: number | null;
-  dcfValue: number | null;
   piotroski: number | null;
   isConverted: boolean;
   currencyNote: string;

@@ -3,7 +3,6 @@ import type { GuruRadarData } from "../lib/guruRadar/types.ts";
 import type { InsiderTradingData } from "../lib/insiderTrading/types.ts";
 
 export interface ValuationState {
-  dcf: number | null;
   insiderTrading: InsiderTradingData | null;
   insiderTradingLoading: boolean;
 }
