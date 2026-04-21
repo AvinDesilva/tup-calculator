@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { C } from "../../lib/theme.ts";
 import { SectionLabel, DataRow, DerivedStat } from "../primitives";
 import type { InsiderTradingData, InsiderTrade } from "../../lib/insiderTrading/types.ts";
@@ -214,40 +214,55 @@ export function InsiderTradingTable({ data, loading, fetchedAt }: InsiderTrading
   const [windowDays, setWindowDays] = useState<180 | 730>(180);
   const [page, setPage] = useState(0);
 
-  const cutoffMs = fetchedAt - windowDays * 24 * 60 * 60 * 1000;
-  const windowTrades = (data?.trades ?? []).filter(
-    t => new Date(t.transactionDate).getTime() >= cutoffMs
-  );
-
-  // Recompute summary for the active window
-  const wBuys = windowTrades.filter(t => t.isBuy);
-  const wSells = windowTrades.filter(t => !t.isBuy);
-  const wDisc = windowTrades.filter(t => t.flags.discretionary);
-  const wClusterAlert = windowTrades.some(t => t.flags.clusterSell);
-  const wNetDir: "buying" | "selling" | "neutral" =
-    wBuys.length > wSells.length * 1.5 ? "buying" :
-    wSells.length > wBuys.length * 1.5 ? "selling" : "neutral";
-  const wDirColor = wNetDir === "buying" ? "#10d97e" : wNetDir === "selling" ? "#FF4D00" : "#888";
-
-  // Select display trades: cluster sells first, then non-cluster disc sells, then buys
-  const clusterTrades = windowTrades.filter(t => t.flags.clusterSell);
-  const discNonCluster = windowTrades.filter(t => t.flags.discretionary && !t.flags.clusterSell);
-  const buyTrades = windowTrades.filter(t => t.isBuy);
-
-  const seen = new Set<string>();
-  const displayTrades: InsiderTrade[] = [];
-  for (const group of [clusterTrades, discNonCluster, buyTrades]) {
-    for (const t of group) {
-      const k = `${t.transactionDate}-${t.reportingCik || t.reportingName}`;
-      if (!seen.has(k)) { seen.add(k); displayTrades.push(t); }
-    }
+  // Reset page when underlying data changes (new ticker searched)
+  const [prevFetchedAt, setPrevFetchedAt] = useState(fetchedAt);
+  if (fetchedAt !== prevFetchedAt) {
+    setPrevFetchedAt(fetchedAt);
+    setPage(0);
   }
-  displayTrades.sort((a, b) => {
-    const pa = a.flags.clusterSell ? 0 : a.flags.discretionary ? 1 : 2;
-    const pb = b.flags.clusterSell ? 0 : b.flags.discretionary ? 1 : 2;
-    if (pa !== pb) return pa - pb;
-    return new Date(b.transactionDate).getTime() - new Date(a.transactionDate).getTime();
-  });
+
+  // Derive filtered trades, summary, and display list from props + windowDays
+  const { windowSummary, displayTrades } = useMemo(() => {
+    const trades = data?.trades ?? [];
+    const cutoffMs = fetchedAt - windowDays * 24 * 60 * 60 * 1000;
+    const windowTrades = trades.filter(
+      t => new Date(t.transactionDate).getTime() >= cutoffMs
+    );
+
+    // Summary counts
+    let buys = 0, sells = 0, disc = 0, hasCluster = false;
+    for (const t of windowTrades) {
+      if (t.isBuy) buys++; else sells++;
+      if (t.flags.discretionary) disc++;
+      if (t.flags.clusterSell) hasCluster = true;
+    }
+    const netDir: "buying" | "selling" | "neutral" =
+      buys > sells * 1.5 ? "buying" : sells > buys * 1.5 ? "selling" : "neutral";
+
+    // Collect by priority group, dedup, then build a single sorted array
+    const seen = new Set<string>();
+    const grouped: [number, InsiderTrade][] = [];
+    for (const t of windowTrades) {
+      const k = `${t.transactionDate}-${t.reportingCik || t.reportingName}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const priority = t.flags.clusterSell ? 0 : t.flags.discretionary ? 1 : t.isBuy ? 2 : -1;
+      if (priority >= 0) grouped.push([priority, t]);
+    }
+    grouped.sort((a, b) =>
+      a[0] !== b[0]
+        ? a[0] - b[0]
+        : new Date(b[1].transactionDate).getTime() - new Date(a[1].transactionDate).getTime()
+    );
+
+    return {
+      windowSummary: { buys, sells, disc, hasCluster, netDir },
+      displayTrades: grouped.map(g => g[1]),
+    };
+  }, [data, fetchedAt, windowDays]);
+
+  const { buys, sells, disc, hasCluster, netDir } = windowSummary;
+  const dirColor = netDir === "buying" ? "#10d97e" : netDir === "selling" ? "#FF4D00" : "#888";
 
   const totalTrades = displayTrades.length;
   const totalPages = Math.max(1, Math.ceil(totalTrades / PAGE_SIZE));
@@ -281,25 +296,25 @@ export function InsiderTradingTable({ data, loading, fetchedAt }: InsiderTrading
       {/* Summary rows */}
       {hasData && (
         <div style={{ marginBottom: 20 }}>
-          <DataRow label="Buys" value={wBuys.length} accent="#10d97e" />
+          <DataRow label="Buys" value={buys} accent="#10d97e" />
           <DataRow
             label="Sells"
-            value={wSells.length}
-            accent={wSells.length > 0 ? "#e8e4dc" : "#505050"}
+            value={sells}
+            accent={sells > 0 ? "#e8e4dc" : "#505050"}
           />
-          {wDisc.length > 0 && (
-            <DataRow label="Discretionary" value={wDisc.length} accent="#f5a020" />
+          {disc > 0 && (
+            <DataRow label="Discretionary" value={disc} accent="#f5a020" />
           )}
           <DerivedStat
             label={`Net (${windowLabel})`}
-            value={wNetDir === "buying" ? "net buying" : wNetDir === "selling" ? "net selling" : "neutral"}
-            accent={wDirColor}
+            value={netDir === "buying" ? "net buying" : netDir === "selling" ? "net selling" : "neutral"}
+            accent={dirColor}
           />
         </div>
       )}
 
       {/* Cluster alert banner */}
-      {wClusterAlert && (
+      {hasCluster && (
         <div style={{
           marginBottom: 10,
           padding: "6px 10px",
