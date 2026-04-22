@@ -263,9 +263,7 @@ export function InsiderTradingTable({ data, loading, fetchedAt }: InsiderTrading
       if (priority >= 0) grouped.push([priority, t]);
     }
     grouped.sort((a, b) =>
-      a[0] !== b[0]
-        ? a[0] - b[0]
-        : new Date(b[1].transactionDate).getTime() - new Date(a[1].transactionDate).getTime()
+      new Date(b[1].transactionDate).getTime() - new Date(a[1].transactionDate).getTime()
     );
 
     return {
