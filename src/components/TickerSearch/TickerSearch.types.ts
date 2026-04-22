@@ -10,4 +10,5 @@ export interface TickerSearchProps {
   autoFocus?: boolean;
   onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  onOpenChange?: (open: boolean) => void;
 }

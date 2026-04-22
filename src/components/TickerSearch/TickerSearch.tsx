@@ -7,7 +7,7 @@ import type { TickerSearchProps } from "./TickerSearch.types.ts";
 
 export function TickerSearch({
   value, onChange, onSelect, onSubmit,
-  inputStyle, placeholder, autoFocus, onFocus, onBlur,
+  inputStyle, placeholder, autoFocus, onFocus, onBlur, onOpenChange,
 }: TickerSearchProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -118,6 +118,19 @@ export function TickerSearch({
 
   const showDropdown = isOpen || (isLoading && value.trim().length >= 2);
   const listboxId = "ticker-search-listbox";
+
+  // Notify parent when dropdown visibility changes
+  useEffect(() => {
+    onOpenChange?.(showDropdown);
+  }, [showDropdown, onOpenChange]);
+
+  // Recalculate dropdown position when container resizes (e.g. parent hides sibling elements)
+  useEffect(() => {
+    if (!showDropdown || !containerRef.current) return;
+    const observer = new ResizeObserver(() => updatePosition());
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [showDropdown, updatePosition]);
 
   return (
     <div ref={containerRef} style={{ position: "relative", width: "100%", flex: 1, minWidth: 0 }}>

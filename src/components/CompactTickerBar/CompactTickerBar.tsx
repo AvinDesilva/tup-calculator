@@ -7,6 +7,7 @@ import type { CompactTickerBarProps } from "./CompactTickerBar.types.ts";
 
 export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, fetchLog, onRollDice, onCancelDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onApplyFilters, onResetFilters, hasActiveFilters }: CompactTickerBarProps) {
   const [hovered, setHovered] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   return (
     <section className="rsp-ticker-bar" style={{ background: C.bg, paddingTop: "12px", paddingBottom: "20px", borderBottom: `1px solid ${C.borderWeak}`, animation: "fadeInUp 0.4s ease both" }}>
       <div className="rsp-api-bar" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ display: "flex", alignItems: "center", gap: "8px", border: `1px solid ${hovered ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)"}`, boxShadow: hovered ? "0 0 12px rgba(255,255,255,0.08)" : "none", padding: "10px 18px", borderRadius: "4px", transition: "border-color 0.2s, box-shadow 0.2s" }}>
@@ -21,12 +22,13 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
             onSelect={onTickerSelect}
             onSubmit={onFetch}
             placeholder="click to search..."
-            inputStyle={{ ...inputShared, letterSpacing: "0.12em", textTransform: "uppercase", paddingBottom: 0, borderBottom: "none", lineHeight: 1, position: "relative", top: "-1.5px" }}
+            inputStyle={{ ...inputShared, letterSpacing: "0.12em", textTransform: "uppercase", paddingBottom: 0, borderBottom: "none", lineHeight: 1, position: "relative", top: "-1.5px", height: "32px" }}
             onFocus={e => (e.target.style.borderBottomColor = C.accent)}
             onBlur={e => (e.target.style.borderBottomColor = C.borderWeak)}
+            onOpenChange={setDropdownOpen}
           />
         </div>
-        <div className="rsp-api-bar-btn" style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+        <div className="rsp-api-bar-btn" style={{ display: dropdownOpen ? "none" : "flex", gap: "8px", flexShrink: 0 }}>
           {loading && !rollingDice && (
             <div style={{ width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg aria-hidden="true" style={{ animation: "spin 1s linear infinite", width: "14px", height: "14px", color: C.text3 }} viewBox="0 0 24 24">
