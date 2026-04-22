@@ -369,58 +369,56 @@ export function InsiderTradingTable({ data, loading, fetchedAt }: InsiderTrading
             </tbody>
           </table>
 
-          {totalPages > 1 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12, gap: 12 }}>
-              <button
-                onClick={() => setPage(p => Math.max(0, p - 1))}
-                disabled={safePage === 0}
-                aria-label="Previous page"
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontFamily: mono,
-                  fontSize: "14px",
-                  color: safePage === 0 ? "#333" : C.text2,
-                  cursor: safePage === 0 ? "default" : "pointer",
-                  padding: "4px 8px",
-                }}
-              >←</button>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setPage(i)}
-                    aria-label={`Page ${i + 1}`}
-                    aria-current={i === safePage ? "page" : undefined}
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      border: "none",
-                      background: i === safePage ? C.accent : "rgba(255,255,255,0.12)",
-                      cursor: "pointer",
-                      padding: 0,
-                      transition: "background 0.15s",
-                    }}
-                  />
-                ))}
-              </div>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={safePage === totalPages - 1}
-                aria-label="Next page"
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontFamily: mono,
-                  fontSize: "14px",
-                  color: safePage === totalPages - 1 ? "#333" : C.text2,
-                  cursor: safePage === totalPages - 1 ? "default" : "pointer",
-                  padding: "4px 8px",
-                }}
-              >→</button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 12, gap: 12 }}>
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={safePage === 0}
+              aria-label="Previous page"
+              style={{
+                background: "none",
+                border: "none",
+                fontFamily: mono,
+                fontSize: "14px",
+                color: safePage === 0 ? "#333" : C.text2,
+                cursor: safePage === 0 ? "default" : "pointer",
+                padding: "4px 8px",
+              }}
+            >←</button>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i)}
+                  aria-label={`Page ${i + 1}`}
+                  aria-current={i === safePage ? "page" : undefined}
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    border: "none",
+                    background: i === safePage ? C.accent : "rgba(255,255,255,0.12)",
+                    cursor: totalPages > 1 ? "pointer" : "default",
+                    padding: 0,
+                    transition: "background 0.15s",
+                  }}
+                />
+              ))}
             </div>
-          )}
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={safePage === totalPages - 1}
+              aria-label="Next page"
+              style={{
+                background: "none",
+                border: "none",
+                fontFamily: mono,
+                fontSize: "14px",
+                color: safePage === totalPages - 1 ? "#333" : C.text2,
+                cursor: safePage === totalPages - 1 ? "default" : "pointer",
+                padding: "4px 8px",
+              }}
+            >→</button>
+          </div>
 
           <div style={{ marginTop: 8, fontSize: "10px", color: "#505050", lineHeight: 1.6 }}>
             C = cluster (3+ insiders / 30d) · D = discretionary open-market sell · <span style={{ color: C.accent }}>gold role</span> = C-suite
