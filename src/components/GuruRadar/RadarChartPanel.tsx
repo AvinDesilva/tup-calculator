@@ -14,6 +14,7 @@ interface Props {
   color: string;
   rotationDeg?: number;
   highlightIndex?: number | null;
+  highlightVisible?: boolean;
 }
 
 // The tooltip is inside the CSS-rotated container, so it physically moves and
@@ -54,11 +55,10 @@ const LABEL_PUSH_PX = 5;   // extra px from the outer ring
 const RECT_PAD_X   = 5;   // horizontal padding inside the outline box
 const RECT_PAD_Y   = 3;   // vertical padding inside the outline box
 
-export function RadarChartPanel({ radar, color, rotationDeg = 0, highlightIndex = null }: Props) {
+export function RadarChartPanel({ radar, color, rotationDeg = 0, highlightIndex = null, highlightVisible = true }: Props) {
   return (
     <div style={{
       transform: `rotate(${rotationDeg}deg)`,
-      transition: "transform 0.55s cubic-bezier(0.4, 0, 0.2, 1)",
     }}>
       <ResponsiveContainer width="100%" height={320} minWidth={0}>
         <RadarChart data={radar} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
@@ -109,17 +109,24 @@ export function RadarChartPanel({ radar, color, rotationDeg = 0, highlightIndex 
                       fillOpacity={0.92}
                       stroke={C.accent}
                       strokeWidth={1}
+                      style={{
+                        opacity: highlightVisible ? 1 : 0,
+                        transition: highlightVisible ? "opacity 0.35s ease" : "opacity 0.08s ease",
+                      }}
                     />
                   )}
                   <text
                     x={lx}
                     y={ly}
-                    fill={isHighlighted ? C.accent : C.text2}
                     fontSize={10}
                     fontFamily="Space Grotesk, sans-serif"
                     fontWeight={isHighlighted ? 700 : 400}
                     textAnchor="middle"
                     dominantBaseline="central"
+                    style={isHighlighted ? {
+                      fill: highlightVisible ? C.accent : C.text3,
+                      transition: highlightVisible ? "fill 0.35s ease" : "fill 0.08s ease",
+                    } : { fill: C.text2 }}
                   >
                     {value}
                   </text>
@@ -140,8 +147,10 @@ export function RadarChartPanel({ radar, color, rotationDeg = 0, highlightIndex 
               const index: number = props.index ?? 0;
               const isHighlighted  = index === highlightIndex;
               if (isHighlighted) {
+                const dotOpacity = highlightVisible ? 1 : 0;
+                const dotTransition = highlightVisible ? "opacity 0.35s ease" : "opacity 0.08s ease";
                 return (
-                  <g key={`dot-${index}`}>
+                  <g key={`dot-${index}`} style={{ opacity: dotOpacity, transition: dotTransition }}>
                     <circle cx={cx} cy={cy} r={9} fill="none" stroke={C.accent} strokeWidth={1} opacity={0.3} />
                     <circle cx={cx} cy={cy} r={5} fill={C.accent} stroke="#080808" strokeWidth={1.5} />
                   </g>

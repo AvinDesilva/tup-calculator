@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
 import { Panel } from "./Panel.tsx";
 import { RadarChartPanel } from "../GuruRadar/RadarChartPanel.tsx";
 import { ExpandedContextCarousel } from "../GuruRadar/ExpandedContext/index.ts";
@@ -58,7 +58,10 @@ export function ValuationContext({
 
   const [activeGuru, setActiveGuru] = useState<string | null>(null);
   const [activeMetricIndex, setActiveMetricIndex] = useState(BOTTOM_INDEX);
+  const [fractionalMetricIndex, setFractionalMetricIndex] = useState(BOTTOM_INDEX);
   const touchInProgressRef = useRef(false);
+
+  const handleScrollProgress = useCallback((f: number) => setFractionalMetricIndex(f), []);
 
   // Must be before early return to satisfy Rules of Hooks
   const metricContexts = useMemo(() => {
@@ -104,8 +107,10 @@ export function ValuationContext({
     : 0;
   const radarColor = avgGuruScore >= 8 ? "#10d97e" : avgGuruScore >= 4 ? "#f5a020" : "#e03030";
 
-  // Radar rotation: bring activeMetricIndex to the bottom position
-  const rotationDeg = (BOTTOM_INDEX - activeMetricIndex) * DEG_PER_METRIC;
+  // Radar rotation: driven by fractional scroll position for real-time sync
+  const rotationDeg = (BOTTOM_INDEX - fractionalMetricIndex) * DEG_PER_METRIC;
+  // Highlight label/dot only when the carousel is settled on a card (not mid-swipe)
+  const highlightVisible = Math.abs(fractionalMetricIndex - activeMetricIndex) < 0.08;
   const hasContexts = metricContexts.length > 0;
 
   return (
@@ -142,6 +147,7 @@ export function ValuationContext({
           color={radarColor}
           rotationDeg={rotationDeg}
           highlightIndex={activeMetricIndex}
+          highlightVisible={highlightVisible}
         />
 
         {/* Expanded context carousel */}
@@ -153,6 +159,7 @@ export function ValuationContext({
                 radar={guruData!.radar}
                 activeIndex={activeMetricIndex}
                 onIndexChange={setActiveMetricIndex}
+                onScrollProgress={handleScrollProgress}
               />
             </div>
           </>
