@@ -105,7 +105,7 @@ export function ValuationContext({
   const radarColor = avgGuruScore >= 8 ? "#10d97e" : avgGuruScore >= 4 ? "#f5a020" : "#e03030";
 
   // Radar rotation: bring activeMetricIndex to the bottom position
-  const rotationDeg = (activeMetricIndex - BOTTOM_INDEX) * DEG_PER_METRIC;
+  const rotationDeg = (BOTTOM_INDEX - activeMetricIndex) * DEG_PER_METRIC;
   const hasContexts = metricContexts.length > 0;
 
   return (
