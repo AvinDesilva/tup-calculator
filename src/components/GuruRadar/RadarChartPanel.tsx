@@ -16,22 +16,32 @@ interface Props {
   highlightIndex?: number | null;
 }
 
-interface TooltipPayload {
-  payload?: RadarMetricPoint;
+// The tooltip is inside the CSS-rotated container, so it physically moves and
+// rotates with the chart. Counter-rotating the content keeps text readable
+// while preserving the "orbiting" tooltip position.
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload?: RadarMetricPoint }>;
+  rotationDeg: number;
 }
 
-function CustomTooltip({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) {
+function CustomTooltip({ active, payload, rotationDeg }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
   const point = payload[0]?.payload;
   if (!point) return null;
   return (
     <div style={{
       background: C.bg,
-      border: `1px solid ${C.borderWeak}`,
-      borderRadius: 6,
+      border: `1px solid ${C.border}`,
+      borderRadius: 4,
       padding: "6px 10px",
       fontSize: 11,
       color: C.text1,
+      // Counter-rotate content so text stays upright while the position
+      // orbits with the rotating chart
+      transform: `rotate(${-rotationDeg}deg)`,
+      transformOrigin: "center center",
+      pointerEvents: "none",
     }}>
       <div style={{ fontWeight: 600, marginBottom: 2 }}>{point.axis}</div>
       <div style={{ color: C.text2 }}>{point.rawLabel}</div>
@@ -39,6 +49,10 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Toolti
     </div>
   );
 }
+
+const LABEL_PUSH_PX = 5;   // extra px from the outer ring
+const RECT_PAD_X   = 5;   // horizontal padding inside the outline box
+const RECT_PAD_Y   = 3;   // vertical padding inside the outline box
 
 export function RadarChartPanel({ radar, color, rotationDeg = 0, highlightIndex = null }: Props) {
   return (
@@ -53,25 +67,63 @@ export function RadarChartPanel({ radar, color, rotationDeg = 0, highlightIndex 
             dataKey="axis"
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             tick={(props: any) => {
-              const x = Number(props.x ?? 0);
-              const y = Number(props.y ?? 0);
-              const value: string = props.payload?.value ?? "";
-              const index: number = props.index ?? 0;
-              const isHighlighted = index === highlightIndex;
+              const rawX:  number = Number(props.x  ?? 0);
+              const rawY:  number = Number(props.y  ?? 0);
+              const chartCx: number = Number(props.cx ?? 0);
+              const chartCy: number = Number(props.cy ?? 0);
+              const value:  string  = props.payload?.value ?? "";
+              const index:  number  = props.index ?? 0;
+              const isHighlighted   = index === highlightIndex;
+
+              // Push the highlighted label a few px further from the chart centre
+              let lx = rawX;
+              let ly = rawY;
+              if (isHighlighted && (chartCx > 0 || chartCy > 0)) {
+                const dx   = rawX - chartCx;
+                const dy   = rawY - chartCy;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 0) {
+                  lx = rawX + (dx / dist) * LABEL_PUSH_PX;
+                  ly = rawY + (dy / dist) * LABEL_PUSH_PX;
+                }
+              }
+
+              // Estimated text box dimensions for the outline rect
+              const approxCharW = 6.2;
+              const approxTextH = 12;
+              const textW = value.length * approxCharW;
+              const rectW = textW + RECT_PAD_X * 2;
+              const rectH = approxTextH + RECT_PAD_Y * 2;
+
               return (
-                <text
-                  x={x}
-                  y={y}
-                  transform={`rotate(${-rotationDeg}, ${x}, ${y})`}
-                  fill={isHighlighted ? C.accent : C.text2}
-                  fontSize={10}
-                  fontFamily="Space Grotesk, sans-serif"
-                  fontWeight={isHighlighted ? 700 : 400}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                >
-                  {value}
-                </text>
+                // Rotate the whole group around the (possibly pushed) label centre
+                <g transform={`rotate(${-rotationDeg}, ${lx}, ${ly})`}>
+                  {isHighlighted && (
+                    <rect
+                      x={lx - rectW / 2}
+                      y={ly - rectH / 2}
+                      width={rectW}
+                      height={rectH}
+                      rx={2}
+                      fill={C.bg}
+                      fillOpacity={0.92}
+                      stroke={C.accent}
+                      strokeWidth={1}
+                    />
+                  )}
+                  <text
+                    x={lx}
+                    y={ly}
+                    fill={isHighlighted ? C.accent : C.text2}
+                    fontSize={10}
+                    fontFamily="Space Grotesk, sans-serif"
+                    fontWeight={isHighlighted ? 700 : 400}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                  >
+                    {value}
+                  </text>
+                </g>
               );
             }}
           />
@@ -83,16 +135,14 @@ export function RadarChartPanel({ radar, color, rotationDeg = 0, highlightIndex 
             fillOpacity={0.2}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             dot={(props: any) => {
-              const cx = Number(props.cx ?? 0);
-              const cy = Number(props.cy ?? 0);
+              const cx    = Number(props.cx ?? 0);
+              const cy    = Number(props.cy ?? 0);
               const index: number = props.index ?? 0;
-              const isHighlighted = index === highlightIndex;
+              const isHighlighted  = index === highlightIndex;
               if (isHighlighted) {
                 return (
                   <g key={`dot-${index}`}>
-                    {/* Outer glow ring */}
                     <circle cx={cx} cy={cy} r={9} fill="none" stroke={C.accent} strokeWidth={1} opacity={0.3} />
-                    {/* Filled dot */}
                     <circle cx={cx} cy={cy} r={5} fill={C.accent} stroke="#080808" strokeWidth={1.5} />
                   </g>
                 );
@@ -100,7 +150,7 @@ export function RadarChartPanel({ radar, color, rotationDeg = 0, highlightIndex 
               return <circle key={`dot-${index}`} cx={cx} cy={cy} r={3} fill={color} />;
             }}
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip rotationDeg={rotationDeg} />} />
         </RadarChart>
       </ResponsiveContainer>
     </div>
