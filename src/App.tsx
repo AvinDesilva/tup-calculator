@@ -274,6 +274,14 @@ export default function App() {
               priceMode={priceMode}
               guruData={guruData}
               showPriceTargets={false}
+              metricHistory={{
+                incomeHistory: scorecard.incomeHistory,
+                cashFlowHistory: scorecard.cashFlows,
+                balanceSheetHistory: scorecard.balanceSheetHistory,
+                priceHistory,
+                epsGrowthHistory: scorecard.epsGrowthHistory,
+                shares: inp.shares,
+              }}
             />
           </div>
         )}

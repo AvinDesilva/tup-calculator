@@ -52,7 +52,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
   const [currencyNote, setCurrencyNote] = useState("");
   const [currencyMismatchWarning, setCurrencyMismatchWarning] = useState("");
   const [valuation, setValuation] = useState<ValuationState>({ insiderTrading: null, insiderTradingLoading: false, insiderTradingFetchedAt: 0 });
-  const [scorecard, setScorecard] = useState<ScorecardState>({ cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "" });
+  const [scorecard, setScorecard] = useState<ScorecardState>({ cashFlows: [], incomeHistory: [], balanceSheetHistory: [], epsGrowthHistory: [], description: "" });
 
   const [hasSearched, setHasSearched] = useState(false);
   const [priceHistory, setPriceHistory] = useState<HistoricalPricePoint[]>([]);
@@ -102,7 +102,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
     const t = (tickerOverride || ticker).trim().toUpperCase();
     if (!t) { setError("Enter a ticker symbol."); return null; }
     let paybackResult: number | null = null;
-    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ insiderTrading: null, insiderTradingLoading: false, insiderTradingFetchedAt: 0 }); setScorecard({ cashFlows: [], incomeHistory: [], epsGrowthHistory: [], description: "" }); setStrongBuyPrice(null); setBuyPrice(null); setGuruData(null); setHasSearched(true);
+    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ insiderTrading: null, insiderTradingLoading: false, insiderTradingFetchedAt: 0 }); setScorecard({ cashFlows: [], incomeHistory: [], balanceSheetHistory: [], epsGrowthHistory: [], description: "" }); setStrongBuyPrice(null); setBuyPrice(null); setGuruData(null); setHasSearched(true);
     window.scrollTo(0, 0);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
@@ -120,7 +120,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
       fetchInsiderTrading(t).then(it => {
         setValuation(prev => ({ ...prev, insiderTrading: it, insiderTradingLoading: false, insiderTradingFetchedAt: Date.now() }));
       });
-      setScorecard({ cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory, epsGrowthHistory: data.epsGrowthHistory, description: data.description });
+      setScorecard({ cashFlows: data.cashFlowHistory, incomeHistory: data.incomeHistory, balanceSheetHistory: data.balanceSheetHistory, epsGrowthHistory: data.epsGrowthHistory, description: data.description });
       setPriceHistory(data.priceHistory ?? []);
 
       setGrowthValues({ g5: data.historicalGrowth5yr, g10: data.historicalGrowth });
@@ -272,7 +272,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
       setMeta(dev.DEV_META);
       setInp(dev.DEV_INP);
       setValuation(dev.DEV_VALUATION);
-      setScorecard({ cashFlows: dev.DEV_CASH_FLOWS, incomeHistory: dev.DEV_INCOME_HISTORY, epsGrowthHistory: dev.DEV_EPS_GROWTH_HISTORY, description: dev.DEV_DESCRIPTION });
+      setScorecard({ cashFlows: dev.DEV_CASH_FLOWS, incomeHistory: dev.DEV_INCOME_HISTORY, balanceSheetHistory: [], epsGrowthHistory: dev.DEV_EPS_GROWTH_HISTORY, description: dev.DEV_DESCRIPTION });
       setGrowthValues(dev.DEV_GROWTH_VALUES);
       setGrowthYears(dev.DEV_GROWTH_YEARS);
       setScenarioValues({
@@ -318,6 +318,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
         piotroski: 7,
         cashFlowHistory: dev.DEV_CASH_FLOWS,
         incomeHistory: dev.DEV_INCOME_HISTORY,
+        balanceSheetHistory: [],
         epsGrowthHistory: dev.DEV_EPS_GROWTH_HISTORY,
         description: dev.DEV_DESCRIPTION,
         exchange: "NASDAQ",

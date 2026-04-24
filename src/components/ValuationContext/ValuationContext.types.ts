@@ -1,5 +1,14 @@
-import type { PriceMode } from "../../lib/types.ts";
+import type { PriceMode, FMPIncomeStatement, FMPCashFlow, FMPBalanceSheet, HistoricalPricePoint, EpsGrowthPoint } from "../../lib/types.ts";
 import type { GuruRadarData } from "../../lib/guruRadar/types.ts";
+
+export interface MetricHistoryBundle {
+  incomeHistory: FMPIncomeStatement[];
+  cashFlowHistory: FMPCashFlow[];
+  balanceSheetHistory: FMPBalanceSheet[];
+  priceHistory: HistoricalPricePoint[];
+  epsGrowthHistory: EpsGrowthPoint[];
+  shares: number;
+}
 
 export interface ValuationContextProps {
   strongBuyPrice: number | null;
@@ -9,6 +18,7 @@ export interface ValuationContextProps {
   priceMode?: PriceMode;
   guruData?: GuruRadarData | null;
   showPriceTargets?: boolean;
+  metricHistory?: MetricHistoryBundle | null;
 }
 
 export interface PanelData {

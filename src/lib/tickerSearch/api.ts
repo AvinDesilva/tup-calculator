@@ -360,8 +360,8 @@ export async function lookupTicker(
     // 2) Real-time Quote
     fetchFMP<FMPQuote[]>(`quote?symbol=${t}`).then(d => { log("  ✓ /quote — price, TTM EPS, shares, 200-SMA, dividendYield"); return d; }),
 
-    // 3) Balance Sheet (2 years)
-    fetchFMP<FMPBalanceSheet[]>(`balance-sheet-statement?symbol=${t}&limit=2`).then(d => { log("  ✓ /balance-sheet-statement — debt, cash (2 yrs)"); return d; }),
+    // 3) Balance Sheet (6 years — 2 used for Piotroski, up to 5 for metric history)
+    fetchFMP<FMPBalanceSheet[]>(`balance-sheet-statement?symbol=${t}&limit=6`).then(d => { log("  ✓ /balance-sheet-statement — debt, cash (6 yrs)"); return d; }),
 
     // 4) Income Statement (12 years — need 11 data points for true 10-year CAGR)
     fetchFMP<FMPIncomeStatement[]>(`income-statement?symbol=${t}&limit=12`).then(d => { log("  ✓ /income-statement — revenue, net income (12 yrs)"); return d; }),
@@ -898,6 +898,7 @@ export async function lookupTicker(
     currencyMismatchWarning,
     cashFlowHistory: Array.isArray(cashFlows) ? cashFlows : [],
     incomeHistory: Array.isArray(income) ? income : [],
+    balanceSheetHistory: Array.isArray(balanceSheet) ? balanceSheet : [],
     epsGrowthHistory,
     description: p.description || "",
     exchange,

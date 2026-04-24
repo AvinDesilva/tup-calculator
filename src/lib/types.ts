@@ -110,6 +110,8 @@ export interface FMPQuote {
 }
 
 export interface FMPBalanceSheet {
+  calendarYear?: string | number;
+  date?: string;
   totalDebt?: number;
   longTermDebt?: number;
   cashAndCashEquivalents?: number;
@@ -149,6 +151,8 @@ export interface FMPEstimate {
 
 
 export interface FMPCashFlow {
+  calendarYear?: string | number;
+  date?: string;
   operatingCashFlow?: number;
   netCashProvidedByOperatingActivities?: number;
   freeCashFlow?: number;
@@ -213,6 +217,7 @@ export interface TickerData {
   currencyMismatchWarning: string;
   cashFlowHistory: FMPCashFlow[];
   incomeHistory: FMPIncomeStatement[];
+  balanceSheetHistory: FMPBalanceSheet[];
   epsGrowthHistory: EpsGrowthPoint[];
   description: string;
   exchange: string;

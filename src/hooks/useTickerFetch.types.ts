@@ -1,4 +1,4 @@
-import type { InputState, GrowthScenario, RollFilters, FMPCashFlow, FMPIncomeStatement, EpsGrowthPoint, HistoricalPricePoint } from "../lib/types.ts";
+import type { InputState, GrowthScenario, RollFilters, FMPCashFlow, FMPIncomeStatement, FMPBalanceSheet, EpsGrowthPoint, HistoricalPricePoint } from "../lib/types.ts";
 import type { GuruRadarData } from "../lib/guruRadar/types.ts";
 import type { InsiderTradingData } from "../lib/insiderTrading/types.ts";
 
@@ -11,6 +11,7 @@ export interface ValuationState {
 export interface ScorecardState {
   cashFlows: FMPCashFlow[];
   incomeHistory: FMPIncomeStatement[];
+  balanceSheetHistory: FMPBalanceSheet[];
   epsGrowthHistory: EpsGrowthPoint[];
   description: string;
 }

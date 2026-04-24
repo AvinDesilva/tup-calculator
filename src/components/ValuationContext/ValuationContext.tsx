@@ -1,10 +1,19 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Panel } from "./Panel.tsx";
 import { RadarChartPanel } from "../GuruRadar/RadarChartPanel.tsx";
+import { ExpandedContextCarousel } from "../GuruRadar/ExpandedContext/index.ts";
 import { SectionLabel } from "../primitives";
 import type { ValuationContextProps, PanelData } from "./ValuationContext.types.ts";
 import type { RadarMetricPoint } from "../../lib/guruRadar/types.ts";
 import { C } from "../../lib/theme.ts";
+import { computeMetricContexts } from "../../lib/guruRadar/metricHistory.ts";
+
+// The radar has 14 metrics; index 7 (Current Ratio) naturally sits at the
+// bottom (6 o'clock) with default startAngle=90 going counterclockwise.
+// To bring index K to the bottom we rotate by (K - 7) * (360/14) degrees.
+const METRIC_COUNT = 14;
+const DEG_PER_METRIC = 360 / METRIC_COUNT;
+const BOTTOM_INDEX = 7; // Current Ratio is the natural bottom
 
 function r(radar: RadarMetricPoint[], axis: string): string {
   return radar.find(p => p.axis === axis)?.rawLabel ?? "N/A";
@@ -35,10 +44,12 @@ function getGuruReasoning(name: string, radar: RadarMetricPoint[]): string {
   }
 }
 
-
 const dividerH = <div style={{ background: C.borderWeak, height: "1px", margin: "20px 0" }} />;
 
-export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPrice, priceMode = "adj", guruData, showPriceTargets = true }: ValuationContextProps) {
+export function ValuationContext({
+  strongBuyPrice, buyPrice, currentPrice, adjPrice, priceMode = "adj",
+  guruData, showPriceTargets = true, metricHistory,
+}: ValuationContextProps) {
   const mono = C.mono;
 
   const hasStrongBuy = strongBuyPrice != null && strongBuyPrice > 0 && currentPrice > 0;
@@ -46,7 +57,14 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
   const hasGuru      = guruData != null;
 
   const [activeGuru, setActiveGuru] = useState<string | null>(null);
+  const [activeMetricIndex, setActiveMetricIndex] = useState(BOTTOM_INDEX);
   const touchInProgressRef = useRef(false);
+
+  // Must be before early return to satisfy Rules of Hooks
+  const metricContexts = useMemo(() => {
+    if (!metricHistory) return [];
+    return computeMetricContexts(metricHistory);
+  }, [metricHistory]);
 
   if (!hasStrongBuy && !hasBuy && !hasGuru) return null;
 
@@ -85,6 +103,11 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
     ? guruData!.gurus.reduce((s, g) => s + g.score, 0) / guruData!.gurus.length
     : 0;
   const radarColor = avgGuruScore >= 8 ? "#10d97e" : avgGuruScore >= 4 ? "#f5a020" : "#e03030";
+
+  // Radar rotation: bring activeMetricIndex to the bottom position
+  const rotationDeg = (activeMetricIndex - BOTTOM_INDEX) * DEG_PER_METRIC;
+  const hasContexts = metricContexts.length > 0;
+
   return (
     <div style={{ paddingTop: "8px" }}>
       <SectionLabel title="Valuation Context" />
@@ -114,7 +137,26 @@ export function ValuationContext({ strongBuyPrice, buyPrice, currentPrice, adjPr
           title="Financial Health"
           badge={<span style={{ fontSize: 11, fontWeight: 700, color: radarColor, fontFamily: C.mono, letterSpacing: "0.05em" }}>{guruData!.overallScore}/100</span>}
         />
-        <RadarChartPanel radar={guruData!.radar} color={radarColor} />
+        <RadarChartPanel
+          radar={guruData!.radar}
+          color={radarColor}
+          rotationDeg={rotationDeg}
+          highlightIndex={activeMetricIndex}
+        />
+
+        {/* Expanded context carousel */}
+        {hasContexts && (
+          <>
+            <div style={{ marginTop: 14 }}>
+              <ExpandedContextCarousel
+                contexts={metricContexts}
+                radar={guruData!.radar}
+                activeIndex={activeMetricIndex}
+                onIndexChange={setActiveMetricIndex}
+              />
+            </div>
+          </>
+        )}
 
         {dividerH}
 
