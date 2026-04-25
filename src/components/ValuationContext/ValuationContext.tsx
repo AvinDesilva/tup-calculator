@@ -83,11 +83,20 @@ export function ValuationContext({
     }
   }, [activeMetricIndex]);
 
-  // Keep --rdr-counter in sync when the settled index changes (dot click, initial mount)
+  // Sync --rdr-counter and restore highlight whenever the settled index changes
   useEffect(() => {
     if (radarWrapperRef.current) {
       const counterDeg = (activeMetricIndex - BOTTOM_INDEX) * DEG_PER_METRIC;
       radarWrapperRef.current.style.setProperty('--rdr-counter', `${counterDeg}deg`);
+    }
+    // Always restore highlight on settle (scroll events can't reliably do this
+    // because they stop firing before highlightVisible gets a chance to flip back).
+    // setState in effect is intentional here: we're responding to an external
+    // carousel settle event, not creating an infinite loop.
+    if (!highlightVisibleRef.current) {
+      highlightVisibleRef.current = true;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHighlightVisible(true);
     }
   }, [activeMetricIndex]);
 

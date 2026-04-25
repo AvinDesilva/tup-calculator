@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, useLayoutEffect } from "react";
 import { C } from "../../../lib/theme.ts";
 import { MetricContextCard } from "./MetricContextCard.tsx";
 import type { MetricContext } from "../../../lib/guruRadar/metricHistory.ts";
@@ -21,7 +21,18 @@ export function ExpandedContextCarousel({ contexts, radar, activeIndex, onIndexC
   const scrollingProgrammaticRef = useRef(false);
   const debounceRef            = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Programmatic scroll when activeIndex changes from outside (e.g. future non-carousel trigger)
+  // Set initial scroll position instantly (before first paint) so no scroll
+  // animation fires on mount — prevents spurious onScrollProgress calls that
+  // would incorrectly set highlightVisible=false right from the start.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const cardWidth = el.offsetWidth - PEEK_PX * 2;
+    el.scrollLeft = activeIndex * (cardWidth + GAP_PX);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount only
+
+  // Programmatic scroll when activeIndex changes after mount
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
