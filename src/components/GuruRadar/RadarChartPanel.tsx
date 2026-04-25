@@ -13,7 +13,6 @@ import type { RadarMetricPoint } from "../../lib/guruRadar/types.ts";
 interface Props {
   radar: RadarMetricPoint[];
   color: string;
-  rotationDeg?: number;
   highlightIndex?: number | null;
   highlightVisible?: boolean;
 }
@@ -24,10 +23,9 @@ interface Props {
 interface CustomTooltipProps {
   active?: boolean;
   payload?: Array<{ payload?: RadarMetricPoint }>;
-  rotationDeg: number;
 }
 
-function CustomTooltip({ active, payload, rotationDeg }: CustomTooltipProps) {
+function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
   const point = payload[0]?.payload;
   if (!point) return null;
@@ -39,9 +37,8 @@ function CustomTooltip({ active, payload, rotationDeg }: CustomTooltipProps) {
       padding: "6px 10px",
       fontSize: 11,
       color: C.text1,
-      // Counter-rotate content so text stays upright while the position
-      // orbits with the rotating chart
-      transform: `rotate(${-rotationDeg}deg)`,
+      // Counter-rotate via CSS custom property so it tracks in real-time
+      transform: "rotate(var(--rdr-counter, 0deg))",
       transformOrigin: "center center",
       pointerEvents: "none",
     }}>
@@ -56,7 +53,7 @@ const LABEL_PUSH_PX = 5;   // extra px from the outer ring
 const RECT_PAD_X   = 5;   // horizontal padding inside the outline box
 const RECT_PAD_Y   = 3;   // vertical padding inside the outline box
 
-function RadarChartPanelInner({ radar, color, rotationDeg = 0, highlightIndex = null, highlightVisible = true }: Props) {
+function RadarChartPanelInner({ radar, color, highlightIndex = null, highlightVisible = true }: Props) {
   return (
     <ResponsiveContainer width="100%" height={320} minWidth={0}>
         <RadarChart data={radar} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
@@ -94,8 +91,14 @@ function RadarChartPanelInner({ radar, color, rotationDeg = 0, highlightIndex = 
               const rectH = approxTextH + RECT_PAD_Y * 2;
 
               return (
-                // Rotate the whole group around the (possibly pushed) label centre
-                <g transform={`rotate(${-rotationDeg}, ${lx}, ${ly})`}>
+                // Counter-rotate via CSS custom property so labels track in real-time.
+                // transform-box:view-box makes transformOrigin use SVG viewport coords,
+                // so (lx, ly) correctly maps to the label's SVG position.
+                <g style={{
+                  transformBox: "view-box",
+                  transformOrigin: `${lx}px ${ly}px`,
+                  transform: "rotate(var(--rdr-counter, 0deg))",
+                } as React.CSSProperties}>
                   {isHighlighted && (
                     <rect
                       x={lx - rectW / 2}
@@ -157,7 +160,7 @@ function RadarChartPanelInner({ radar, color, rotationDeg = 0, highlightIndex = 
               return <circle key={`dot-${index}`} cx={cx} cy={cy} r={3} fill={color} />;
             }}
           />
-          <Tooltip content={<CustomTooltip rotationDeg={rotationDeg} />} />
+          <Tooltip content={<CustomTooltip />} />
         </RadarChart>
       </ResponsiveContainer>
   );

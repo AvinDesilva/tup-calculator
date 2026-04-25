@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from "react";
+import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import { Panel } from "./Panel.tsx";
 import { RadarChartPanel } from "../GuruRadar/RadarChartPanel.tsx";
 import { ExpandedContextCarousel } from "../GuruRadar/ExpandedContext/index.ts";
@@ -68,13 +68,26 @@ export function ValuationContext({
     fractionalRef.current = f;
     // Direct DOM update — bypasses React render cycle entirely
     if (radarWrapperRef.current) {
-      radarWrapperRef.current.style.transform = `rotate(${(BOTTOM_INDEX - f) * DEG_PER_METRIC}deg)`;
+      const wrapDeg    = (BOTTOM_INDEX - f) * DEG_PER_METRIC;
+      const counterDeg = (f - BOTTOM_INDEX) * DEG_PER_METRIC;
+      radarWrapperRef.current.style.transform = `rotate(${wrapDeg}deg)`;
+      // Counter-rotation via CSS custom property so labels track the rotation
+      // without triggering a Recharts re-render on every scroll frame
+      radarWrapperRef.current.style.setProperty('--rdr-counter', `${counterDeg}deg`);
     }
     // Only trigger a React re-render when visibility actually toggles
     const nowVisible = Math.abs(f - activeMetricIndex) < 0.08;
     if (nowVisible !== highlightVisibleRef.current) {
       highlightVisibleRef.current = nowVisible;
       setHighlightVisible(nowVisible);
+    }
+  }, [activeMetricIndex]);
+
+  // Keep --rdr-counter in sync when the settled index changes (dot click, initial mount)
+  useEffect(() => {
+    if (radarWrapperRef.current) {
+      const counterDeg = (activeMetricIndex - BOTTOM_INDEX) * DEG_PER_METRIC;
+      radarWrapperRef.current.style.setProperty('--rdr-counter', `${counterDeg}deg`);
     }
   }, [activeMetricIndex]);
 
@@ -122,8 +135,7 @@ export function ValuationContext({
     : 0;
   const radarColor = avgGuruScore >= 8 ? "#10d97e" : avgGuruScore >= 4 ? "#f5a020" : "#e03030";
 
-  // Label counter-rotation: tracks settled index only (Recharts doesn't re-render mid-swipe)
-  const rotationDeg = (BOTTOM_INDEX - activeMetricIndex) * DEG_PER_METRIC;
+  const settledRotationDeg = (BOTTOM_INDEX - activeMetricIndex) * DEG_PER_METRIC;
   const hasContexts = metricContexts.length > 0;
 
   return (
@@ -155,11 +167,10 @@ export function ValuationContext({
           title="Financial Health"
           badge={<span style={{ fontSize: 11, fontWeight: 700, color: radarColor, fontFamily: C.mono, letterSpacing: "0.05em" }}>{guruData!.overallScore}/100</span>}
         />
-        <div ref={radarWrapperRef} style={{ transform: `rotate(${rotationDeg}deg)` }}>
+        <div ref={radarWrapperRef} style={{ transform: `rotate(${settledRotationDeg}deg)` }}>
           <RadarChartPanel
             radar={guruData!.radar}
             color={radarColor}
-            rotationDeg={rotationDeg}
             highlightIndex={activeMetricIndex}
             highlightVisible={highlightVisible}
           />
