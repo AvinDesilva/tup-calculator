@@ -58,10 +58,25 @@ export function ValuationContext({
 
   const [activeGuru, setActiveGuru] = useState<string | null>(null);
   const [activeMetricIndex, setActiveMetricIndex] = useState(BOTTOM_INDEX);
-  const [fractionalMetricIndex, setFractionalMetricIndex] = useState(BOTTOM_INDEX);
+  const [highlightVisible, setHighlightVisible] = useState(true);
   const touchInProgressRef = useRef(false);
+  const fractionalRef = useRef(BOTTOM_INDEX);
+  const highlightVisibleRef = useRef(true);
+  const radarWrapperRef = useRef<HTMLDivElement>(null);
 
-  const handleScrollProgress = useCallback((f: number) => setFractionalMetricIndex(f), []);
+  const handleScrollProgress = useCallback((f: number) => {
+    fractionalRef.current = f;
+    // Direct DOM update — bypasses React render cycle entirely
+    if (radarWrapperRef.current) {
+      radarWrapperRef.current.style.transform = `rotate(${(BOTTOM_INDEX - f) * DEG_PER_METRIC}deg)`;
+    }
+    // Only trigger a React re-render when visibility actually toggles
+    const nowVisible = Math.abs(f - activeMetricIndex) < 0.08;
+    if (nowVisible !== highlightVisibleRef.current) {
+      highlightVisibleRef.current = nowVisible;
+      setHighlightVisible(nowVisible);
+    }
+  }, [activeMetricIndex]);
 
   // Must be before early return to satisfy Rules of Hooks
   const metricContexts = useMemo(() => {
@@ -107,10 +122,8 @@ export function ValuationContext({
     : 0;
   const radarColor = avgGuruScore >= 8 ? "#10d97e" : avgGuruScore >= 4 ? "#f5a020" : "#e03030";
 
-  // Radar rotation: driven by fractional scroll position for real-time sync
-  const rotationDeg = (BOTTOM_INDEX - fractionalMetricIndex) * DEG_PER_METRIC;
-  // Highlight label/dot only when the carousel is settled on a card (not mid-swipe)
-  const highlightVisible = Math.abs(fractionalMetricIndex - activeMetricIndex) < 0.08;
+  // Label counter-rotation: tracks settled index only (Recharts doesn't re-render mid-swipe)
+  const rotationDeg = (BOTTOM_INDEX - activeMetricIndex) * DEG_PER_METRIC;
   const hasContexts = metricContexts.length > 0;
 
   return (
@@ -142,13 +155,15 @@ export function ValuationContext({
           title="Financial Health"
           badge={<span style={{ fontSize: 11, fontWeight: 700, color: radarColor, fontFamily: C.mono, letterSpacing: "0.05em" }}>{guruData!.overallScore}/100</span>}
         />
-        <RadarChartPanel
-          radar={guruData!.radar}
-          color={radarColor}
-          rotationDeg={rotationDeg}
-          highlightIndex={activeMetricIndex}
-          highlightVisible={highlightVisible}
-        />
+        <div ref={radarWrapperRef} style={{ transform: `rotate(${rotationDeg}deg)` }}>
+          <RadarChartPanel
+            radar={guruData!.radar}
+            color={radarColor}
+            rotationDeg={rotationDeg}
+            highlightIndex={activeMetricIndex}
+            highlightVisible={highlightVisible}
+          />
+        </div>
 
         {/* Expanded context carousel */}
         {hasContexts && (

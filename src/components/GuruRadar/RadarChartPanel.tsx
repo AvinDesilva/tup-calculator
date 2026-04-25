@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   RadarChart,
   PolarGrid,
@@ -55,12 +56,9 @@ const LABEL_PUSH_PX = 5;   // extra px from the outer ring
 const RECT_PAD_X   = 5;   // horizontal padding inside the outline box
 const RECT_PAD_Y   = 3;   // vertical padding inside the outline box
 
-export function RadarChartPanel({ radar, color, rotationDeg = 0, highlightIndex = null, highlightVisible = true }: Props) {
+function RadarChartPanelInner({ radar, color, rotationDeg = 0, highlightIndex = null, highlightVisible = true }: Props) {
   return (
-    <div style={{
-      transform: `rotate(${rotationDeg}deg)`,
-    }}>
-      <ResponsiveContainer width="100%" height={320} minWidth={0}>
+    <ResponsiveContainer width="100%" height={320} minWidth={0}>
         <RadarChart data={radar} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
           <PolarGrid stroke={C.borderWeak} />
           <PolarAngleAxis
@@ -162,6 +160,7 @@ export function RadarChartPanel({ radar, color, rotationDeg = 0, highlightIndex 
           <Tooltip content={<CustomTooltip rotationDeg={rotationDeg} />} />
         </RadarChart>
       </ResponsiveContainer>
-    </div>
   );
 }
+
+export const RadarChartPanel = memo(RadarChartPanelInner);
