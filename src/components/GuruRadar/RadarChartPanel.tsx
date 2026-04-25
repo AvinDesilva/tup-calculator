@@ -49,14 +49,15 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   );
 }
 
-const LABEL_PUSH_PX = 5;   // extra px from the outer ring
+const LABEL_BASE_PX = 10;  // push all labels outward from the outer ring
+const LABEL_PUSH_PX = 5;   // additional push for the highlighted label
 const RECT_PAD_X   = 5;   // horizontal padding inside the outline box
 const RECT_PAD_Y   = 3;   // vertical padding inside the outline box
 
 function RadarChartPanelInner({ radar, color, highlightIndex = null, highlightVisible = true }: Props) {
   return (
     <ResponsiveContainer width="100%" height={320} minWidth={0}>
-        <RadarChart data={radar} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
+        <RadarChart data={radar} margin={{ top: 18, right: 40, bottom: 18, left: 40 }}>
           <PolarGrid stroke={C.borderWeak} />
           <PolarAngleAxis
             dataKey="axis"
@@ -70,16 +71,17 @@ function RadarChartPanelInner({ radar, color, highlightIndex = null, highlightVi
               const index:  number  = props.index ?? 0;
               const isHighlighted   = index === highlightIndex;
 
-              // Push the highlighted label a few px further from the chart centre
+              // Push all labels outward for breathing room; highlighted gets extra
               let lx = rawX;
               let ly = rawY;
-              if (isHighlighted && (chartCx > 0 || chartCy > 0)) {
+              if (chartCx > 0 || chartCy > 0) {
                 const dx   = rawX - chartCx;
                 const dy   = rawY - chartCy;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > 0) {
-                  lx = rawX + (dx / dist) * LABEL_PUSH_PX;
-                  ly = rawY + (dy / dist) * LABEL_PUSH_PX;
+                  const push = LABEL_BASE_PX + (isHighlighted ? LABEL_PUSH_PX : 0);
+                  lx = rawX + (dx / dist) * push;
+                  ly = rawY + (dy / dist) * push;
                 }
               }
 
