@@ -59,7 +59,6 @@ export function ValuationContext({
   const [activeGuru, setActiveGuru] = useState<string | null>(null);
   const [activeMetricIndex, setActiveMetricIndex] = useState(BOTTOM_INDEX);
   const [highlightVisible, setHighlightVisible] = useState(true);
-  const touchInProgressRef = useRef(false);
   const fractionalRef = useRef(BOTTOM_INDEX);
   const highlightVisibleRef = useRef(true);
   const radarWrapperRef = useRef<HTMLDivElement>(null);
@@ -203,7 +202,10 @@ export function ValuationContext({
         {dividerH}
 
         {/* Bar chart */}
-        <SectionLabel title="Guru Scores" />
+        <SectionLabel
+          title="Guru Scores"
+          badge={<span style={{ fontSize: 11, fontWeight: 700, color: radarColor, fontFamily: C.mono, letterSpacing: "0.05em" }}>{avgGuruScore.toFixed(1)}/10</span>}
+        />
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           {guruData!.gurus.map(guru => {
             const barColor = guru.score >= 8 ? "#10d97e" : guru.score >= 4 ? "#f5a020" : "#e03030";
@@ -215,14 +217,10 @@ export function ValuationContext({
                   role="button"
                   tabIndex={0}
                   style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
-                  onTouchStart={() => { touchInProgressRef.current = true; }}
-                  onTouchEnd={e => { e.preventDefault(); setActiveGuru(isActive ? null : guru.name); setTimeout(() => { touchInProgressRef.current = false; }, 300); }}
-                  onMouseEnter={() => { if (!touchInProgressRef.current) setActiveGuru(guru.name); }}
-                  onMouseLeave={() => { if (!touchInProgressRef.current) setActiveGuru(null); }}
                   onClick={() => setActiveGuru(isActive ? null : guru.name)}
                   onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setActiveGuru(isActive ? null : guru.name); }}
                 >
-                  <span style={{ width: 72, fontSize: 10, color: isActive ? C.text1 : C.text2, fontFamily: C.mono, flexShrink: 0, textAlign: "right", transition: "color 0.15s" }}>
+                  <span style={{ width: 72, fontSize: 10, color: C.text2, fontFamily: C.mono, flexShrink: 0, textAlign: "right" }}>
                     {guru.name}
                   </span>
                   <div style={{ flex: "1 1 0", height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
@@ -231,6 +229,14 @@ export function ValuationContext({
                   <span style={{ width: 28, fontSize: 10, color: barColor, fontFamily: C.mono, flexShrink: 0, textAlign: "left" }}>
                     {guru.score}/10
                   </span>
+                  <span style={{
+                    fontSize: 12,
+                    color: isActive ? barColor : C.text3,
+                    flexShrink: 0,
+                    display: "inline-block",
+                    transition: "color 0.15s, transform 0.2s ease",
+                    transform: isActive ? "rotate(90deg)" : "rotate(0deg)",
+                  }}>›</span>
                 </div>
                 {isActive && (
                   <div style={{
