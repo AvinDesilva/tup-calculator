@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, useEffect } from "react";
+import { useState, useRef, useMemo, useCallback, useEffect, useLayoutEffect } from "react";
 import { useInView } from "../../hooks/useInView.ts";
 import { Panel } from "./Panel.tsx";
 import { RadarChartPanel } from "../GuruRadar/RadarChartPanel.tsx";
@@ -58,12 +58,21 @@ export function ValuationContext({
   const hasGuru      = guruData != null;
 
   const [activeGuru, setActiveGuru] = useState<string | null>(null);
-  const [activeMetricIndex, setActiveMetricIndex] = useState(BOTTOM_INDEX);
+  const [activeMetricIndex, setActiveMetricIndex] = useState(0);
   const [guruSectionRef, guruBarsVisible] = useInView(0.3);
   const [highlightVisible, setHighlightVisible] = useState(true);
-  const fractionalRef = useRef(BOTTOM_INDEX);
+  const fractionalRef = useRef(0);
   const highlightVisibleRef = useRef(true);
   const radarWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Set --rdr-counter before first paint to match the initial rotation,
+  // preventing a flash of incorrectly-oriented labels on mount.
+  useLayoutEffect(() => {
+    if (radarWrapperRef.current) {
+      const counterDeg = (0 - BOTTOM_INDEX) * DEG_PER_METRIC;
+      radarWrapperRef.current.style.setProperty('--rdr-counter', `${counterDeg}deg`);
+    }
+  }, []);
 
   const handleScrollProgress = useCallback((f: number) => {
     fractionalRef.current = f;
