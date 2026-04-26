@@ -112,25 +112,63 @@ export function ExpandedContextCarousel({ contexts, radar, activeIndex, onIndexC
         })}
       </div>
 
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 5, marginTop: 10 }}>
-        {contexts.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => scrollToIndex(i)}
-            aria-label={`Go to metric ${i + 1}: ${contexts[i]?.title}`}
-            aria-current={i === activeIndex ? "true" : undefined}
-            style={{
-              width: i === activeIndex ? 16 : 6,
-              height: 6,
-              borderRadius: 3,
-              background: i === activeIndex ? C.accent : "rgba(255,255,255,0.12)",
-              border: "none",
-              padding: 0,
-              cursor: "pointer",
-              transition: "width 0.25s ease, background 0.25s ease",
-            }}
-          />
-        ))}
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 10 }}>
+        <button
+          onClick={() => scrollToIndex(activeIndex - 1)}
+          disabled={activeIndex === 0}
+          aria-label="Previous metric"
+          style={{
+            background: "none",
+            border: "none",
+            padding: "0 2px",
+            cursor: activeIndex === 0 ? "default" : "pointer",
+            fontSize: 16,
+            lineHeight: 1,
+            color: activeIndex === 0 ? C.text3 : C.text2,
+            opacity: activeIndex === 0 ? 0.35 : 1,
+            transition: "color 0.15s, opacity 0.15s",
+            flexShrink: 0,
+          }}
+        >‹</button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          {contexts.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => scrollToIndex(i)}
+              aria-label={`Go to metric ${i + 1}: ${contexts[i]?.title}`}
+              aria-current={i === activeIndex ? "true" : undefined}
+              style={{
+                width: i === activeIndex ? 16 : 6,
+                height: 6,
+                borderRadius: 3,
+                background: i === activeIndex ? C.accent : "rgba(255,255,255,0.12)",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                transition: "width 0.25s ease, background 0.25s ease",
+              }}
+            />
+          ))}
+        </div>
+
+        <button
+          onClick={() => scrollToIndex(activeIndex + 1)}
+          disabled={activeIndex === contexts.length - 1}
+          aria-label="Next metric"
+          style={{
+            background: "none",
+            border: "none",
+            padding: "0 2px",
+            cursor: activeIndex === contexts.length - 1 ? "default" : "pointer",
+            fontSize: 16,
+            lineHeight: 1,
+            color: activeIndex === contexts.length - 1 ? C.text3 : C.text2,
+            opacity: activeIndex === contexts.length - 1 ? 0.35 : 1,
+            transition: "color 0.15s, opacity 0.15s",
+            flexShrink: 0,
+          }}
+        >›</button>
       </div>
     </div>
   );
