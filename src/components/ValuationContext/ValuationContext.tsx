@@ -65,11 +65,13 @@ export function ValuationContext({
   const highlightVisibleRef = useRef(true);
   const radarWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Set --rdr-counter before first paint to match the initial rotation,
-  // preventing a flash of incorrectly-oriented labels on mount.
+  // Set transform and --rdr-counter before first paint to match the initial
+  // rotation, preventing a flash of incorrectly-oriented labels on mount.
   useLayoutEffect(() => {
     if (radarWrapperRef.current) {
-      const counterDeg = (0 - BOTTOM_INDEX) * DEG_PER_METRIC;
+      const wrapDeg    = BOTTOM_INDEX * DEG_PER_METRIC;
+      const counterDeg = -BOTTOM_INDEX * DEG_PER_METRIC;
+      radarWrapperRef.current.style.transform = `rotate(${wrapDeg}deg)`;
       radarWrapperRef.current.style.setProperty('--rdr-counter', `${counterDeg}deg`);
     }
   }, []);
@@ -85,28 +87,43 @@ export function ValuationContext({
       // without triggering a Recharts re-render on every scroll frame
       radarWrapperRef.current.style.setProperty('--rdr-counter', `${counterDeg}deg`);
     }
-    // Only trigger a React re-render when visibility actually toggles
-    const nowVisible = Math.abs(f - activeMetricIndex) < 0.08;
+    // Hide highlight when between any two metric positions (user swipe or arrow scroll).
+    // Compare against Math.round(f), not activeMetricIndex — activeMetricIndex is
+    // updated immediately on arrow click (before scroll completes), so comparing
+    // against it would incorrectly hide the highlight for the entire animation.
+    const nowVisible = Math.abs(f - Math.round(f)) < 0.08;
     if (nowVisible !== highlightVisibleRef.current) {
       highlightVisibleRef.current = nowVisible;
       setHighlightVisible(nowVisible);
     }
-  }, [activeMetricIndex]);
+  }, []);
 
-  // Sync --rdr-counter and restore highlight whenever the settled index changes
+  // Sync transform + --rdr-counter and highlight whenever the settled index changes.
   useEffect(() => {
-    if (radarWrapperRef.current) {
+    const nearTarget = radarWrapperRef.current != null
+      && Math.abs(fractionalRef.current - activeMetricIndex) < 0.15;
+
+    if (nearTarget) {
+      // Scroll already at (or very near) the target — apply final rotation and
+      // restore the highlight. This covers the user-swipe-debounce-settle path.
+      const wrapDeg    = (BOTTOM_INDEX - activeMetricIndex) * DEG_PER_METRIC;
       const counterDeg = (activeMetricIndex - BOTTOM_INDEX) * DEG_PER_METRIC;
-      radarWrapperRef.current.style.setProperty('--rdr-counter', `${counterDeg}deg`);
-    }
-    // Always restore highlight on settle (scroll events can't reliably do this
-    // because they stop firing before highlightVisible gets a chance to flip back).
-    // setState in effect is intentional here: we're responding to an external
-    // carousel settle event, not creating an infinite loop.
-    if (!highlightVisibleRef.current) {
-      highlightVisibleRef.current = true;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setHighlightVisible(true);
+      radarWrapperRef.current!.style.transform = `rotate(${wrapDeg}deg)`;
+      radarWrapperRef.current!.style.setProperty('--rdr-counter', `${counterDeg}deg`);
+      if (!highlightVisibleRef.current) {
+        highlightVisibleRef.current = true;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setHighlightVisible(true);
+      }
+    } else {
+      // Programmatic scroll starting — fractional is far from destination.
+      // Hide the highlight immediately so it doesn't flash at the new
+      // highlightIndex while the radar is still rotated to the old position.
+      // handleScrollProgress will restore it as f approaches the target.
+      if (highlightVisibleRef.current) {
+        highlightVisibleRef.current = false;
+        setHighlightVisible(false);
+      }
     }
   }, [activeMetricIndex]);
 
@@ -154,7 +171,6 @@ export function ValuationContext({
     : 0;
   const radarColor = avgGuruScore >= 8 ? "#10d97e" : avgGuruScore >= 4 ? "#f5a020" : "#e03030";
 
-  const settledRotationDeg = (BOTTOM_INDEX - activeMetricIndex) * DEG_PER_METRIC;
   const hasContexts = metricContexts.length > 0;
 
   return (
@@ -187,7 +203,7 @@ export function ValuationContext({
           badge={<span style={{ fontSize: 11, fontWeight: 700, color: radarColor, fontFamily: C.mono, letterSpacing: "0.05em" }}>{guruData!.overallScore}/100</span>}
         />
         <div className="rsp-radar-entrance">
-          <div ref={radarWrapperRef} style={{ transform: `rotate(${settledRotationDeg}deg)` }}>
+          <div ref={radarWrapperRef}>
             <RadarChartPanel
               radar={guruData!.radar}
               color={radarColor}
