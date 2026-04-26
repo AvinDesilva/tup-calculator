@@ -186,19 +186,21 @@ export function ValuationContext({
           title="Financial Health"
           badge={<span style={{ fontSize: 11, fontWeight: 700, color: radarColor, fontFamily: C.mono, letterSpacing: "0.05em" }}>{guruData!.overallScore}/100</span>}
         />
-        <div ref={radarWrapperRef} style={{ transform: `rotate(${settledRotationDeg}deg)` }}>
-          <RadarChartPanel
-            radar={guruData!.radar}
-            color={radarColor}
-            highlightIndex={activeMetricIndex}
-            highlightVisible={highlightVisible}
-          />
+        <div className="rsp-radar-entrance">
+          <div ref={radarWrapperRef} style={{ transform: `rotate(${settledRotationDeg}deg)` }}>
+            <RadarChartPanel
+              radar={guruData!.radar}
+              color={radarColor}
+              highlightIndex={activeMetricIndex}
+              highlightVisible={highlightVisible}
+            />
+          </div>
         </div>
 
         {/* Expanded context carousel */}
         {hasContexts && (
           <>
-            <div style={{ marginTop: 14 }}>
+            <div style={{ marginTop: 14 }} className="rsp-cards-entrance">
               <ExpandedContextCarousel
                 contexts={metricContexts}
                 radar={guruData!.radar}
