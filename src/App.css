@@ -20,8 +20,15 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
+@keyframes guruSectionReveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .slot-strip { transition: none !important; }
+  .guru-scores-section { animation: none !important; }
+  .guru-scores-section * { transition: none !important; }
 }
 
 /* ── Desktop Defaults ──────────────────────────────────────────────────────── */

@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from "react";
+import { useInView } from "../../hooks/useInView.ts";
 import { Panel } from "./Panel.tsx";
 import { RadarChartPanel } from "../GuruRadar/RadarChartPanel.tsx";
 import { ExpandedContextCarousel } from "../GuruRadar/ExpandedContext/index.ts";
@@ -58,6 +59,7 @@ export function ValuationContext({
 
   const [activeGuru, setActiveGuru] = useState<string | null>(null);
   const [activeMetricIndex, setActiveMetricIndex] = useState(BOTTOM_INDEX);
+  const [guruSectionRef, guruBarsVisible] = useInView(0.3);
   const [highlightVisible, setHighlightVisible] = useState(true);
   const fractionalRef = useRef(BOTTOM_INDEX);
   const highlightVisibleRef = useRef(true);
@@ -202,60 +204,76 @@ export function ValuationContext({
         {dividerH}
 
         {/* Bar chart */}
-        <SectionLabel
-          title="Guru Scores"
-          badge={<span style={{ fontSize: 11, fontWeight: 700, color: radarColor, fontFamily: C.mono, letterSpacing: "0.05em" }}>{avgGuruScore.toFixed(1)}/10</span>}
-        />
-        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-          {guruData!.gurus.map(guru => {
-            const barColor = guru.score >= 8 ? "#10d97e" : guru.score >= 4 ? "#f5a020" : "#e03030";
-            const pct = `${(guru.score / 10) * 100}%`;
-            const isActive = activeGuru === guru.name;
-            return (
-              <div key={guru.name}>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
-                  onClick={() => setActiveGuru(isActive ? null : guru.name)}
-                  onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setActiveGuru(isActive ? null : guru.name); }}
-                >
-                  <span style={{ width: 72, fontSize: 10, color: C.text2, fontFamily: C.mono, flexShrink: 0, textAlign: "right" }}>
-                    {guru.name}
-                  </span>
-                  <div style={{ flex: "1 1 0", height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ width: pct, height: "100%", background: barColor, borderRadius: 3, transition: "width 0.4s ease" }} />
+        <div
+          ref={guruSectionRef}
+          className="guru-scores-section"
+          style={{
+            opacity: guruBarsVisible ? 1 : 0,
+            animation: guruBarsVisible ? "guruSectionReveal 0.5s ease both" : "none",
+          }}
+        >
+          <SectionLabel
+            title="Guru Scores"
+            badge={<span style={{ fontSize: 11, fontWeight: 700, color: radarColor, fontFamily: C.mono, letterSpacing: "0.05em" }}>{avgGuruScore.toFixed(1)}/10</span>}
+          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            {guruData!.gurus.map((guru, index) => {
+              const barColor = guru.score >= 8 ? "#10d97e" : guru.score >= 4 ? "#f5a020" : "#e03030";
+              const pct = `${(guru.score / 10) * 100}%`;
+              const isActive = activeGuru === guru.name;
+              return (
+                <div key={guru.name}>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+                    onClick={() => setActiveGuru(isActive ? null : guru.name)}
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setActiveGuru(isActive ? null : guru.name); }}
+                  >
+                    <span style={{ width: 72, fontSize: 10, color: C.text2, fontFamily: C.mono, flexShrink: 0, textAlign: "right" }}>
+                      {guru.name}
+                    </span>
+                    <div style={{ flex: "1 1 0", height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{
+                        width: guruBarsVisible ? pct : "0%",
+                        height: "100%",
+                        background: barColor,
+                        borderRadius: 3,
+                        transition: "width 0.4s ease",
+                        transitionDelay: `${index * 60}ms`,
+                      }} />
+                    </div>
+                    <span style={{ width: 28, fontSize: 10, color: barColor, fontFamily: C.mono, flexShrink: 0, textAlign: "left" }}>
+                      {guru.score}/10
+                    </span>
+                    <span style={{
+                      fontSize: 12,
+                      color: isActive ? barColor : C.text3,
+                      flexShrink: 0,
+                      display: "inline-block",
+                      transition: "color 0.15s, transform 0.2s ease",
+                      transform: isActive ? "rotate(90deg)" : "rotate(0deg)",
+                    }}>›</span>
                   </div>
-                  <span style={{ width: 28, fontSize: 10, color: barColor, fontFamily: C.mono, flexShrink: 0, textAlign: "left" }}>
-                    {guru.score}/10
-                  </span>
-                  <span style={{
-                    fontSize: 12,
-                    color: isActive ? barColor : C.text3,
-                    flexShrink: 0,
-                    display: "inline-block",
-                    transition: "color 0.15s, transform 0.2s ease",
-                    transform: isActive ? "rotate(90deg)" : "rotate(0deg)",
-                  }}>›</span>
+                  {isActive && (
+                    <div style={{
+                      marginTop: 4,
+                      marginLeft: 80,
+                      marginRight: 36,
+                      padding: "7px 10px",
+                      border: `1px solid ${barColor}33`,
+                      background: `${barColor}0d`,
+                      fontSize: 10,
+                      color: C.text2,
+                      lineHeight: 1.5,
+                    }}>
+                      {getGuruReasoning(guru.name, guruData!.radar)}
+                    </div>
+                  )}
                 </div>
-                {isActive && (
-                  <div style={{
-                    marginTop: 4,
-                    marginLeft: 80,
-                    marginRight: 36,
-                    padding: "7px 10px",
-                    border: `1px solid ${barColor}33`,
-                    background: `${barColor}0d`,
-                    fontSize: 10,
-                    color: C.text2,
-                    lineHeight: 1.5,
-                  }}>
-                    {getGuruReasoning(guru.name, guruData!.radar)}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </>)}
     </div>
