@@ -98,34 +98,51 @@ export function ValuationContext({
     }
   }, []);
 
-  // Sync transform + --rdr-counter and highlight whenever the settled index changes.
+  // Helper: apply the exact settled rotation for a given metric index.
+  // Shared between the immediate and deferred paths below.
+  const applySettledRotation = useCallback((index: number) => {
+    if (!radarWrapperRef.current) return;
+    const wrapDeg    = (BOTTOM_INDEX - index) * DEG_PER_METRIC;
+    const counterDeg = (index - BOTTOM_INDEX) * DEG_PER_METRIC;
+    radarWrapperRef.current.style.transform = `rotate(${wrapDeg}deg)`;
+    radarWrapperRef.current.style.setProperty('--rdr-counter', `${counterDeg}deg`);
+  }, []);
+
+  // Sync rotation and highlight whenever the settled index changes.
   useEffect(() => {
     const nearTarget = radarWrapperRef.current != null
       && Math.abs(fractionalRef.current - activeMetricIndex) < 0.15;
 
     if (nearTarget) {
-      // Scroll already at (or very near) the target — apply final rotation and
-      // restore the highlight. This covers the user-swipe-debounce-settle path.
-      const wrapDeg    = (BOTTOM_INDEX - activeMetricIndex) * DEG_PER_METRIC;
-      const counterDeg = (activeMetricIndex - BOTTOM_INDEX) * DEG_PER_METRIC;
-      radarWrapperRef.current!.style.transform = `rotate(${wrapDeg}deg)`;
-      radarWrapperRef.current!.style.setProperty('--rdr-counter', `${counterDeg}deg`);
+      // Already near target (user-swipe debounce settle) — apply immediately.
+      applySettledRotation(activeMetricIndex);
       if (!highlightVisibleRef.current) {
         highlightVisibleRef.current = true;
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setHighlightVisible(true);
       }
     } else {
-      // Programmatic scroll starting — fractional is far from destination.
-      // Hide the highlight immediately so it doesn't flash at the new
-      // highlightIndex while the radar is still rotated to the old position.
-      // handleScrollProgress will restore it as f approaches the target.
+      // Programmatic scroll starting — hide highlight while animating.
       if (highlightVisibleRef.current) {
         highlightVisibleRef.current = false;
         setHighlightVisible(false);
       }
     }
-  }, [activeMetricIndex]);
+
+    // Always schedule a deferred settle pass to correct floating-point drift
+    // after the scroll animation fully completes. handleScrollProgress drives
+    // rotation during the animation using el.scrollLeft / (cardWidth + gap),
+    // which rarely lands on an exact integer — this final pass snaps to it.
+    const settleDelay = nearTarget ? 150 : 750;
+    const settleId = setTimeout(() => {
+      applySettledRotation(activeMetricIndex);
+      if (!highlightVisibleRef.current) {
+        highlightVisibleRef.current = true;
+        setHighlightVisible(true);
+      }
+    }, settleDelay);
+    return () => clearTimeout(settleId);
+  }, [activeMetricIndex, applySettledRotation]);
 
   // Must be before early return to satisfy Rules of Hooks
   const metricContexts = useMemo(() => {
