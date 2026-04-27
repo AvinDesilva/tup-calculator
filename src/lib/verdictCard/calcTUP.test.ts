@@ -46,9 +46,9 @@ describe("terminal growth rate formula", () => {
     // histBlended = (0.10 + 0.08) / 2 = 0.09
     // fwdCompound = sqrt(1.08 * 1.06) - 1 = 0.06995
     // terminal = (0.09 + 0.06995) / 2 + 0.005 = 0.08498
-    expect(r.grY1).toBeCloseTo(0.08 + 0.005, P);
-    expect(r.grY2).toBeCloseTo(0.06 + 0.005, P);
     expect(r.grTerminal).toBeCloseTo(0.08498, 4);
+    expect(r.grY1).toBeCloseTo(r.grTerminal, P);
+    expect(r.grY2).toBeCloseTo(r.grTerminal, P);
   });
 
   it("2: hyper growth (APP-like)", () => {
@@ -59,9 +59,9 @@ describe("terminal growth rate formula", () => {
     // histBlended = (0.96 + 0.28) / 2 = 0.62
     // fwdCompound = sqrt(1.28 * 1.22) - 1 = 0.24965
     // terminal = (0.62 + 0.24965) / 2 = 0.43483
-    expect(r.grY1).toBeCloseTo(0.28, P);
-    expect(r.grY2).toBeCloseTo(0.22, P);
     expect(r.grTerminal).toBeCloseTo(0.43483, 4);
+    expect(r.grY1).toBeCloseTo(r.grTerminal, P);
+    expect(r.grY2).toBeCloseTo(r.grTerminal, P);
   });
 
   it("3: dividend payer (NVO-like)", () => {
@@ -72,9 +72,9 @@ describe("terminal growth rate formula", () => {
     // histBlended = (0.20 + 0.15) / 2 = 0.175
     // fwdCompound = sqrt(1.15 * 1.12) - 1 = 0.13490
     // terminal = (0.175 + 0.13490) / 2 + 0.049 = 0.20395
-    expect(r.grY1).toBeCloseTo(0.15 + 0.049, P);
-    expect(r.grY2).toBeCloseTo(0.12 + 0.049, P);
     expect(r.grTerminal).toBeCloseTo(0.20395, 4);
+    expect(r.grY1).toBeCloseTo(r.grTerminal, P);
+    expect(r.grY2).toBeCloseTo(r.grTerminal, P);
   });
 
   it("4: cyclical recovery (negative hist, positive fwd)", () => {
@@ -85,9 +85,9 @@ describe("terminal growth rate formula", () => {
     // histBlended = (-0.05 + 0.25) / 2 = 0.10
     // fwdCompound = sqrt(1.25 * 1.15) - 1 = 0.19896
     // terminal = (0.10 + 0.19896) / 2 = 0.14948
-    expect(r.grY1).toBeCloseTo(0.25, P);
-    expect(r.grY2).toBeCloseTo(0.15, P);
     expect(r.grTerminal).toBeCloseTo(0.14948, 4);
+    expect(r.grY1).toBeCloseTo(r.grTerminal, P);
+    expect(r.grY2).toBeCloseTo(r.grTerminal, P);
   });
 
   it("5: declining company (all negative rates, dividend offset)", () => {
@@ -99,9 +99,9 @@ describe("terminal growth rate formula", () => {
     // fwdProduct = 0.95 * 0.92 = 0.874 > 0
     // fwdCompound = sqrt(0.874) - 1 = -0.06513
     // terminal = (-0.075 + -0.06513) / 2 + 0.03 = -0.04006
-    expect(r.grY1).toBeCloseTo(-0.05 + 0.03, P);
-    expect(r.grY2).toBeCloseTo(-0.08 + 0.03, P);
     expect(r.grTerminal).toBeCloseTo(-0.04006, 4);
+    expect(r.grY1).toBeCloseTo(r.grTerminal, P);
+    expect(r.grY2).toBeCloseTo(r.grTerminal, P);
   });
 
   it("6: turnaround (deep negative hist, strong positive fwd)", () => {
@@ -112,9 +112,9 @@ describe("terminal growth rate formula", () => {
     // histBlended = (-0.20 + 0.30) / 2 = 0.05
     // fwdCompound = sqrt(1.30 * 1.20) - 1 = 0.24900
     // terminal = (0.05 + 0.24900) / 2 = 0.14950
-    expect(r.grY1).toBeCloseTo(0.30, P);
-    expect(r.grY2).toBeCloseTo(0.20, P);
     expect(r.grTerminal).toBeCloseTo(0.14950, 4);
+    expect(r.grY1).toBeCloseTo(r.grTerminal, P);
+    expect(r.grY2).toBeCloseTo(r.grTerminal, P);
   });
 
   it("7: severe contraction (near-extreme negatives, product > 0)", () => {
@@ -138,9 +138,9 @@ describe("terminal growth rate formula", () => {
     // fwdCompound = (0.50 + -2.00) / 2 = -0.75
     // histBlended = (0.10 + 0.50) / 2 = 0.30
     // terminal = (0.30 + -0.75) / 2 = -0.225
-    expect(r.grY1).toBeCloseTo(0.50, P);
-    expect(r.grY2).toBeCloseTo(-2.00, P);
     expect(r.grTerminal).toBeCloseTo(-0.225, P);
+    expect(r.grY1).toBeCloseTo(r.grTerminal, P);
+    expect(r.grY2).toBeCloseTo(r.grTerminal, P);
   });
 
   it("9: Y2 null — geometric mean degrades to Y1", () => {
@@ -152,9 +152,9 @@ describe("terminal growth rate formula", () => {
     // histBlended = (0.15 + 0.12) / 2 = 0.135
     // fwdCompound = sqrt(1.12 * 1.12) - 1 = 0.12
     // terminal = (0.135 + 0.12) / 2 = 0.1275
-    expect(r.grY1).toBeCloseTo(0.12, P);
-    expect(r.grY2).toBeCloseTo(0.12, P);
     expect(r.grTerminal).toBeCloseTo(0.1275, P);
+    expect(r.grY1).toBeCloseTo(r.grTerminal, P);
+    expect(r.grY2).toBeCloseTo(r.grTerminal, P);
   });
 
   it("10: negative epsBase — all forward rates collapse to histRate", () => {
@@ -170,9 +170,9 @@ describe("terminal growth rate formula", () => {
     // fwdCompound = sqrt(1.15 * 1.15) - 1 = 0.15
     // terminal = (0.15 + 0.15) / 2 = 0.15
     expect(r.epsBase).toBeCloseTo(-0.5, P);
-    expect(r.grY1).toBeCloseTo(0.15, P);
-    expect(r.grY2).toBeCloseTo(0.15, P);
     expect(r.grTerminal).toBeCloseTo(0.15, P);
+    expect(r.grY1).toBeCloseTo(r.grTerminal, P);
+    expect(r.grY2).toBeCloseTo(r.grTerminal, P);
   });
 });
 

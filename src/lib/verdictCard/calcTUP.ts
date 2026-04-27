@@ -43,9 +43,6 @@ export function calcTUP(inp: InputState, mode: Mode, targetPriceOverride?: numbe
       fwd2Rate = histRate;
     }
 
-    grY1 = fwd1Rate + divBonus;
-    grY2 = fwd2Rate + divBonus;
-
     // Historical Blended: anchor past CAGR with Y1 forward outlook
     const histBlended = (histRate + fwd1Rate) / 2;
 
@@ -56,6 +53,8 @@ export function calcTUP(inp: InputState, mode: Mode, targetPriceOverride?: numbe
       : (fwd1Rate + fwd2Rate) / 2;  // fallback for extreme negatives
 
     grTerminal = (histBlended + fwdCompoundCAGR) / 2 + divBonus;
+    grY1 = grTerminal;
+    grY2 = grTerminal;
   } else {
     epsBase    = revenuePerShare * (targetMargin / 100);
     threshold  = PP_THRESHOLD;
@@ -96,10 +95,6 @@ export function calcTUP(inp: InputState, mode: Mode, targetPriceOverride?: numbe
     let yearGr: number;
     if (growthOverrides && growthOverrides[y] !== undefined) {
       yearGr = growthOverrides[y] / 100;
-    } else if (y === 1) {
-      yearGr = grY1;
-    } else if (y === 2) {
-      yearGr = grY2;
     } else {
       yearGr = decayMode === "vdr" ? fadedGrowth(grTerminal, y, vdrCtx)
              : decayMode === "ff"  ? fixedFrictionGrowth(grTerminal, y, vdrCtx)

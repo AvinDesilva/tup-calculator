@@ -16,8 +16,6 @@ export function GrowthAssumptions({
   const fwd1 = inp.fwdGrowthY1;
   const fwd2 = inp.fwdGrowthY2 ?? fwd1;
 
-  const blendedY1 = fwd1;
-  const blendedY2 = fwd2;
   // Historical Blended: (Hist CAGR + Y1) / 2
   const histBlended = (histRate + fwd1) / 2;
   // Forward Compound CAGR: geometric mean of Y1 and Y2 (in %)
@@ -229,18 +227,6 @@ export function GrowthAssumptions({
           <div style={{ padding: "8px 12px 8px 0", borderBottom: "1px solid rgba(255,255,255,0.08)", ...labelSm, fontSize: "9px", letterSpacing: "0.18em", textAlign: "right" }}>Formula</div>
           <div style={{ padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.08)", ...labelSm, fontSize: "9px", letterSpacing: "0.18em", textAlign: "right" }}>Rate</div>
 
-          {/* Year 1 */}
-          <div style={{ padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", ...labelSm }}>Y1 Growth</div>
-          <div style={{ padding: "7px 12px 7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", ...formulaSm }}>Analyst Y1</div>
-          <div style={{ padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", ...valueSm }}>{f(blendedY1)}%</div>
-
-          {/* Year 2 */}
-          <div style={{ padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", ...labelSm }}>Y2 Growth</div>
-          <div style={{ padding: "7px 12px 7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", ...formulaSm }}>
-            {inp.fwdGrowthY2 != null ? "Analyst Y2" : "= Y1"}
-          </div>
-          <div style={{ padding: "7px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", ...valueSm }}>{f(blendedY2)}%</div>
-
           {/* Historical Blended (intermediate) */}
           <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontSize: "10px", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "#555" }}>Hist Blended</div>
           <div style={{ padding: "6px 12px 6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "#444", textAlign: "right" }}>(Hist + Y1) / 2</div>
@@ -251,8 +237,8 @@ export function GrowthAssumptions({
           <div style={{ padding: "6px 12px 6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "#444", textAlign: "right" }}>GM(Y1, Y2)</div>
           <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", fontWeight: 500, color: "#666", textAlign: "right" }}>{f(fwdCompoundCAGR)}%</div>
 
-          {/* Terminal */}
-          <div style={{ padding: "7px 0", ...labelSm }}>Terminal (Y3+)</div>
+          {/* Blended Rate */}
+          <div style={{ padding: "7px 0", ...labelSm }}>Blended Rate</div>
           <div style={{ padding: "7px 12px 7px 0", ...formulaSm }}>(HB + FC) / 2</div>
           <div style={{ padding: "7px 0", ...valueSm, color: "#C4A06E" }}>{f(blendedTerminal)}%</div>
         </div>
