@@ -34,6 +34,7 @@ export function ExpandedContextCarousel({ contexts, radar, activeIndex, onIndexC
 
   // Programmatic scroll when activeIndex changes after mount
   useEffect(() => {
+    if (scrollingProgrammaticRef.current) return;
     const el = scrollRef.current;
     if (!el) return;
     const cardWidth  = el.offsetWidth - PEEK_PX * 2;
