@@ -12,9 +12,8 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
   const [editGrowthVal, setEditGrowthVal] = useState("");
   const [completedKey, setCompletedKey] = useState(0);
   const [arrowTick, setArrowTick] = useState(0);
-  const [verdictAnimKey, setVerdictAnimKey] = useState(0);
-  const [verdictCompletedKey, setVerdictCompletedKey] = useState(0);
   const prevVerdictRef = useRef<string | null>(null);
+  const [verdictCompletedFor, setVerdictCompletedFor] = useState<string | null>(null);
 
   useEffect(() => {
     if (animationKey === 0) return;
@@ -27,17 +26,12 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
     const verdict = result?.verdict ?? null;
     if (verdict === null || verdict === prevVerdictRef.current) return;
     prevVerdictRef.current = verdict;
-    setVerdictAnimKey(k => k + 1);
+    const flip = setInterval(() => setArrowTick(t => t + 1), 100);
+    const stop = setTimeout(() => { clearInterval(flip); setVerdictCompletedFor(verdict); }, 650);
+    return () => { clearInterval(flip); clearTimeout(stop); };
   }, [result?.verdict]);
 
-  useEffect(() => {
-    if (verdictAnimKey === 0) return;
-    const flip = setInterval(() => setArrowTick(t => t + 1), 100);
-    const stop = setTimeout(() => { clearInterval(flip); setVerdictCompletedKey(verdictAnimKey); }, 650);
-    return () => { clearInterval(flip); clearTimeout(stop); };
-  }, [verdictAnimKey]);
-
-  const isSpinning = (animationKey > 0 && animationKey !== completedKey) || (verdictAnimKey > 0 && verdictAnimKey !== verdictCompletedKey);
+  const isSpinning = (animationKey > 0 && animationKey !== completedKey) || (result?.verdict != null && result.verdict !== verdictCompletedFor);
   const arrowUp = arrowTick % 2 === 0;
 
   if (!result) return null;
