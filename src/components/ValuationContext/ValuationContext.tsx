@@ -64,6 +64,10 @@ export function ValuationContext({
   const fractionalRef = useRef(0);
   const highlightVisibleRef = useRef(true);
   const radarWrapperRef = useRef<HTMLDivElement>(null);
+  // Ref kept in sync with activeMetricIndex so the scroll debounce can read it
+  // without capturing a stale closure value.
+  const activeMetricIndexRef = useRef(activeMetricIndex);
+  const scrollDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Set transform and --rdr-counter before first paint to match the initial
   // rotation, preventing a flash of incorrectly-oriented labels on mount.
@@ -74,6 +78,16 @@ export function ValuationContext({
       radarWrapperRef.current.style.transform = `rotate(${wrapDeg}deg)`;
       radarWrapperRef.current.style.setProperty('--rdr-counter', `${counterDeg}deg`);
     }
+  }, []);
+
+  // Helper: apply the exact settled rotation for a given metric index.
+  // Shared between the immediate and deferred paths below.
+  const applySettledRotation = useCallback((index: number) => {
+    if (!radarWrapperRef.current) return;
+    const wrapDeg    = (BOTTOM_INDEX - index) * DEG_PER_METRIC;
+    const counterDeg = (index - BOTTOM_INDEX) * DEG_PER_METRIC;
+    radarWrapperRef.current.style.transform = `rotate(${wrapDeg}deg)`;
+    radarWrapperRef.current.style.setProperty('--rdr-counter', `${counterDeg}deg`);
   }, []);
 
   const handleScrollProgress = useCallback((f: number) => {
@@ -96,20 +110,24 @@ export function ValuationContext({
       highlightVisibleRef.current = nowVisible;
       setHighlightVisible(nowVisible);
     }
-  }, []);
-
-  // Helper: apply the exact settled rotation for a given metric index.
-  // Shared between the immediate and deferred paths below.
-  const applySettledRotation = useCallback((index: number) => {
-    if (!radarWrapperRef.current) return;
-    const wrapDeg    = (BOTTOM_INDEX - index) * DEG_PER_METRIC;
-    const counterDeg = (index - BOTTOM_INDEX) * DEG_PER_METRIC;
-    radarWrapperRef.current.style.transform = `rotate(${wrapDeg}deg)`;
-    radarWrapperRef.current.style.setProperty('--rdr-counter', `${counterDeg}deg`);
-  }, []);
+    // Debounce settle: fires 80ms after scroll events stop rather than at a fixed
+    // offset from the index change. This adapts to the actual animation duration
+    // (which varies by browser and scroll-snap behaviour), preventing the settle
+    // from firing while the scroll is still in progress.
+    if (scrollDebounceRef.current) clearTimeout(scrollDebounceRef.current);
+    scrollDebounceRef.current = setTimeout(() => {
+      applySettledRotation(activeMetricIndexRef.current);
+      if (!highlightVisibleRef.current) {
+        highlightVisibleRef.current = true;
+        setHighlightVisible(true);
+      }
+    }, 80);
+  }, [applySettledRotation]);
 
   // Sync rotation and highlight whenever the settled index changes.
   useEffect(() => {
+    activeMetricIndexRef.current = activeMetricIndex;
+
     const nearTarget = radarWrapperRef.current != null
       && Math.abs(fractionalRef.current - activeMetricIndex) < 0.15;
 
@@ -129,11 +147,11 @@ export function ValuationContext({
       }
     }
 
-    // Always schedule a deferred settle pass to correct floating-point drift
-    // after the scroll animation fully completes. handleScrollProgress drives
-    // rotation during the animation using el.scrollLeft / (cardWidth + gap),
-    // which rarely lands on an exact integer — this final pass snaps to it.
-    const settleDelay = nearTarget ? 150 : 750;
+    // Safety-net settle: covers edge cases where no scroll events fire (e.g. an
+    // external index change with no visible scroll). The handleScrollProgress
+    // debounce handles the normal case (80ms after the last scroll event), so
+    // this can afford a long delay without affecting perceived responsiveness.
+    const settleDelay = nearTarget ? 150 : 1500;
     const settleId = setTimeout(() => {
       applySettledRotation(activeMetricIndex);
       if (!highlightVisibleRef.current) {
@@ -143,6 +161,9 @@ export function ValuationContext({
     }, settleDelay);
     return () => clearTimeout(settleId);
   }, [activeMetricIndex, applySettledRotation]);
+
+  // Clean up the scroll debounce timer on unmount.
+  useEffect(() => () => { if (scrollDebounceRef.current) clearTimeout(scrollDebounceRef.current); }, []);
 
   // Must be before early return to satisfy Rules of Hooks
   const metricContexts = useMemo(() => {
