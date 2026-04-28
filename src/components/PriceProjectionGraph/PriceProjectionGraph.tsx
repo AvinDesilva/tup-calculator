@@ -68,21 +68,21 @@ export function PriceProjectionGraph({
 
   // ─── rAF loop — same pattern as useLifecycleAnimation ────────────────────
   // Two independent time tracks from the same start reference.
-  // Each projection line draws for 400ms with a 200ms pause between them.
+  // Each projection line draws for 400ms with a 350ms pause between them.
   //
   // Line-mount track (introState):
   //   0–900ms    → pending  (historical line animating)
-  //   900–1500   → bear     (draws 400ms, pause 200ms)
-  //   1500–2100  → bull     (draws 400ms, pause 200ms)
-  //   2100–2500  → base     (draws 400ms)
-  //   2500+      → done
+  //   900–1650   → bear     (draws 400ms, pause 350ms)
+  //   1650–2400  → bull     (draws 400ms, pause 350ms)
+  //   2400–2800  → base     (draws 400ms)
+  //   2800+      → done
   //
   // Button track (introScenario) — crossfade starts when each draw ends,
-  // which is exactly 200ms before the next line mounts:
+  // which is exactly 350ms before the next line mounts:
   //   900–1300   → "bear"
-  //   1300–1900  → "bull"   (crossfade during pause, finishes mid-draw of bull)
-  //   1900–2500  → "base"
-  //   2500+      → null
+  //   1300–2050  → "bull"   (crossfade during pause, finishes mid-draw of bull)
+  //   2050–2800  → "base"
+  //   2800+      → null
   useEffect(() => {
     introActiveRef.current = true;
     let rafId: number;
@@ -96,21 +96,21 @@ export function PriceProjectionGraph({
 
       const nextLine: IntroPhase =
         elapsed < 900  ? "pending" :
-        elapsed < 1500 ? "bear"    :
-        elapsed < 2100 ? "bull"    :
-        elapsed < 2500 ? "base"    :
+        elapsed < 1650 ? "bear"    :
+        elapsed < 2400 ? "bull"    :
+        elapsed < 2800 ? "base"    :
         "done";
 
       const nextBtn: GrowthScenario | null =
         elapsed >= 900  && elapsed < 1300 ? "bear" :
-        elapsed >= 1300 && elapsed < 1900 ? "bull" :
-        elapsed >= 1900 && elapsed < 2500 ? "base" :
+        elapsed >= 1300 && elapsed < 2050 ? "bull" :
+        elapsed >= 2050 && elapsed < 2800 ? "base" :
         null;
 
       if (nextLine !== curLine) { curLine = nextLine; setIntroState({ key: chartKey, phase: nextLine }); }
       if (nextBtn  !== curBtn)  { curBtn  = nextBtn;  setIntroScenario(nextBtn); }
 
-      if (elapsed < 2500) rafId = requestAnimationFrame(tick);
+      if (elapsed < 2800) rafId = requestAnimationFrame(tick);
     };
 
     rafId = requestAnimationFrame(tick);
