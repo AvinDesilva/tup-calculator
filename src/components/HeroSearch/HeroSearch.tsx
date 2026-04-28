@@ -66,7 +66,8 @@ export function HeroSearch({ ticker, onTickerChange, onTickerSelect, onFetch, lo
         )}
         <button onClick={onRollDice} disabled={loading || rollingDice} style={{
           position: "relative",
-          padding: "16px 20px",
+          padding: "0 20px",
+          height: "52px",
           background: "transparent",
           color: C.accent,
           border: `1px solid ${C.accent}`,
