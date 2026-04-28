@@ -36,15 +36,15 @@ export function GraphLegend({ growthScenario, onScenarioChange, showSma, setShow
               padding: "5px 18px",
               width: "83px",
               justifyContent: "center",
-              border: `1px solid ${rgba.border}`,
+              border: `1px solid ${active ? color : rgba.border}`,
               marginLeft: i > 0 ? "-1px" : 0,
-              background: rgba.bg,
-              transition: "opacity 0.15s",
+              background: active ? color : rgba.bg,
+              transition: "opacity 0.15s, background 0.15s",
               position: "relative",
               zIndex: active ? 1 : 0,
             }}
           >
-            <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color, fontWeight: 700 }}>
+            <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color: active ? "#000" : color, fontWeight: 700 }}>
               {label}
             </span>
           </button>
