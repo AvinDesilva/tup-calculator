@@ -139,10 +139,7 @@ export function PriceProjectionGraph({
               dot={false}
               activeDot={false}
               connectNulls={false}
-              isAnimationActive={true}
-              animationBegin={1700}
-              animationDuration={400}
-              animationEasing="ease-out"
+              isAnimationActive={false}
               hide={!showSma}
             />
 
