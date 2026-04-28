@@ -297,6 +297,7 @@ export function PriceProjectionGraph({
         sma200={sma200}
         body={body}
         introScenario={introScenario}
+        introPending={introPhase === "pending"}
         onIntroCancel={() => {
           introActiveRef.current = false;
           setIntroState({ key: chartKey, phase: "done" });

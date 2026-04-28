@@ -9,6 +9,7 @@ interface GraphLegendProps {
   sma200: number;
   body: string;
   introScenario?: GrowthScenario | null;
+  introPending?: boolean;
   onIntroCancel?: () => void;
 }
 
@@ -18,11 +19,11 @@ const legendItems: Array<{ key: GrowthScenario; label: string }> = [
   { key: "bull", label: "Bull" },
 ];
 
-export function GraphLegend({ growthScenario, onScenarioChange, showSma, setShowSma, sma200, body, introScenario, onIntroCancel }: GraphLegendProps) {
+export function GraphLegend({ growthScenario, onScenarioChange, showSma, setShowSma, sma200, body, introScenario, introPending, onIntroCancel }: GraphLegendProps) {
   return (
     <div role="group" aria-label="Projection scenario" style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: "10px", flexShrink: 0 }}>
       {legendItems.map(({ key, label }, i) => {
-        const activeScenario = introScenario ?? growthScenario;
+        const activeScenario = introPending ? null : (introScenario ?? growthScenario);
         const active = activeScenario === key;
         const color = COLORS[key];
         const rgba = SCENARIO_RGBA[key];
