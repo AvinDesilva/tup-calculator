@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 import { calcTUP } from "../lib/verdictCard/calcTUP.ts";
 import { lookupTicker, lookupTickerQuick, fetchFilteredPool } from "../lib/tickerSearch/api.ts";
+import type { QuickTickerData } from "../lib/tickerSearch/api.ts";
 import { fetchInsiderTrading } from "../lib/insiderTrading/fetch.ts";
 import type { InputState, GrowthScenario, RollFilters, TupRangeFilter, HistoricalPricePoint } from "../lib/types.ts";
 import * as dev from "../lib/devData.ts";
@@ -14,6 +15,16 @@ import type { ValuationState, ScorecardState, UseTickerFetchReturn } from "./use
 
 const DICE_PHRASES = ["Rolling...", "Scanning...", "Searching...", "Thinking...", "Casting...", "Praying..."];
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms);
+    promise.then(
+      val => { clearTimeout(timer); resolve(val); },
+      err => { clearTimeout(timer); reject(err); },
+    );
+  });
+}
+
 function matchesTupRange(pb: number, ranges: TupRangeFilter[]): boolean {
   if (ranges.length === 0) return pb > 4 && pb < 18;
   return ranges.some(r => {
@@ -24,6 +35,34 @@ function matchesTupRange(pb: number, ranges: TupRangeFilter[]): boolean {
     if (r === "15+")   return pb > 15;
     return false;
   });
+}
+
+// Relaxed version used for quick screening — expands each boundary by ±2 years
+// to compensate for divergence between quick estimates and full analyst data.
+function matchesTupRangeWithBuffer(pb: number, ranges: TupRangeFilter[]): boolean {
+  if (ranges.length === 0) return pb > 2 && pb < 20;
+  return ranges.some(r => {
+    if (r === "≤7")    return pb <= 9;
+    if (r === "≤9")    return pb > 5  && pb <= 11;
+    if (r === "10–12") return pb >= 8  && pb <= 14;
+    if (r === "13–15") return pb >= 11 && pb <= 17;
+    if (r === "15+")   return pb > 13;
+    return false;
+  });
+}
+
+function quickDataToInputState(data: QuickTickerData): InputState {
+  return {
+    marketCap: data.marketCap, debt: data.debt, cash: data.cash, shares: data.shares,
+    ttmEPS: data.ttmEPS, forwardEPS: data.forwardEPS,
+    historicalGrowth: data.historicalGrowth5yr, analystGrowth: data.analystGrowth,
+    fwdGrowthY1: data.fwdGrowthY1, fwdGrowthY2: data.fwdGrowthY2, fwdCAGR: data.fwdCAGR,
+    revenuePerShare: data.revenuePerShare, targetMargin: data.targetMargin,
+    inceptionGrowth: data.inceptionGrowth, breakEvenYear: data.breakEvenYear,
+    currentPrice: data.currentPrice, sma200: data.sma200,
+    dividendYield: data.dividendYield || 0, operatingMargin: data.operatingMargin ?? null,
+    lifecycleStage: data.lifecycleStage, growthOverrides: {}, decayMode: "ff",
+  };
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -178,11 +217,14 @@ export function useTickerFetch(): UseTickerFetchReturn {
     diceAbortRef.current = false;
     setRollingDice(true);
     setError("");
-    const MAX_ATTEMPTS = 20;
-    const DELAY_MS = 1000;
-    const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+    const BATCH_SIZE = 4;
+    const MAX_CANDIDATES = 24;
+    const MAX_QUICK_MATCHES = 3;
+    const QUICK_TIMEOUT_MS = 6000;
+    const FULL_TIMEOUT_MS = 12000;
+
     try {
-      // Pre-filter pool using FMP screener + ETF intersection (single API call)
       console.log("[rollDice] filters:", rollFilters);
       const pool = await fetchFilteredPool(rollFilters);
       if (diceAbortRef.current) { setRollingDice(false); return; }
@@ -192,51 +234,66 @@ export function useTickerFetch(): UseTickerFetchReturn {
         setRollingDice(false);
         return;
       }
+
       // Fisher-Yates shuffle — no duplicate picks
       const shuffled = [...pool];
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
-      const limit = Math.min(MAX_ATTEMPTS, shuffled.length);
-      for (let attempt = 0; attempt < limit; attempt++) {
+
+      const candidates = shuffled.slice(0, Math.min(MAX_CANDIDATES, shuffled.length));
+      const quickMatches: string[] = [];
+
+      // ── Phase 1: Batched parallel quick screening ──────────────────────────
+      for (let batchStart = 0; batchStart < candidates.length; batchStart += BATCH_SIZE) {
         if (diceAbortRef.current) { setRollingDice(false); return; }
-        if (attempt > 0) await wait(DELAY_MS);
-        if (diceAbortRef.current) { setRollingDice(false); return; }
-        const t = shuffled[attempt];
-        try {
-          console.log(`[rollDice] attempt ${attempt + 1}/${limit}: ${t}`);
-          const data = await lookupTickerQuick(t);
+        if (quickMatches.length >= MAX_QUICK_MATCHES) break;
+
+        const batch = candidates.slice(batchStart, batchStart + BATCH_SIZE);
+        console.log(`[rollDice] quick batch ${Math.floor(batchStart / BATCH_SIZE) + 1}: ${batch.join(", ")}`);
+
+        const results = await Promise.allSettled(
+          batch.map(t => withTimeout(lookupTickerQuick(t), QUICK_TIMEOUT_MS))
+        );
+
+        for (let i = 0; i < results.length; i++) {
           if (diceAbortRef.current) { setRollingDice(false); return; }
-          const testInp: InputState = {
-            marketCap: data.marketCap, debt: data.debt, cash: data.cash, shares: data.shares,
-            ttmEPS: data.ttmEPS, forwardEPS: data.forwardEPS,
-            historicalGrowth: data.historicalGrowth5yr, analystGrowth: data.analystGrowth,
-            fwdGrowthY1: data.fwdGrowthY1, fwdGrowthY2: data.fwdGrowthY2, fwdCAGR: data.fwdCAGR,
-            revenuePerShare: data.revenuePerShare, targetMargin: data.targetMargin,
-            inceptionGrowth: data.inceptionGrowth, breakEvenYear: data.breakEvenYear,
-            currentPrice: data.currentPrice, sma200: data.sma200,
-            dividendYield: data.dividendYield || 0, operatingMargin: data.operatingMargin ?? null, lifecycleStage: data.lifecycleStage, growthOverrides: {}, decayMode: "ff",
-          };
-          const testResult = calcTUP(testInp, "standard");
-          const pb = testResult?.payback;
-          console.log(`[rollDice] ${t} payback=${pb}`);
-          if (pb && matchesTupRange(pb, rollFilters.tupRange)) {
-            if (diceAbortRef.current) { setRollingDice(false); return; }
-            console.log(`[rollDice] MATCH ${t} — running full fetch`);
-            setTicker(t);
-            setIsFilterOpen(false);
-            const fullPb = await doFetch(t);
-            if (fullPb && matchesTupRange(fullPb, rollFilters.tupRange)) {
-              setRollingDice(false);
-              return;
+          const r = results[i];
+          if (r.status === "fulfilled") {
+            const testInp = quickDataToInputState(r.value);
+            const testResult = calcTUP(testInp, "standard");
+            const pb = testResult?.payback;
+            console.log(`[rollDice] ${batch[i]} payback=${pb}`);
+            if (pb && matchesTupRangeWithBuffer(pb, rollFilters.tupRange)) {
+              quickMatches.push(batch[i]);
             }
-            console.log(`[rollDice] ${t} full-fetch payback=${fullPb} — diverged from quick estimate, skipping`);
+          } else {
+            console.warn(`[rollDice] ${batch[i]} quick failed:`, r.reason instanceof Error ? r.reason.message : r.reason);
           }
-        } catch (err) {
-          console.warn(`[rollDice] ${t} failed:`, err instanceof Error ? err.message : err);
         }
       }
+
+      console.log(`[rollDice] quick matches: ${quickMatches.join(", ") || "(none)"}`);
+
+      // ── Phase 2: Full fetch on quick matches (first valid match wins) ───────
+      for (const t of quickMatches) {
+        if (diceAbortRef.current) { setRollingDice(false); return; }
+        console.log(`[rollDice] full fetch: ${t}`);
+        setTicker(t);
+        setIsFilterOpen(false);
+        try {
+          const fullPb = await withTimeout(doFetch(t), FULL_TIMEOUT_MS);
+          if (fullPb && matchesTupRange(fullPb, rollFilters.tupRange)) {
+            setRollingDice(false);
+            return;
+          }
+          console.log(`[rollDice] ${t} full-fetch payback=${fullPb} — diverged, trying next`);
+        } catch (err) {
+          console.warn(`[rollDice] ${t} full fetch failed:`, err instanceof Error ? err.message : err);
+        }
+      }
+
       if (!diceAbortRef.current) setError("Could not find a suitable stock — try adjusting filters.");
     } catch (e) {
       if (!diceAbortRef.current) setError(e instanceof Error ? e.message : "Failed to roll dice.");
