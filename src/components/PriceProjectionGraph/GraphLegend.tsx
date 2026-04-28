@@ -20,6 +20,10 @@ const legendItems: Array<{ key: GrowthScenario; label: string }> = [
 ];
 
 export function GraphLegend({ growthScenario, onScenarioChange, showSma, setShowSma, sma200, body, introScenario, introPending, onIntroCancel }: GraphLegendProps) {
+  // Longer transitions during the intro cycle so each button fades in/out smoothly;
+  // snappy (0.15s) for normal user interaction.
+  const dur = introScenario != null ? "0.3s" : "0.15s";
+
   return (
     <div role="group" aria-label="Projection scenario" style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: "10px", flexShrink: 0 }}>
       {legendItems.map(({ key, label }, i) => {
@@ -43,12 +47,12 @@ export function GraphLegend({ growthScenario, onScenarioChange, showSma, setShow
               border: `1px solid ${active ? color : rgba.border}`,
               marginLeft: i > 0 ? "-1px" : 0,
               background: active ? color : rgba.bg,
-              transition: "opacity 0.15s, background 0.15s",
+              transition: `opacity ${dur}, background ${dur}, color ${dur}, border-color ${dur}`,
               position: "relative",
               zIndex: active ? 1 : 0,
             }}
           >
-            <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color: active ? "#000" : color, fontWeight: 700 }}>
+            <span style={{ fontSize: "9px", fontFamily: body, letterSpacing: "0.1em", textTransform: "uppercase", color: active ? "#000" : color, fontWeight: 700, transition: `color ${dur}` }}>
               {label}
             </span>
           </button>
