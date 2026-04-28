@@ -47,7 +47,6 @@ export function PriceProjectionGraph({
 
   // Arm the intro on each new chart load; disarm on cleanup so stale callbacks are no-ops
   useEffect(() => {
-    setIntroScenario(null);
     introActiveRef.current = true;
     return () => { introActiveRef.current = false; };
   }, [chartKey]);
