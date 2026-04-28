@@ -8,6 +8,8 @@ interface GraphLegendProps {
   setShowSma: React.Dispatch<React.SetStateAction<boolean>>;
   sma200: number;
   body: string;
+  introScenario?: GrowthScenario | null;
+  onIntroCancel?: () => void;
 }
 
 const legendItems: Array<{ key: GrowthScenario; label: string }> = [
@@ -16,17 +18,18 @@ const legendItems: Array<{ key: GrowthScenario; label: string }> = [
   { key: "bull", label: "Bull" },
 ];
 
-export function GraphLegend({ growthScenario, onScenarioChange, showSma, setShowSma, sma200, body }: GraphLegendProps) {
+export function GraphLegend({ growthScenario, onScenarioChange, showSma, setShowSma, sma200, body, introScenario, onIntroCancel }: GraphLegendProps) {
   return (
     <div role="group" aria-label="Projection scenario" style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: "10px", flexShrink: 0 }}>
       {legendItems.map(({ key, label }, i) => {
-        const active = growthScenario === key;
+        const activeScenario = introScenario ?? growthScenario;
+        const active = activeScenario === key;
         const color = COLORS[key];
         const rgba = SCENARIO_RGBA[key];
         return (
           <button
             key={key}
-            onClick={() => onScenarioChange?.(key)}
+            onClick={() => { onIntroCancel?.(); onScenarioChange?.(key); }}
             aria-pressed={active}
             aria-label={`${label} scenario`}
             style={{

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   ReferenceLine, ResponsiveContainer, Tooltip,
@@ -29,6 +29,7 @@ export function PriceProjectionGraph({
 
   const [viewYears, setViewYears] = useState<2 | 5 | 10>(2);
   const [showSma, setShowSma] = useState(true);
+  const [introScenario, setIntroScenario] = useState<GrowthScenario | null>(null);
 
   const { chartData, todayLabel, chartKey, yDomain } = useChartData(
     priceHistory,
@@ -42,6 +43,15 @@ export function PriceProjectionGraph({
   );
 
   const tickFmt = (v: number) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(0)}`;
+
+  // Sequence button highlights in sync with staggered line draw animations
+  useEffect(() => {
+    const t0 = setTimeout(() => setIntroScenario("bear"), 900);
+    const t1 = setTimeout(() => setIntroScenario("bull"), 1500);
+    const t2 = setTimeout(() => setIntroScenario("base"), 2100);
+    const t3 = setTimeout(() => setIntroScenario(null),   2700);
+    return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [chartKey]);
 
   // Scenario line styles — active: full opacity + thicker, inactive: dimmed
   const lineStyle = (s: GrowthScenario): { strokeOpacity: number; strokeWidth: number } => ({
@@ -153,7 +163,7 @@ export function PriceProjectionGraph({
               activeDot={{ r: 4, fill: COLORS.base, strokeWidth: 0 }}
               connectNulls={false}
               isAnimationActive={true}
-              animationBegin={900}
+              animationBegin={2100}
               animationDuration={600}
               animationEasing="ease-out"
               {...lineStyle("base")}
@@ -169,7 +179,7 @@ export function PriceProjectionGraph({
               activeDot={{ r: 4, fill: COLORS.bull, strokeWidth: 0 }}
               connectNulls={false}
               isAnimationActive={true}
-              animationBegin={900}
+              animationBegin={1500}
               animationDuration={600}
               animationEasing="ease-out"
               {...lineStyle("bull")}
@@ -216,6 +226,8 @@ export function PriceProjectionGraph({
         setShowSma={setShowSma}
         sma200={sma200}
         body={body}
+        introScenario={introScenario}
+        onIntroCancel={() => setIntroScenario(null)}
       />
     </div>
   );
