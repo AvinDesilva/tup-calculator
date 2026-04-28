@@ -67,21 +67,23 @@ export function PriceProjectionGraph({
   const introActiveRef = useRef(false);
 
   // ─── rAF loop — same pattern as useLifecycleAnimation ────────────────────
-  // Two independent time tracks from the same start reference:
+  // Two independent time tracks from the same start reference.
   //
-  // Line-mount track  (introState) — controls when each projection line mounts:
-  //   0–900ms   → pending  (historical line animating; no projection lines yet)
-  //   900–1500  → bear     (bear line mounts + draws with animationBegin=0)
-  //   1500–2100 → bull
-  //   2100–2700 → base
-  //   2700+     → done
+  // Line-mount track (introState) — 200ms pause between each draw:
+  //   0–900ms    → pending  (historical line animating)
+  //   900–1500   → bear     (draws 600ms)  ┐
+  //   1500–1700  →  pause                  │ 200ms gap
+  //   1700–2300  → bull     (draws 600ms)  ┘
+  //   2300–2500  →  pause
+  //   2500–3100  → base     (draws 600ms)
+  //   3100+      → done
   //
-  // Button track (introScenario) — starts crossfade 200ms before next line mounts
-  // so the fade overlaps with the end of each line's draw, not the start of the next:
-  //   900–1300  → "bear"   (light up; bear line is drawing)
-  //   1300–1900 → "bull"   (crossfade starts 200ms before bull line mounts at 1500ms)
-  //   1900–2700 → "base"   (crossfade starts 200ms before base line mounts at 2100ms)
-  //   2700+     → null     (growthScenario takes over)
+  // Button track (introScenario) — crossfade starts at end of each draw, which is
+  // exactly 200ms before the next line mounts (the pause == the crossfade lead time):
+  //   900–1500   → "bear"
+  //   1500–2300  → "bull"   (crossfade during the 200ms pause, then mid-draw of bull)
+  //   2300–3100  → "base"
+  //   3100+      → null     (growthScenario takes over)
   useEffect(() => {
     introActiveRef.current = true;
     let rafId: number;
@@ -95,21 +97,21 @@ export function PriceProjectionGraph({
 
       const nextLine: IntroPhase =
         elapsed < 900  ? "pending" :
-        elapsed < 1500 ? "bear"    :
-        elapsed < 2100 ? "bull"    :
-        elapsed < 2700 ? "base"    :
+        elapsed < 1700 ? "bear"    :
+        elapsed < 2500 ? "bull"    :
+        elapsed < 3100 ? "base"    :
         "done";
 
       const nextBtn: GrowthScenario | null =
-        elapsed >= 900  && elapsed < 1300 ? "bear" :
-        elapsed >= 1300 && elapsed < 1900 ? "bull" :
-        elapsed >= 1900 && elapsed < 2700 ? "base" :
+        elapsed >= 900  && elapsed < 1500 ? "bear" :
+        elapsed >= 1500 && elapsed < 2300 ? "bull" :
+        elapsed >= 2300 && elapsed < 3100 ? "base" :
         null;
 
       if (nextLine !== curLine) { curLine = nextLine; setIntroState({ key: chartKey, phase: nextLine }); }
       if (nextBtn  !== curBtn)  { curBtn  = nextBtn;  setIntroScenario(nextBtn); }
 
-      if (elapsed < 2700) rafId = requestAnimationFrame(tick);
+      if (elapsed < 3100) rafId = requestAnimationFrame(tick);
     };
 
     rafId = requestAnimationFrame(tick);
@@ -149,7 +151,7 @@ export function PriceProjectionGraph({
 
   const showBear = introPhase !== "pending";
   const showBull = introPhase === "bull" || introPhase === "base" || introPhase === "done";
-  const showBase = introPhase === "base" || introPhase === "done";
+  const showBase = introPhase === "base"  || introPhase === "done";
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
