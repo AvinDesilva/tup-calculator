@@ -12,6 +12,15 @@ import { ChartTooltip } from "./ChartTooltip.tsx";
 import { GraphLegend } from "./GraphLegend.tsx";
 import { ViewWindowToggle } from "./ViewWindowToggle.tsx";
 
+// ─── Intro phase ────────────────────────────────────────────────────────────
+// Controls both which projection lines are mounted and which button is lit.
+// 'pending'  → no projection lines visible yet
+// 'bear'     → bear line mounted + bear button lit
+// 'bull'     → bear + bull mounted + bull button lit
+// 'base'     → all mounted + base button lit
+// 'done'     → all mounted + no button override (growthScenario wins)
+type IntroPhase = "pending" | GrowthScenario | "done";
+
 export function PriceProjectionGraph({
   priceHistory,
   currentPrice,
@@ -29,8 +38,6 @@ export function PriceProjectionGraph({
 
   const [viewYears, setViewYears] = useState<2 | 5 | 10>(2);
   const [showSma, setShowSma] = useState(true);
-  const [introScenario, setIntroScenario] = useState<GrowthScenario | null>(null);
-  const introActiveRef = useRef(false);
 
   const { chartData, todayLabel, chartKey, yDomain } = useChartData(
     priceHistory,
@@ -43,35 +50,52 @@ export function PriceProjectionGraph({
     dividendYield,
   );
 
-  // Track which chartKey the SMA has already animated for; derives smaAnimActive cleanly
+  // ─── Intro animation state ────────────────────────────────────────────────
+  // Keyed by chartKey so phase resets to 'pending' automatically when new data loads.
+  const [introState, setIntroState] = useState<{ key: string | null; phase: IntroPhase }>(
+    { key: null, phase: "done" },
+  );
+  const introPhase: IntroPhase = introState.key === chartKey ? introState.phase : "pending";
+  const introScenario: GrowthScenario | null =
+    introPhase === "bear" || introPhase === "bull" || introPhase === "base" ? introPhase : null;
+
+  // Track which chartKey the SMA has already animated for; drives smaAnimActive.
   const [smaAnimatedKey, setSmaAnimatedKey] = useState<string | null>(null);
   const smaAnimActive = smaAnimatedKey !== chartKey;
 
-  const tickFmt = (v: number) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(0)}`;
+  const introActiveRef = useRef(false);
 
-  // rAF loop — same pattern as useLifecycleAnimation so button highlights and line draws
-  // share a single time reference. recharts animationBegin values (900/1500/2100) match
-  // the thresholds below; the rAF fires slightly after recharts' first draw tick (~one frame),
-  // ensuring the line is already mid-draw when the button lights up.
+  // ─── rAF loop — same pattern as useLifecycleAnimation ────────────────────
+  // Controls WHEN each projection line mounts (and its button highlights) from the
+  // same time source. Each line mounts with animationBegin={0} so recharts draws it
+  // immediately on mount — no dependency on recharts' internal animation timers.
+  //
+  // Thresholds (ms from effect fire, which is ~one frame after chart commits):
+  //   0–900   → pending   (historical line is animating; no projection lines yet)
+  //   900–1500 → bear     (bear line mounts and draws; bear button lights up)
+  //   1500–2100 → bull    (bull line mounts and draws; bull button lights up)
+  //   2100–2700 → base    (base line mounts and draws; base button lights up)
+  //   2700+    → done     (all lines visible; revert to selected growthScenario)
   useEffect(() => {
     introActiveRef.current = true;
     let rafId: number;
     const start = performance.now();
-    let current: GrowthScenario | null = null;
+    let current: IntroPhase = "pending";
 
     const tick = (now: number) => {
       if (!introActiveRef.current) return;
       const elapsed = now - start;
 
-      const next: GrowthScenario | null =
-        elapsed >= 900  && elapsed < 1500 ? "bear" :
-        elapsed >= 1500 && elapsed < 2100 ? "bull" :
-        elapsed >= 2100 && elapsed < 2700 ? "base" :
-        null;
+      const next: IntroPhase =
+        elapsed < 900  ? "pending" :
+        elapsed < 1500 ? "bear"    :
+        elapsed < 2100 ? "bull"    :
+        elapsed < 2700 ? "base"    :
+        "done";
 
       if (next !== current) {
         current = next;
-        setIntroScenario(next);
+        setIntroState({ key: chartKey, phase: next });
       }
 
       if (elapsed < 2700) rafId = requestAnimationFrame(tick);
@@ -86,8 +110,8 @@ export function PriceProjectionGraph({
 
   const onSmaAnimEnd = useCallback(() => { setSmaAnimatedKey(chartKey); }, [chartKey]);
 
-  // Scenario line styles — active: full opacity + thicker, inactive: dimmed
-  // Uses introScenario during the intro so the drawing line is always the prominent one
+  // Scenario line styles — active: full opacity + thicker, inactive: dimmed.
+  // During intro, uses introScenario so the currently-drawing line is always prominent.
   const lineStyle = (s: GrowthScenario): { strokeOpacity: number; strokeWidth: number } => {
     const effective = introScenario ?? growthScenario;
     return {
@@ -96,12 +120,11 @@ export function PriceProjectionGraph({
     };
   };
 
-  // Stable tooltip wrapper — prevents Recharts from remounting the tooltip
-  // on every render (which happens when content is an inline arrow function)
+  const tickFmt = (v: number) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(0)}`;
+
   const tooltipContent = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (props: any) => <ChartTooltip {...props} currentPrice={currentPrice} tickFmt={tickFmt} mono={mono} />,
-    // tickFmt is a stable inline function with no captures; mono/currentPrice are primitives
     [currentPrice, mono],
   );
 
@@ -112,6 +135,10 @@ export function PriceProjectionGraph({
       </div>
     );
   }
+
+  const showBear = introPhase !== "pending";
+  const showBull = introPhase === "bull" || introPhase === "base" || introPhase === "done";
+  const showBase = introPhase === "base" || introPhase === "done";
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -158,7 +185,7 @@ export function PriceProjectionGraph({
               strokeWidth={1}
             />
 
-            {/* 200-day SMA — curved line following the rolling 40-week average */}
+            {/* 200-day SMA */}
             <Line
               type="monotone"
               dataKey="sma"
@@ -191,58 +218,63 @@ export function PriceProjectionGraph({
               animationEasing="ease-out"
             />
 
-            {/* Base — white dashed */}
-            <Line
-              type="monotone"
-              dataKey="base"
-              stroke={COLORS.base}
-              strokeDasharray="6 3"
-              dot={false}
-              activeDot={{ r: 4, fill: COLORS.base, strokeWidth: 0 }}
-              connectNulls={false}
-              isAnimationActive={true}
-              animationBegin={2100}
-              animationDuration={600}
-              animationEasing="ease-out"
-              {...lineStyle("base")}
-            />
+            {/* Bear — mounts at t≈900ms; draws immediately with animationBegin=0 */}
+            {showBear && (
+              <Line
+                type="monotone"
+                dataKey="bear"
+                stroke={COLORS.bear}
+                strokeDasharray="6 3"
+                dot={false}
+                activeDot={{ r: 4, fill: COLORS.bear, strokeWidth: 0 }}
+                connectNulls={false}
+                isAnimationActive={true}
+                animationBegin={0}
+                animationDuration={600}
+                animationEasing="ease-out"
+                {...lineStyle("bear")}
+              />
+            )}
 
-            {/* Bull — green dashed */}
-            <Line
-              type="monotone"
-              dataKey="bull"
-              stroke={COLORS.bull}
-              strokeDasharray="6 3"
-              dot={false}
-              activeDot={{ r: 4, fill: COLORS.bull, strokeWidth: 0 }}
-              connectNulls={false}
-              isAnimationActive={true}
-              animationBegin={1500}
-              animationDuration={600}
-              animationEasing="ease-out"
-              {...lineStyle("bull")}
-            />
+            {/* Bull — mounts at t≈1500ms */}
+            {showBull && (
+              <Line
+                type="monotone"
+                dataKey="bull"
+                stroke={COLORS.bull}
+                strokeDasharray="6 3"
+                dot={false}
+                activeDot={{ r: 4, fill: COLORS.bull, strokeWidth: 0 }}
+                connectNulls={false}
+                isAnimationActive={true}
+                animationBegin={0}
+                animationDuration={600}
+                animationEasing="ease-out"
+                {...lineStyle("bull")}
+              />
+            )}
 
-            {/* Bear — red dashed */}
-            <Line
-              type="monotone"
-              dataKey="bear"
-              stroke={COLORS.bear}
-              strokeDasharray="6 3"
-              dot={false}
-              activeDot={{ r: 4, fill: COLORS.bear, strokeWidth: 0 }}
-              connectNulls={false}
-              isAnimationActive={true}
-              animationBegin={900}
-              animationDuration={600}
-              animationEasing="ease-out"
-              {...lineStyle("bear")}
-            />
+            {/* Base — mounts at t≈2100ms */}
+            {showBase && (
+              <Line
+                type="monotone"
+                dataKey="base"
+                stroke={COLORS.base}
+                strokeDasharray="6 3"
+                dot={false}
+                activeDot={{ r: 4, fill: COLORS.base, strokeWidth: 0 }}
+                connectNulls={false}
+                isAnimationActive={true}
+                animationBegin={0}
+                animationDuration={600}
+                animationEasing="ease-out"
+                {...lineStyle("base")}
+              />
+            )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Screen-reader summary — tooltip data is mouse-only; this gives AT users key projection endpoints */}
       {chartData.length > 0 && (() => {
         const last = chartData[chartData.length - 1];
         const projYears = viewYears === 10 ? 10 : 5;
@@ -265,7 +297,10 @@ export function PriceProjectionGraph({
         sma200={sma200}
         body={body}
         introScenario={introScenario}
-        onIntroCancel={() => { introActiveRef.current = false; setIntroScenario(null); }}
+        onIntroCancel={() => {
+          introActiveRef.current = false;
+          setIntroState({ key: chartKey, phase: "done" });
+        }}
       />
     </div>
   );
