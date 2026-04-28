@@ -31,9 +31,6 @@ export function PriceProjectionGraph({
   const [showSma, setShowSma] = useState(true);
   const [introScenario, setIntroScenario] = useState<GrowthScenario | null>(null);
   const introActiveRef = useRef(false);
-  // Track which chartKey the SMA has already animated for; derives smaAnimActive cleanly
-  const [smaAnimatedKey, setSmaAnimatedKey] = useState<string | null>(null);
-  const smaAnimActive = smaAnimatedKey !== chartKey;
 
   const { chartData, todayLabel, chartKey, yDomain } = useChartData(
     priceHistory,
@@ -46,20 +43,48 @@ export function PriceProjectionGraph({
     dividendYield,
   );
 
+  // Track which chartKey the SMA has already animated for; derives smaAnimActive cleanly
+  const [smaAnimatedKey, setSmaAnimatedKey] = useState<string | null>(null);
+  const smaAnimActive = smaAnimatedKey !== chartKey;
+
   const tickFmt = (v: number) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(0)}`;
 
-  // Arm the intro on each new chart load; disarm on cleanup so stale callbacks are no-ops
+  // rAF loop — same pattern as useLifecycleAnimation so button highlights and line draws
+  // share a single time reference. recharts animationBegin values (900/1500/2100) match
+  // the thresholds below; the rAF fires slightly after recharts' first draw tick (~one frame),
+  // ensuring the line is already mid-draw when the button lights up.
   useEffect(() => {
     introActiveRef.current = true;
-    return () => { introActiveRef.current = false; };
+    let rafId: number;
+    const start = performance.now();
+    let current: GrowthScenario | null = null;
+
+    const tick = (now: number) => {
+      if (!introActiveRef.current) return;
+      const elapsed = now - start;
+
+      const next: GrowthScenario | null =
+        elapsed >= 900  && elapsed < 1500 ? "bear" :
+        elapsed >= 1500 && elapsed < 2100 ? "bull" :
+        elapsed >= 2100 && elapsed < 2700 ? "base" :
+        null;
+
+      if (next !== current) {
+        current = next;
+        setIntroScenario(next);
+      }
+
+      if (elapsed < 2700) rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => {
+      introActiveRef.current = false;
+      cancelAnimationFrame(rafId);
+    };
   }, [chartKey]);
 
-  // Driven by recharts animation events — guaranteed to fire exactly when each line starts/ends
-  const onBearAnimStart  = useCallback(() => { if (introActiveRef.current) setIntroScenario("bear"); }, []);
-  const onBullAnimStart  = useCallback(() => { if (introActiveRef.current) setIntroScenario("bull"); }, []);
-  const onBaseAnimStart  = useCallback(() => { if (introActiveRef.current) setIntroScenario("base"); }, []);
-  const onBaseAnimEnd    = useCallback(() => { if (introActiveRef.current) setIntroScenario(null);   }, []);
-  const onSmaAnimEnd     = useCallback(() => { setSmaAnimatedKey(chartKey); }, [chartKey]);
+  const onSmaAnimEnd = useCallback(() => { setSmaAnimatedKey(chartKey); }, [chartKey]);
 
   // Scenario line styles — active: full opacity + thicker, inactive: dimmed
   // Uses introScenario during the intro so the drawing line is always the prominent one
@@ -179,8 +204,6 @@ export function PriceProjectionGraph({
               animationBegin={2100}
               animationDuration={600}
               animationEasing="ease-out"
-              onAnimationStart={onBaseAnimStart}
-              onAnimationEnd={onBaseAnimEnd}
               {...lineStyle("base")}
             />
 
@@ -197,7 +220,6 @@ export function PriceProjectionGraph({
               animationBegin={1500}
               animationDuration={600}
               animationEasing="ease-out"
-              onAnimationStart={onBullAnimStart}
               {...lineStyle("bull")}
             />
 
@@ -214,7 +236,6 @@ export function PriceProjectionGraph({
               animationBegin={900}
               animationDuration={600}
               animationEasing="ease-out"
-              onAnimationStart={onBearAnimStart}
               {...lineStyle("bear")}
             />
           </ComposedChart>
