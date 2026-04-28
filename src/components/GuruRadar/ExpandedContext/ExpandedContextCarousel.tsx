@@ -16,6 +16,14 @@ interface Props {
 const PEEK_PX = 20;
 const GAP_PX  = 10;
 
+/** Read the actual rendered card width from the DOM. CSS flex-basis uses a
+ *  percentage of the content box (already minus padding), so computing from
+ *  el.offsetWidth alone gives the wrong value. */
+function cardWidthOf(el: HTMLElement): number {
+  const first = el.firstElementChild as HTMLElement | null;
+  return first ? first.offsetWidth : el.offsetWidth - PEEK_PX * 2;
+}
+
 export function ExpandedContextCarousel({ contexts, radar, activeIndex, onIndexChange, onScrollProgress }: Props) {
   const scrollRef              = useRef<HTMLDivElement>(null);
   const scrollingProgrammaticRef = useRef(false);
@@ -27,7 +35,7 @@ export function ExpandedContextCarousel({ contexts, radar, activeIndex, onIndexC
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const cardWidth = el.offsetWidth - PEEK_PX * 2;
+    const cardWidth = cardWidthOf(el);
     el.scrollLeft = activeIndex * (cardWidth + GAP_PX);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount only
@@ -49,7 +57,7 @@ export function ExpandedContextCarousel({ contexts, radar, activeIndex, onIndexC
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const cardWidth = el.offsetWidth - PEEK_PX * 2;
+    const cardWidth = cardWidthOf(el);
     if (cardWidth <= 0) return;
 
     const fractional = el.scrollLeft / (cardWidth + GAP_PX);
@@ -69,7 +77,7 @@ export function ExpandedContextCarousel({ contexts, radar, activeIndex, onIndexC
   const scrollToIndex = useCallback((idx: number) => {
     const el = scrollRef.current;
     if (!el) return;
-    const cardWidth = el.offsetWidth - PEEK_PX * 2;
+    const cardWidth = cardWidthOf(el);
     scrollingProgrammaticRef.current = true;
     el.scrollTo({ left: idx * (cardWidth + GAP_PX), behavior: "smooth" });
     // Report the target immediately so activeMetricIndex updates (highlights the dot)
