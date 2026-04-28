@@ -77,11 +77,11 @@ export function PriceProjectionGraph({
   //   2400–2800  → base     (draws 400ms)
   //   2800+      → done
   //
-  // Button track (introScenario) — crossfade starts when each draw ends,
-  // which is exactly 350ms before the next line mounts:
-  //   900–1300   → "bear"
-  //   1300–2050  → "bull"   (crossfade during pause, finishes mid-draw of bull)
-  //   2050–2800  → "base"
+  // Button track (introScenario) — stays lit through the pause, crossfades only
+  // when the next line mounts (aligns with line-mount track):
+  //   900–1650   → "bear"   (lit during draw + pause)
+  //   1650–2400  → "bull"
+  //   2400–2800  → "base"
   //   2800+      → null
   useEffect(() => {
     introActiveRef.current = true;
@@ -102,9 +102,9 @@ export function PriceProjectionGraph({
         "done";
 
       const nextBtn: GrowthScenario | null =
-        elapsed >= 900  && elapsed < 1300 ? "bear" :
-        elapsed >= 1300 && elapsed < 2050 ? "bull" :
-        elapsed >= 2050 && elapsed < 2800 ? "base" :
+        elapsed >= 900  && elapsed < 1650 ? "bear" :
+        elapsed >= 1650 && elapsed < 2400 ? "bull" :
+        elapsed >= 2400 && elapsed < 2800 ? "base" :
         null;
 
       if (nextLine !== curLine) { curLine = nextLine; setIntroState({ key: chartKey, phase: nextLine }); }
