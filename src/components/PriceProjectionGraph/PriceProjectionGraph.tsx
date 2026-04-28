@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   ReferenceLine, ResponsiveContainer, Tooltip,
@@ -30,6 +30,7 @@ export function PriceProjectionGraph({
   const [viewYears, setViewYears] = useState<2 | 5 | 10>(2);
   const [showSma, setShowSma] = useState(true);
   const [introScenario, setIntroScenario] = useState<GrowthScenario | null>(null);
+  const introActiveRef = useRef(false);
 
   const { chartData, todayLabel, chartKey, yDomain } = useChartData(
     priceHistory,
@@ -44,20 +45,28 @@ export function PriceProjectionGraph({
 
   const tickFmt = (v: number) => `$${v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(0)}`;
 
-  // Sequence button highlights in sync with staggered line draw animations
+  // Arm the intro on each new chart load; disarm on cleanup so stale callbacks are no-ops
   useEffect(() => {
-    const t0 = setTimeout(() => setIntroScenario("bear"), 900);
-    const t1 = setTimeout(() => setIntroScenario("bull"), 1500);
-    const t2 = setTimeout(() => setIntroScenario("base"), 2100);
-    const t3 = setTimeout(() => setIntroScenario(null),   2700);
-    return () => { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    setIntroScenario(null);
+    introActiveRef.current = true;
+    return () => { introActiveRef.current = false; };
   }, [chartKey]);
 
+  // Driven by recharts animation events — guaranteed to fire exactly when each line starts/ends
+  const onBearAnimStart  = useCallback(() => { if (introActiveRef.current) setIntroScenario("bear"); }, []);
+  const onBullAnimStart  = useCallback(() => { if (introActiveRef.current) setIntroScenario("bull"); }, []);
+  const onBaseAnimStart  = useCallback(() => { if (introActiveRef.current) setIntroScenario("base"); }, []);
+  const onBaseAnimEnd    = useCallback(() => { if (introActiveRef.current) setIntroScenario(null);   }, []);
+
   // Scenario line styles — active: full opacity + thicker, inactive: dimmed
-  const lineStyle = (s: GrowthScenario): { strokeOpacity: number; strokeWidth: number } => ({
-    strokeOpacity: growthScenario === s ? 1 : 0.3,
-    strokeWidth:   growthScenario === s ? 2.5 : 1.5,
-  });
+  // Uses introScenario during the intro so the drawing line is always the prominent one
+  const lineStyle = (s: GrowthScenario): { strokeOpacity: number; strokeWidth: number } => {
+    const effective = introScenario ?? growthScenario;
+    return {
+      strokeOpacity: effective === s ? 1 : 0.3,
+      strokeWidth:   effective === s ? 2.5 : 1.5,
+    };
+  };
 
   // Stable tooltip wrapper — prevents Recharts from remounting the tooltip
   // on every render (which happens when content is an inline arrow function)
@@ -166,6 +175,8 @@ export function PriceProjectionGraph({
               animationBegin={2100}
               animationDuration={600}
               animationEasing="ease-out"
+              onAnimationStart={onBaseAnimStart}
+              onAnimationEnd={onBaseAnimEnd}
               {...lineStyle("base")}
             />
 
@@ -182,6 +193,7 @@ export function PriceProjectionGraph({
               animationBegin={1500}
               animationDuration={600}
               animationEasing="ease-out"
+              onAnimationStart={onBullAnimStart}
               {...lineStyle("bull")}
             />
 
@@ -198,6 +210,7 @@ export function PriceProjectionGraph({
               animationBegin={900}
               animationDuration={600}
               animationEasing="ease-out"
+              onAnimationStart={onBearAnimStart}
               {...lineStyle("bear")}
             />
           </ComposedChart>
@@ -227,7 +240,7 @@ export function PriceProjectionGraph({
         sma200={sma200}
         body={body}
         introScenario={introScenario}
-        onIntroCancel={() => setIntroScenario(null)}
+        onIntroCancel={() => { introActiveRef.current = false; setIntroScenario(null); }}
       />
     </div>
   );
