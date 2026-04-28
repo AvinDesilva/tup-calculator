@@ -51,13 +51,14 @@ export function PriceProjectionGraph({
   );
 
   // ─── Intro animation state ────────────────────────────────────────────────
-  // Keyed by chartKey so phase resets to 'pending' automatically when new data loads.
+  // introState (keyed by chartKey) controls which projection lines are mounted.
+  // introScenario is independent: it changes ~200ms earlier so the button crossfade
+  // overlaps with the end of each line's draw, not the beginning of the next.
   const [introState, setIntroState] = useState<{ key: string | null; phase: IntroPhase }>(
     { key: null, phase: "done" },
   );
   const introPhase: IntroPhase = introState.key === chartKey ? introState.phase : "pending";
-  const introScenario: GrowthScenario | null =
-    introPhase === "bear" || introPhase === "bull" || introPhase === "base" ? introPhase : null;
+  const [introScenario, setIntroScenario] = useState<GrowthScenario | null>(null);
 
   // Track which chartKey the SMA has already animated for; drives smaAnimActive.
   const [smaAnimatedKey, setSmaAnimatedKey] = useState<string | null>(null);
@@ -66,37 +67,47 @@ export function PriceProjectionGraph({
   const introActiveRef = useRef(false);
 
   // ─── rAF loop — same pattern as useLifecycleAnimation ────────────────────
-  // Controls WHEN each projection line mounts (and its button highlights) from the
-  // same time source. Each line mounts with animationBegin={0} so recharts draws it
-  // immediately on mount — no dependency on recharts' internal animation timers.
+  // Two independent time tracks from the same start reference:
   //
-  // Thresholds (ms from effect fire, which is ~one frame after chart commits):
-  //   0–900   → pending   (historical line is animating; no projection lines yet)
-  //   900–1500 → bear     (bear line mounts and draws; bear button lights up)
-  //   1500–2100 → bull    (bull line mounts and draws; bull button lights up)
-  //   2100–2700 → base    (base line mounts and draws; base button lights up)
-  //   2700+    → done     (all lines visible; revert to selected growthScenario)
+  // Line-mount track  (introState) — controls when each projection line mounts:
+  //   0–900ms   → pending  (historical line animating; no projection lines yet)
+  //   900–1500  → bear     (bear line mounts + draws with animationBegin=0)
+  //   1500–2100 → bull
+  //   2100–2700 → base
+  //   2700+     → done
+  //
+  // Button track (introScenario) — starts crossfade 200ms before next line mounts
+  // so the fade overlaps with the end of each line's draw, not the start of the next:
+  //   900–1300  → "bear"   (light up; bear line is drawing)
+  //   1300–1900 → "bull"   (crossfade starts 200ms before bull line mounts at 1500ms)
+  //   1900–2700 → "base"   (crossfade starts 200ms before base line mounts at 2100ms)
+  //   2700+     → null     (growthScenario takes over)
   useEffect(() => {
     introActiveRef.current = true;
     let rafId: number;
     const start = performance.now();
-    let current: IntroPhase = "pending";
+    let curLine: IntroPhase = "pending";
+    let curBtn: GrowthScenario | null = null;
 
     const tick = (now: number) => {
       if (!introActiveRef.current) return;
       const elapsed = now - start;
 
-      const next: IntroPhase =
+      const nextLine: IntroPhase =
         elapsed < 900  ? "pending" :
         elapsed < 1500 ? "bear"    :
         elapsed < 2100 ? "bull"    :
         elapsed < 2700 ? "base"    :
         "done";
 
-      if (next !== current) {
-        current = next;
-        setIntroState({ key: chartKey, phase: next });
-      }
+      const nextBtn: GrowthScenario | null =
+        elapsed >= 900  && elapsed < 1300 ? "bear" :
+        elapsed >= 1300 && elapsed < 1900 ? "bull" :
+        elapsed >= 1900 && elapsed < 2700 ? "base" :
+        null;
+
+      if (nextLine !== curLine) { curLine = nextLine; setIntroState({ key: chartKey, phase: nextLine }); }
+      if (nextBtn  !== curBtn)  { curBtn  = nextBtn;  setIntroScenario(nextBtn); }
 
       if (elapsed < 2700) rafId = requestAnimationFrame(tick);
     };
@@ -301,6 +312,7 @@ export function PriceProjectionGraph({
         onIntroCancel={() => {
           introActiveRef.current = false;
           setIntroState({ key: chartKey, phase: "done" });
+          setIntroScenario(null);
         }}
       />
     </div>

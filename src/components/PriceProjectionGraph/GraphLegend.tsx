@@ -22,7 +22,7 @@ const legendItems: Array<{ key: GrowthScenario; label: string }> = [
 export function GraphLegend({ growthScenario, onScenarioChange, showSma, setShowSma, sma200, body, introScenario, introPending, onIntroCancel }: GraphLegendProps) {
   // Longer transitions during the intro cycle so each button fades in/out smoothly;
   // snappy (0.15s) for normal user interaction.
-  const dur = introScenario != null ? "0.3s" : "0.15s";
+  const dur = introScenario != null ? "0.4s" : "0.15s";
 
   return (
     <div role="group" aria-label="Projection scenario" style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: "10px", flexShrink: 0 }}>
