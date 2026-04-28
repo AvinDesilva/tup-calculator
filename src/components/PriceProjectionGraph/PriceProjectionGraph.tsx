@@ -31,6 +31,9 @@ export function PriceProjectionGraph({
   const [showSma, setShowSma] = useState(true);
   const [introScenario, setIntroScenario] = useState<GrowthScenario | null>(null);
   const introActiveRef = useRef(false);
+  // Track which chartKey the SMA has already animated for; derives smaAnimActive cleanly
+  const [smaAnimatedKey, setSmaAnimatedKey] = useState<string | null>(null);
+  const smaAnimActive = smaAnimatedKey !== chartKey;
 
   const { chartData, todayLabel, chartKey, yDomain } = useChartData(
     priceHistory,
@@ -56,6 +59,7 @@ export function PriceProjectionGraph({
   const onBullAnimStart  = useCallback(() => { if (introActiveRef.current) setIntroScenario("bull"); }, []);
   const onBaseAnimStart  = useCallback(() => { if (introActiveRef.current) setIntroScenario("base"); }, []);
   const onBaseAnimEnd    = useCallback(() => { if (introActiveRef.current) setIntroScenario(null);   }, []);
+  const onSmaAnimEnd     = useCallback(() => { setSmaAnimatedKey(chartKey); }, [chartKey]);
 
   // Scenario line styles — active: full opacity + thicker, inactive: dimmed
   // Uses introScenario during the intro so the drawing line is always the prominent one
@@ -139,7 +143,11 @@ export function PriceProjectionGraph({
               dot={false}
               activeDot={false}
               connectNulls={false}
-              isAnimationActive={false}
+              isAnimationActive={smaAnimActive}
+              animationBegin={1700}
+              animationDuration={400}
+              animationEasing="ease-out"
+              onAnimationEnd={onSmaAnimEnd}
               hide={!showSma}
             />
 
