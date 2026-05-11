@@ -15,6 +15,7 @@ import { HeroSearch } from "./components/HeroSearch";
 import { CompactTickerBar } from "./components/CompactTickerBar";
 import { DataSections } from "./components/DataSections";
 import { PriceProjectionGraph } from "./components/PriceProjectionGraph";
+import { Backtesting } from "./components/Backtesting";
 import { TabNav } from "./components/TabNav";
 import type { Tab } from "./components/TabNav";
 import { useTickerFetch } from "./hooks/useTickerFetch.ts";
@@ -340,6 +341,17 @@ export default function App() {
               }}
             />
           </div>
+        )}
+
+        {hasSearched && activeTab === "backtest" && company && (
+          <Backtesting
+            ticker={ticker}
+            incomeHistory={scorecard.incomeHistory}
+            balanceSheetHistory={scorecard.balanceSheetHistory}
+            cashFlowHistory={scorecard.cashFlows}
+            priceHistory={priceHistory}
+            shares={inp.shares}
+          />
         )}
 
         {hasSearched && (

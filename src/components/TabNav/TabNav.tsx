@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { C } from "../../lib/theme.ts";
 
-export type Tab = "analysis" | "metrics" | "profile" | "logic";
+export type Tab = "analysis" | "metrics" | "profile" | "logic" | "backtest";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "analysis", label: "Analysis" },
   { id: "metrics",  label: "Metrics"  },
   { id: "profile",  label: "Profile"  },
   { id: "logic",    label: "Logic"    },
+  { id: "backtest", label: "Backtest" },
 ];
 
 interface TabNavProps {
