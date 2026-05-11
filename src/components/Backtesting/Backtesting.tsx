@@ -57,8 +57,8 @@ export function Backtesting({
 
       {/* Intro description */}
       <p style={{ fontSize: "10px", color: C.text3, margin: "12px 0 0", lineHeight: 1.7 }}>
-        Reconstructs TUP signals at each historical fiscal year-end using point-in-time financials,
-        then tracks actual stock performance vs. the S&amp;P 500.
+        Shows what the entry price implied about earnings power at each historical fiscal year-end,
+        and whether the growth assumption built into that price actually materialised.
       </p>
 
       {/* Loading state */}
@@ -90,15 +90,19 @@ export function Backtesting({
             fontSize: "10px", color: C.text3, lineHeight: 1.8,
           }}>
             <strong style={{ color: C.text2, letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "9px" }}>
-              Methodology Limitations
+              Hindsight Limitation
             </strong>
             <br />
-            Historical analyst estimates are unavailable — actual next-year EPS growth is used as a proxy for
-            forward estimates. This means signals were computed with perfect hindsight on growth, which may
-            overstate signal quality. Dividend yield is set to 0% for all historical snapshots.
+            This is a decomposition, not a prospective signal test. Historical analyst consensus estimates
+            are unavailable from FMP, so actual next-year EPS growth is used as the forward estimate —
+            meaning every valuation label was computed with perfect knowledge of future earnings.
+            A real-time signal would have used analyst projections available at the time, which may have
+            been wrong. <strong style={{ color: C.text2 }}>Earnings Accuracy is the most meaningful column</strong> — it shows
+            whether the growth assumption implied by the entry price actually held over the following 3 years,
+            independent of hindsight bias.
             {!spyUnavailable && " Alpha = stock return minus SPY return over the same window."}
-            {" "}Rows marked with † used market cap as enterprise value (balance sheet data unavailable for that year).
-            {" "}Earn. Acc. measures how close the modelled growth rate was to the actual 3-year EPS CAGR.
+            {" "}Dividend yield is set to 0% for all historical snapshots.
+            {" "}† = balance sheet unavailable, enterprise value estimated from market cap only.
           </div>
         </>
       )}

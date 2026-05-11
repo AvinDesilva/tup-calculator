@@ -59,12 +59,12 @@ export function BacktestSummaryBar({ summary, spyUnavailable }: BacktestSummaryP
       marginBottom: "20px",
     }}>
       <Stat
-        label="Buy Signals"
+        label="Discounted Entries"
         value={`${summary.buySignals} / ${summary.totalSnapshots}`}
         accent
       />
       <div style={{ width: "1px", background: C.borderWeak, margin: "8px 0" }} />
-      <Stat label="5yr Win Rate" value={spyUnavailable ? "—" : winRateStr} />
+      <Stat label="Beat Index (5yr)" value={spyUnavailable ? "—" : winRateStr} />
       <div style={{ width: "1px", background: C.borderWeak, margin: "8px 0" }} />
       <AlphaStat label={spyUnavailable ? "5yr Alpha" : "Avg 5yr Alpha"} value={spyUnavailable ? null : summary.avgAlpha5yr} />
       <div style={{ width: "1px", background: C.borderWeak, margin: "8px 0" }} />
