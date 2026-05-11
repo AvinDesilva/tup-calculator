@@ -21,6 +21,9 @@ export interface BacktestRow {
   verdict: VerdictKey;
   paybackYears: number | null;
   adjPrice: number;
+  epsBase: number | null;
+  grTerminal: number | null;    // decimal (0.12 = 12%)
+  fallingKnife: boolean;
   // Forward performance
   return3yr: number | null;
   return5yr: number | null;
