@@ -247,14 +247,14 @@ export default function App() {
                 <div className="rsp-price-targets-row" style={{ display: "flex", justifyContent: "space-around", padding: "12px 0 12px", borderTop: `1px solid ${C.borderWeak}` }}>
                   {displayStrongBuyPrice != null && (
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Strong Buy Below</div>
+                      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Deeply Discounted Below</div>
                       <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: sbColor }}>${displayStrongBuyPrice.toFixed(2)}</div>
                       <div style={{ fontSize: "10px", color: "#666", marginTop: "2px", fontFamily: C.mono }}>{fmtDiff(displayStrongBuyPrice)}</div>
                     </div>
                   )}
                   {displayBuyPrice != null && (
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Patient Buy Below</div>
+                      <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#666", marginBottom: "4px" }}>Fairly Priced Below</div>
                       <div style={{ fontFamily: C.mono, fontSize: "15px", fontWeight: 600, color: bColor }}>${displayBuyPrice.toFixed(2)}</div>
                       <div style={{ fontSize: "10px", color: "#666", marginTop: "2px", fontFamily: C.mono }}>{fmtDiff(displayBuyPrice)}</div>
                     </div>

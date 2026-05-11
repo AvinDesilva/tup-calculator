@@ -187,14 +187,14 @@ export function ValuationContext({
   const buyDiffPct = hasBuy && hasRef       ? (((buyPrice as number)       - (refPrice as number)) / (refPrice as number)) * 100 : null;
 
   const sbPanel: PanelData | null = hasStrongBuy ? {
-    key: "strongbuy", title: "Strong Buy Below",
+    key: "strongbuy", title: "Deeply Discounted Below",
     value: `$${(strongBuyPrice as number).toFixed(2)}`,
     icon: sbBelow ? "▲▲" : null, color: sbColor,
     sub: sbDiffPct != null ? fmtDiff(sbDiffPct) : "",
   } : null;
 
   const buyPanel: PanelData | null = hasBuy ? {
-    key: "buy", title: "Patient Buy Below",
+    key: "buy", title: "Fairly Priced Below",
     value: `$${(buyPrice as number).toFixed(2)}`,
     icon: buyBelow ? "▲" : null, color: buyColor,
     sub: buyDiffPct != null ? fmtDiff(buyDiffPct) : "",
