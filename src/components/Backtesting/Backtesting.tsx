@@ -34,7 +34,7 @@ export function Backtesting({
   const isLoading = stage === "idle" || stage === "fetching" || stage === "computing";
 
   return (
-    <div style={{ padding: "0 40px 40px", animation: "fadeInUp 0.5s 0.05s ease both" }}>
+    <div style={{ paddingBottom: "40px", animation: "fadeInUp 0.5s 0.05s ease both" }}>
 
       {/* Section header */}
       <div style={{
