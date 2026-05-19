@@ -17,12 +17,26 @@ export function SlotCounter({ value, paybackNote, color, animationKey }: SlotCou
     );
   }
 
-  // 30+ case (null value, no paybackNote)
+  // 30+ case (null value, no paybackNote) — spin digits like normal numbers, fade "+" in after
   if (value == null) {
     return (
-      <span style={{ color, transition: "color 0.4s ease", animation: "slotFadeIn 0.4s ease" }} key={`30p-${animationKey}`}>
-        30+
-      </span>
+      <>
+        <span aria-hidden="true" style={{ display: "inline-flex", alignItems: "center" }}>
+          <SlotDigit digit={3} color={color} delay={0} spinKey={animationKey} />
+          <SlotDigit digit={0} color={color} delay={120} spinKey={animationKey} />
+          <span
+            style={{
+              color,
+              transition: "color 0.4s ease",
+              animation: "slotFadeIn 0.35s ease both",
+              animationDelay: "480ms",
+            }}
+          >
+            +
+          </span>
+        </span>
+        <span className="sr-only">30+</span>
+      </>
     );
   }
 
