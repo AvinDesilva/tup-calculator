@@ -17,9 +17,9 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors);
 app.use(rateLimiter);
-app.use(router);
 app.use("/auth", authRouter);
 app.use("/watchlist", watchlistRouter);
+app.use(router);
 
 app.listen(PORT, "127.0.0.1", () => {
   console.log(`[tup-proxy] listening on 127.0.0.1:${PORT}`);
