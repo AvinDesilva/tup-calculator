@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 
 import { calcTUP } from "./lib/verdictCard/calcTUP.ts";
 import { C } from "./lib/theme.ts";
@@ -19,6 +19,14 @@ import { Backtesting } from "./components/Backtesting";
 import { TabNav } from "./components/TabNav";
 import type { Tab } from "./components/TabNav";
 import { useTickerFetch } from "./hooks/useTickerFetch.ts";
+import { AuthModal } from "./components/Auth";
+import { WatchlistPage } from "./components/Watchlist/WatchlistPage.tsx";
+import { WatchlistButton } from "./components/Watchlist/WatchlistButton.tsx";
+import { SignupPrompt } from "./components/SignupPrompt/SignupPrompt.tsx";
+import { useAuth } from "./contexts/useAuth.ts";
+import { useSearchCount } from "./hooks/useSearchCount.ts";
+import * as watchlistApi from "./lib/api/watchlist.ts";
+import type { WatchlistItem } from "./lib/api/watchlist.ts";
 import "./App.css";
 
 export default function App() {
@@ -42,10 +50,17 @@ export default function App() {
     scenarioValues, hasScenarioData,
   } = useTickerFetch();
 
+  const { isAuthenticated } = useAuth();
+  const { incrementSearchCount, shouldShowPrompt, dismissPrompt } = useSearchCount();
+
   const [showMethodology, setShowMethodology] = useState(false);
+  const [showWatchlist, setShowWatchlist] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<"login" | "register">("login");
   const [priceMode, setPriceMode] = useState<PriceMode>("adj");
   const [activeTab, setActiveTab] = useState<Tab>("analysis");
   const [animationKey, setAnimationKey] = useState(0);
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const mode: Mode = "standard";
   const result: TUPResult | null = useMemo(
     () => calcTUP(inp, mode, priceMode === "listed" && inp.currentPrice > 0 ? inp.currentPrice : undefined),
@@ -63,11 +78,37 @@ export default function App() {
     return { displayStrongBuyPrice: strongBuyPrice, displayBuyPrice: buyPrice };
   }, [priceMode, result, strongBuyPrice, buyPrice]);
 
+  // Load watchlist when authenticated
+  const refreshWatchlist = useCallback(() => {
+    if (!isAuthenticated) { setWatchlist([]); return; }
+    watchlistApi.getWatchlist().then(setWatchlist).catch(() => {});
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    // Sync watchlist from server when auth state changes
+    let cancelled = false;
+    if (!isAuthenticated) {
+      // Clear watchlist in a microtask to avoid sync setState in effect
+      Promise.resolve().then(() => { if (!cancelled) setWatchlist([]); });
+      return () => { cancelled = true; };
+    }
+    watchlistApi.getWatchlist()
+      .then(items => { if (!cancelled) setWatchlist(items); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isAuthenticated]);
+
+  const isInWatchlist = useCallback((t: string) => watchlist.some(w => w.ticker === t.toUpperCase()), [watchlist]);
+
+  const openSignIn = useCallback(() => { setAuthModalTab("login"); setShowAuthModal(true); }, []);
+  const openRegister = useCallback(() => { setAuthModalTab("register"); setShowAuthModal(true); }, []);
+
   const handleFetch = (sym?: string) => {
     setPriceMode("adj");
     setActiveTab("analysis");
     setAnimationKey(k => k + 1);
     doFetch(sym);
+    incrementSearchCount();
   };
 
   const handleTabChange = (tab: Tab) => {
@@ -110,6 +151,17 @@ export default function App() {
 
   if (showMethodology) return <MethodologyPage onBack={() => setShowMethodology(false)} />;
 
+  if (showWatchlist) return (
+    <WatchlistPage
+      items={watchlist}
+      onBack={() => setShowWatchlist(false)}
+      onSelectTicker={(t) => { setShowWatchlist(false); setTicker(t); handleFetch(t); }}
+      onRemove={(t) => {
+        watchlistApi.removeFromWatchlist(t).then(refreshWatchlist).catch(() => {});
+      }}
+    />
+  );
+
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text1, fontFamily: C.body, boxSizing: "border-box" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Barlow+Condensed:wght@400;700;900&family=Space+Grotesk:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
@@ -124,6 +176,8 @@ export default function App() {
         <Masthead
           onShowMethodology={() => { setShowMethodology(true); setIsFilterOpen(false); window.scrollTo(0, 0); }}
           onReset={hasSearched ? () => { resetSearch(); window.scrollTo(0, 0); } : undefined}
+          onSignIn={openSignIn}
+          onWatchlist={() => setShowWatchlist(true)}
         />
 
         {!hasSearched && (
@@ -170,7 +224,35 @@ export default function App() {
               onResetFilters={() => setRollFilters({ marketCap: [], sector: "", exchange: [], indexEtf: "", tupRange: [] })}
               hasActiveFilters={hasActiveFilters}
             />
-            <TabNav activeTab={activeTab} onTabChange={handleTabChange} />
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <TabNav activeTab={activeTab} onTabChange={handleTabChange} />
+              {company && (
+                <WatchlistButton
+                  ticker={ticker}
+                  isInWatchlist={isInWatchlist(ticker)}
+                  isAuthenticated={isAuthenticated}
+                  onToggle={() => {
+                    if (!isAuthenticated) { openSignIn(); return; }
+                    if (isInWatchlist(ticker)) {
+                      watchlistApi.removeFromWatchlist(ticker).then(refreshWatchlist).catch(() => {});
+                    } else {
+                      watchlistApi.addToWatchlist({
+                        ticker,
+                        companyName: company,
+                        paybackYears: result?.payback ?? null,
+                        verdict: result?.verdict ?? null,
+                        sma200Cleared: inp.currentPrice > inp.sma200,
+                        currentPrice: inp.currentPrice,
+                        sma200: inp.sma200,
+                        adjPrice: result?.adjPrice ?? null,
+                        growthRate: result?.gr ?? null,
+                        epsBase: result?.epsBase ?? null,
+                      }).then(refreshWatchlist).catch(() => {});
+                    }
+                  }}
+                />
+              )}
+            </div>
           </div>
         )}
 
@@ -363,6 +445,15 @@ export default function App() {
         )}
 
       </main>
+
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} initialTab={authModalTab} />
+
+      {shouldShowPrompt && (
+        <SignupPrompt
+          onCreateAccount={openRegister}
+          onDismiss={dismissPrompt}
+        />
+      )}
     </div>
   );
 }

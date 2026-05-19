@@ -1,5 +1,7 @@
 "use strict";
 
+const { verifyAccessToken } = require("./lib/auth");
+
 // ── CORS — only the production domain + local dev ─────────────────────────────
 const ALLOWED_ORIGINS = new Set([
   "https://tupcalculator.org",
@@ -14,8 +16,9 @@ function cors(req, res, next) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
   }
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 }
@@ -53,4 +56,18 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
-module.exports = { cors, rateLimiter };
+// ── Auth middleware — verify JWT access token ─────────────────────────────────
+function requireAuth(req, res, next) {
+  const token = req.cookies?.access_token;
+  if (!token) return res.status(401).json({ error: "Not authenticated" });
+
+  try {
+    const payload = verifyAccessToken(token);
+    req.userId = payload.sub;
+    next();
+  } catch {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+}
+
+module.exports = { cors, rateLimiter, requireAuth };

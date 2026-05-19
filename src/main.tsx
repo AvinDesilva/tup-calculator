@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { AuthProvider } from './contexts/AuthContext.tsx'
 
 if (import.meta.env.DEV) {
   import('@axe-core/react').then((axe) => {
@@ -13,6 +14,8 @@ if (import.meta.env.DEV) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </StrictMode>,
 )
