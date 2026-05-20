@@ -20,6 +20,8 @@ function getCookieInt(name: string): number {
   return parseInt(getCookie(name) ?? "0", 10) || 0;
 }
 
+const FORCE_PROMPT = new URLSearchParams(window.location.search).has("show_prompt");
+
 export function useSearchCount() {
   const { isAuthenticated } = useAuth();
   const [searchCount, setSearchCount] = useState(() => getCookieInt(SEARCH_COUNT_KEY));
@@ -36,7 +38,7 @@ export function useSearchCount() {
     setDismissed(true);
   }, []);
 
-  const shouldShowPrompt = searchCount >= 5 && !isAuthenticated && !dismissed;
+  const shouldShowPrompt = (FORCE_PROMPT || searchCount >= 5) && !isAuthenticated && !dismissed;
 
   return { searchCount, incrementSearchCount, shouldShowPrompt, dismissPrompt };
 }
