@@ -39,6 +39,8 @@ export function Masthead({ onShowMethodology, onReset, onSignIn, onWatchlist }: 
       flexWrap: "wrap",
       borderBottom: `2px solid ${C.accent}`,
       animation: "fadeInUp 0.4s ease both",
+      position: "relative",
+      zIndex: 200,
     }}>
       <div className="rsp-header-content">
         <div className="rsp-header-logo">
