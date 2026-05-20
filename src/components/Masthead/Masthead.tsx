@@ -98,7 +98,7 @@ export function Masthead({ onShowMethodology, onReset, onSignIn, onWatchlist }: 
       </div>
 
       {/* Top-right icons: book + user */}
-      <div className="rsp-header-icons" style={{ display: "flex", alignItems: "center", gap: "12px", paddingTop: "8px" }}>
+      <div className="rsp-header-icons" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <button
           onClick={onShowMethodology}
           aria-label="Read methodology"

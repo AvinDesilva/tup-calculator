@@ -96,23 +96,15 @@
     flex-direction: column !important;
   }
   .rsp-header {
-    flex-direction: column;
-    gap: 12px;
     padding-top: 14px !important;
     padding-bottom: 12px !important;
+    align-items: center !important;
   }
   .rsp-header-logo {
     display: none !important;
   }
-  .rsp-header-content {
-    width: 100%;
-  }
   .rsp-header-subtitle {
-    justify-content: space-between;
     margin-top: 0 !important;
-  }
-  .rsp-header-icons {
-    align-self: flex-end;
   }
   .rsp-main-grid {
     display: flex !important;
