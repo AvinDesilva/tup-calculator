@@ -5,6 +5,9 @@ export default defineConfig({
   plugins: [
     react(),
   ],
+  build: {
+    sourcemap: false,
+  },
   server: {
     proxy: {
       "/api": {
