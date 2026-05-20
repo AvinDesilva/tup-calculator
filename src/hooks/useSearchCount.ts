@@ -3,24 +3,36 @@ import { useAuth } from "../contexts/useAuth.ts";
 
 const SEARCH_COUNT_KEY = "tup_search_count";
 const DISMISSED_KEY = "tup_signup_dismissed";
+const COUNT_DAYS = 30;
+const DISMISS_DAYS = 7;
 
-function getSessionInt(key: string): number {
-  return parseInt(sessionStorage.getItem(key) || "0", 10) || 0;
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function setCookie(name: string, value: string, days: number) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+}
+
+function getCookieInt(name: string): number {
+  return parseInt(getCookie(name) ?? "0", 10) || 0;
 }
 
 export function useSearchCount() {
   const { isAuthenticated } = useAuth();
-  const [searchCount, setSearchCount] = useState(() => getSessionInt(SEARCH_COUNT_KEY));
-  const [dismissed, setDismissed] = useState(() => sessionStorage.getItem(DISMISSED_KEY) === "1");
+  const [searchCount, setSearchCount] = useState(() => getCookieInt(SEARCH_COUNT_KEY));
+  const [dismissed, setDismissed] = useState(() => getCookie(DISMISSED_KEY) === "1");
 
   const incrementSearchCount = useCallback(() => {
-    const next = getSessionInt(SEARCH_COUNT_KEY) + 1;
-    sessionStorage.setItem(SEARCH_COUNT_KEY, String(next));
+    const next = getCookieInt(SEARCH_COUNT_KEY) + 1;
+    setCookie(SEARCH_COUNT_KEY, String(next), COUNT_DAYS);
     setSearchCount(next);
   }, []);
 
   const dismissPrompt = useCallback(() => {
-    sessionStorage.setItem(DISMISSED_KEY, "1");
+    setCookie(DISMISSED_KEY, "1", DISMISS_DAYS);
     setDismissed(true);
   }, []);
 
