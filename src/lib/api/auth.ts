@@ -45,5 +45,5 @@ export function logout() {
 
 export function getMe() {
   return fetch(`${API}/me`, { ...opts })
-    .then(r => handle<AuthResponse>(r));
+    .then(r => handle<{ user: AuthUser | null }>(r));
 }

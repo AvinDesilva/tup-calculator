@@ -232,7 +232,7 @@ router.post("/logout", (req, res) => {
 
 router.get("/me", (req, res) => {
   const token = req.cookies?.access_token;
-  if (!token) return res.status(401).json({ error: "Not authenticated" });
+  if (!token) return res.json({ user: null });
 
   try {
     const payload = verifyAccessToken(token);
@@ -244,7 +244,7 @@ router.get("/me", (req, res) => {
       },
     });
   } catch {
-    return res.status(401).json({ error: "Invalid or expired token" });
+    return res.json({ user: null });
   }
 });
 

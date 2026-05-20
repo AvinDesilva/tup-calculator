@@ -12,15 +12,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     authApi.getMe()
       .then(({ user }) => setUser(user))
-      .catch(async () => {
-        // Access token missing/expired — try refresh
-        try {
-          const { user } = await authApi.refreshToken();
-          setUser(user);
-        } catch {
-          setUser(null);
-        }
-      })
+      .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);
 
