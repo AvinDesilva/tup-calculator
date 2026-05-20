@@ -9,7 +9,6 @@ interface SignupPromptProps {
 export function SignupPrompt({ onCreateAccount, onDismiss }: SignupPromptProps) {
   return createPortal(
     <div
-      onClick={onDismiss}
       style={{
         position: "fixed",
         inset: 0,
@@ -23,12 +22,26 @@ export function SignupPrompt({ onCreateAccount, onDismiss }: SignupPromptProps) 
         animation: "fadeInUp 0.3s ease both",
       }}
     >
+      {/* Full-screen button behind the card — click-to-dismiss */}
+      <button
+        aria-label="Dismiss"
+        onClick={onDismiss}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "transparent",
+          border: "none",
+          cursor: "default",
+        }}
+      />
+
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Create a free account"
-        onClick={e => e.stopPropagation()}
         style={{
+          position: "relative",
+          zIndex: 1,
           background: "#1a1a1a",
           border: `1px solid ${C.accent}`,
           padding: "32px 28px",
