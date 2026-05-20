@@ -111,6 +111,9 @@
     justify-content: space-between;
     margin-top: 0 !important;
   }
+  .rsp-header-icons {
+    align-self: flex-end;
+  }
   .rsp-main-grid {
     display: flex !important;
     flex-direction: column !important;
