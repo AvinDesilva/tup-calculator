@@ -38,7 +38,7 @@ export function useSearchCount() {
     setDismissed(true);
   }, []);
 
-  const shouldShowPrompt = (FORCE_PROMPT || searchCount >= 5) && !isAuthenticated && !dismissed;
+  const shouldShowPrompt = !isAuthenticated && (FORCE_PROMPT || (searchCount >= 5 && !dismissed));
 
   return { searchCount, incrementSearchCount, shouldShowPrompt, dismissPrompt };
 }
