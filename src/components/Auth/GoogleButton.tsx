@@ -7,7 +7,7 @@ declare global {
       accounts: {
         id: {
           initialize: (config: { client_id: string; callback: (response: { credential: string }) => void }) => void;
-          renderButton: (el: HTMLElement, options: Record<string, string>) => void;
+          renderButton: (el: HTMLElement, options: Record<string, unknown>) => void;
         };
       };
     };
@@ -41,7 +41,7 @@ export function GoogleButton({ onToken }: GoogleButtonProps) {
         theme: "filled_black",
         text: "continue_with",
         size: "large",
-        width: "100%",
+        width: 360,
       });
     }
 
