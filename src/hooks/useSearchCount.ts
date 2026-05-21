@@ -20,7 +20,8 @@ function getCookieInt(name: string): number {
   return parseInt(getCookie(name) ?? "0", 10) || 0;
 }
 
-const FORCE_PROMPT = new URLSearchParams(window.location.search).has("show_prompt");
+export const FORCE_PROMPT = new URLSearchParams(window.location.search).has("show_prompt");
+export const URL_TICKER = new URLSearchParams(window.location.search).get("t")?.toUpperCase() ?? null;
 
 export function useSearchCount() {
   const { isAuthenticated } = useAuth();

@@ -24,7 +24,7 @@ import { WatchlistPage } from "./components/Watchlist/WatchlistPage.tsx";
 import { WatchlistButton } from "./components/Watchlist/WatchlistButton.tsx";
 import { SignupPrompt } from "./components/SignupPrompt/SignupPrompt.tsx";
 import { useAuth } from "./contexts/useAuth.ts";
-import { useSearchCount } from "./hooks/useSearchCount.ts";
+import { useSearchCount, URL_TICKER } from "./hooks/useSearchCount.ts";
 import * as watchlistApi from "./lib/api/watchlist.ts";
 import type { WatchlistItem } from "./lib/api/watchlist.ts";
 import "./App.css";
@@ -99,6 +99,15 @@ export default function App() {
   }, [isAuthenticated]);
 
   const isInWatchlist = useCallback((t: string) => watchlist.some(w => w.ticker === t.toUpperCase()), [watchlist]);
+
+  // Auto-fetch ticker from ?t= URL param on first load
+  useEffect(() => {
+    if (URL_TICKER) {
+      setTicker(URL_TICKER);
+      doFetch(URL_TICKER);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openSignIn = useCallback(() => { setAuthModalTab("login"); setShowAuthModal(true); }, []);
   const openRegister = useCallback(() => { setAuthModalTab("register"); setShowAuthModal(true); }, []);
