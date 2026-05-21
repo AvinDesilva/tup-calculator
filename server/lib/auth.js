@@ -20,8 +20,8 @@ const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : nul
 
 // ── JWT ──────────────────────────────────────────────────────────────────────
 
-function signAccessToken(userId, email, displayName) {
-  return jwt.sign({ sub: userId, email, displayName }, JWT_SECRET, { expiresIn: ACCESS_TOKEN_TTL });
+function signAccessToken(userId, email, displayName, avatarUrl) {
+  return jwt.sign({ sub: userId, email, displayName, avatarUrl: avatarUrl || null }, JWT_SECRET, { expiresIn: ACCESS_TOKEN_TTL });
 }
 
 function verifyAccessToken(token) {

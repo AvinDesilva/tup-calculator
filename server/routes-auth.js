@@ -102,7 +102,7 @@ router.post("/register", (req, res) => {
   ).run(email, hash, displayName.trim());
 
   const user = db.prepare("SELECT * FROM users WHERE id = ?").get(result.lastInsertRowid);
-  const accessToken = signAccessToken(user.id, user.email, user.display_name);
+  const accessToken = signAccessToken(user.id, user.email, user.display_name, user.avatar_url);
   const refreshToken = createRefreshToken(user.id);
   setAuthCookies(res, accessToken, refreshToken);
 
@@ -127,7 +127,7 @@ router.post("/login", loginLimiter, (req, res) => {
     return res.status(401).json({ error: "Invalid email or password" });
   }
 
-  const accessToken = signAccessToken(user.id, user.email, user.display_name);
+  const accessToken = signAccessToken(user.id, user.email, user.display_name, user.avatar_url);
   const refreshToken = createRefreshToken(user.id);
   setAuthCookies(res, accessToken, refreshToken);
 
@@ -170,7 +170,7 @@ router.post("/google", loginLimiter, async (req, res) => {
       }
     }
 
-    const accessToken = signAccessToken(user.id, user.email, user.display_name);
+    const accessToken = signAccessToken(user.id, user.email, user.display_name, user.avatar_url);
     const refreshToken = createRefreshToken(user.id);
     setAuthCookies(res, accessToken, refreshToken);
 
@@ -217,7 +217,7 @@ router.post("/refresh", (req, res) => {
     "INSERT INTO refresh_tokens (id, user_id, family_id, expires_at) VALUES (?, ?, ?, ?)"
   ).run(newRefreshId, user.id, row.family_id, expiresAt);
 
-  const accessToken = signAccessToken(user.id, user.email, user.display_name);
+  const accessToken = signAccessToken(user.id, user.email, user.display_name, user.avatar_url);
   setAuthCookies(res, accessToken, newRefreshId);
 
   res.json({ user: userResponse(user) });
@@ -248,6 +248,7 @@ router.get("/me", (req, res) => {
         id: payload.sub,
         email: payload.email,
         displayName: payload.displayName,
+        avatarUrl: payload.avatarUrl || null,
       },
     });
   } catch {
