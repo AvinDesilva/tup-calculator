@@ -23,16 +23,27 @@ function cors(req, res, next) {
   next();
 }
 
+// ── Client IP helper — works behind nginx reverse proxy ──────────────────────
+// nginx sets X-Real-IP; fall back to X-Forwarded-For first entry, then socket.
+function getClientIP(req) {
+  const realIp = req.headers["x-real-ip"];
+  if (realIp) return realIp;
+  const xff = req.headers["x-forwarded-for"];
+  if (xff) return xff.split(",")[0].trim();
+  return req.socket.remoteAddress || "unknown";
+}
+
 // ── Rate limiting — 150 requests / minute per IP ──────────────────────────────
 // Each ticker lookup fires ~10 parallel FMP calls, so 30/min only allowed ~3
 // lookups before triggering a false 429. Bumped to 150 to allow ~15 lookups/min
 // while still protecting against abuse (FMP plan allows 750/min).
 const RATE_LIMIT  = 150;
 const RATE_WINDOW = 60 * 1000;
+const MAX_RATE_MAP_SIZE = 10000; // prevent memory exhaustion from spoofed IPs
 const rateMap = new Map();
 
 function rateLimiter(req, res, next) {
-  const ip  = req.socket.remoteAddress || "unknown";
+  const ip  = getClientIP(req);
   const now = Date.now();
   let entry = rateMap.get(ip);
 
@@ -43,6 +54,7 @@ function rateLimiter(req, res, next) {
   rateMap.set(ip, entry);
 
   if (entry.count > RATE_LIMIT) {
+    console.warn(`[rate-limit] blocked ${ip} — ${entry.count} requests in window`);
     return res.status(429).json({ error: "Too many requests. Try again later." });
   }
   next();
@@ -54,7 +66,42 @@ setInterval(() => {
   for (const [ip, entry] of rateMap.entries()) {
     if (now > entry.reset) rateMap.delete(ip);
   }
+  // Hard cap: if map is still too large after pruning, clear it entirely
+  if (rateMap.size > MAX_RATE_MAP_SIZE) {
+    console.warn(`[rate-limit] map exceeded ${MAX_RATE_MAP_SIZE} entries — clearing`);
+    rateMap.clear();
+  }
 }, 5 * 60 * 1000);
+
+// ── Login brute-force protection — 10 attempts / 15 min per IP ───────────────
+const LOGIN_LIMIT  = 10;
+const LOGIN_WINDOW = 15 * 60 * 1000;
+const loginMap = new Map();
+
+function loginLimiter(req, res, next) {
+  const ip  = getClientIP(req);
+  const now = Date.now();
+  let entry = loginMap.get(ip);
+
+  if (!entry || now > entry.reset) {
+    entry = { count: 0, reset: now + LOGIN_WINDOW };
+  }
+  entry.count++;
+  loginMap.set(ip, entry);
+
+  if (entry.count > LOGIN_LIMIT) {
+    console.warn(`[login-limit] blocked ${ip} — ${entry.count} attempts in window`);
+    return res.status(429).json({ error: "Too many login attempts. Try again later." });
+  }
+  next();
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of loginMap.entries()) {
+    if (now > entry.reset) loginMap.delete(ip);
+  }
+}, 10 * 60 * 1000);
 
 // ── Auth middleware — verify JWT access token ─────────────────────────────────
 function requireAuth(req, res, next) {
@@ -70,4 +117,4 @@ function requireAuth(req, res, next) {
   }
 }
 
-module.exports = { cors, rateLimiter, requireAuth };
+module.exports = { cors, rateLimiter, loginLimiter, requireAuth, getClientIP };

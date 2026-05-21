@@ -9,6 +9,7 @@ const {
   hashPassword, verifyPassword,
   verifyGoogleToken, refreshTokenExpiresAt,
 } = require("./lib/auth");
+const { loginLimiter, getClientIP } = require("./middleware");
 
 const router = express.Router();
 
@@ -84,7 +85,7 @@ router.post("/register", (req, res) => {
   const err = validateRegistration(req.body);
   if (err) return res.status(400).json({ error: err });
 
-  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
+  const ip = getClientIP(req);
   if (!checkRegLimit(ip)) {
     return res.status(429).json({ error: "Too many registrations. Try again later." });
   }
@@ -110,7 +111,7 @@ router.post("/register", (req, res) => {
 
 // ── POST /auth/login ─────────────────────────────────────────────────────────
 
-router.post("/login", (req, res) => {
+router.post("/login", loginLimiter, (req, res) => {
   const err = validateLogin(req.body);
   if (err) return res.status(400).json({ error: err });
 
@@ -135,7 +136,7 @@ router.post("/login", (req, res) => {
 
 // ── POST /auth/google ────────────────────────────────────────────────────────
 
-router.post("/google", async (req, res) => {
+router.post("/google", loginLimiter, async (req, res) => {
   const { idToken } = req.body || {};
   if (!idToken) return res.status(400).json({ error: "ID token is required" });
 

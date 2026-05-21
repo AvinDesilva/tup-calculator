@@ -2,6 +2,8 @@ resource "aws_sns_topic" "alerts" {
   name = "tup-calculator-alerts"
 }
 
+# ── EC2 built-in metrics ─────────────────────────────────────────────────────
+
 resource "aws_cloudwatch_metric_alarm" "status_check_failed" {
   alarm_name          = "tup-status-check-failed"
   alarm_description   = "EC2 status check failed - notify"
@@ -56,6 +58,24 @@ resource "aws_cloudwatch_metric_alarm" "network_out_spike" {
   }
 }
 
+resource "aws_cloudwatch_metric_alarm" "network_in_spike" {
+  alarm_name          = "tup-network-in-spike"
+  alarm_description   = "Network ingress above 500MB in 5 minutes — possible DDoS or abuse"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "NetworkIn"
+  namespace           = "AWS/EC2"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 524288000
+  treat_missing_data  = "missing"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    InstanceId = aws_instance.tup.id
+  }
+}
+
 resource "aws_cloudwatch_metric_alarm" "billing_spike" {
   alarm_name          = "tup-billing-spike"
   alarm_description   = "Estimated charges exceed $50"
@@ -72,4 +92,76 @@ resource "aws_cloudwatch_metric_alarm" "billing_spike" {
   dimensions = {
     Currency = "USD"
   }
+}
+
+# ── CloudWatch Agent custom metrics (disk + memory) ─────────────────────────
+# These require the CloudWatch agent to be installed and configured on the EC2
+# instance. See server/cloudwatch-agent-config.json for the agent configuration
+# and server/setup-monitoring.sh for the installation script.
+
+resource "aws_cloudwatch_metric_alarm" "disk_usage_high" {
+  alarm_name          = "tup-disk-usage-high"
+  alarm_description   = "Root volume disk usage above 80% — DB or logs may be growing unbounded"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "disk_used_percent"
+  namespace           = "CWAgent"
+  period              = 300
+  statistic           = "Maximum"
+  threshold           = 80
+  treat_missing_data  = "missing"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    InstanceId = aws_instance.tup.id
+    path       = "/"
+    fstype     = "ext4"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "memory_usage_high" {
+  alarm_name          = "tup-memory-usage-high"
+  alarm_description   = "Memory usage above 85% — possible leak or abuse"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 3
+  metric_name         = "mem_used_percent"
+  namespace           = "CWAgent"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 85
+  treat_missing_data  = "missing"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    InstanceId = aws_instance.tup.id
+  }
+}
+
+# ── IAM role for CloudWatch agent on EC2 ─────────────────────────────────────
+
+resource "aws_iam_role" "ec2_cloudwatch" {
+  name = "tup-ec2-cloudwatch-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    Name = "tup-ec2-cloudwatch-role"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
+  role       = aws_iam_role.ec2_cloudwatch.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+resource "aws_iam_instance_profile" "ec2_cloudwatch" {
+  name = "tup-ec2-cloudwatch-profile"
+  role = aws_iam_role.ec2_cloudwatch.name
 }
