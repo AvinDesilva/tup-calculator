@@ -31,6 +31,7 @@ export function GoogleButton({ onToken }: GoogleButtonProps) {
     function init() {
       if (!window.google || !containerRef.current || initialized.current) return;
       initialized.current = true;
+      const width = Math.min(400, Math.max(200, containerRef.current.offsetWidth));
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: (response) => onToken(response.credential),
@@ -41,7 +42,7 @@ export function GoogleButton({ onToken }: GoogleButtonProps) {
         theme: "filled_black",
         text: "continue_with",
         size: "large",
-        width: 360,
+        width,
       });
     }
 
