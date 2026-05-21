@@ -4,12 +4,17 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { OAuth2Client } = require("google-auth-library");
 
+const IS_PROD = process.env.NODE_ENV === "production";
+
+if (IS_PROD && !process.env.JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET environment variable must be set in production");
+  process.exit(1);
+}
+
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const ACCESS_TOKEN_TTL = "15m";
 const REFRESH_TOKEN_DAYS = 30;
-
-const IS_PROD = process.env.NODE_ENV === "production";
 
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 

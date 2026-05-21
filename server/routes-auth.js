@@ -147,13 +147,19 @@ router.post("/google", async (req, res) => {
     let user = db.prepare("SELECT * FROM users WHERE google_id = ?").get(googleId);
 
     if (!user) {
-      // Check if email already exists (link accounts)
-      user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
-      if (user) {
-        // Link Google to existing account
+      // Check if email already exists
+      const existingUser = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+      if (existingUser && existingUser.password_hash) {
+        // Account exists with a password — require password to link Google
+        return res.status(409).json({
+          error: "An account with this email already exists. Please log in with your password to link Google.",
+          code: "LINK_REQUIRES_PASSWORD",
+        });
+      } else if (existingUser) {
+        // Account exists without password (e.g. previously created via Google with no password) — safe to link
         db.prepare("UPDATE users SET google_id = ?, avatar_url = COALESCE(avatar_url, ?), updated_at = datetime('now') WHERE id = ?")
-          .run(googleId, avatarUrl, user.id);
-        user = db.prepare("SELECT * FROM users WHERE id = ?").get(user.id);
+          .run(googleId, avatarUrl, existingUser.id);
+        user = db.prepare("SELECT * FROM users WHERE id = ?").get(existingUser.id);
       } else {
         // Create new user
         const result = db.prepare(
