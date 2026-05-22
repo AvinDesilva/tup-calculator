@@ -138,30 +138,7 @@ resource "aws_cloudwatch_metric_alarm" "memory_usage_high" {
 }
 
 # ── IAM role for CloudWatch agent on EC2 ─────────────────────────────────────
-
-resource "aws_iam_role" "ec2_cloudwatch" {
-  name = "tup-ec2-cloudwatch-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "ec2.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-
-  tags = {
-    Name = "tup-ec2-cloudwatch-role"
-  }
-}
-
-resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
-  role       = aws_iam_role.ec2_cloudwatch.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-}
-
-resource "aws_iam_instance_profile" "ec2_cloudwatch" {
-  name = "tup-ec2-cloudwatch-profile"
-  role = aws_iam_role.ec2_cloudwatch.name
-}
+# Managed via AWS Console (claude-dev IAM user lacks iam:* permissions).
+# Role: tup-ec2-cloudwatch-role
+# Policy: CloudWatchAgentServerPolicy
+# Instance profile: tup-ec2-cloudwatch-profile (attached to EC2)
