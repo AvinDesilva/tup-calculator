@@ -23,6 +23,8 @@ app.use(helmet({
   contentSecurityPolicy: false,      // managed by nginx
   strictTransportSecurity: false,    // managed by nginx
   xFrameOptions: false,             // managed by nginx (DENY)
+  xContentTypeOptions: false,       // managed by nginx (nosniff)
+  referrerPolicy: false,            // managed by nginx (strict-origin-when-cross-origin)
   crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }, // Google OAuth popup
 }));
 
