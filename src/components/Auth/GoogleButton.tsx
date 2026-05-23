@@ -66,7 +66,7 @@ export function GoogleButton({ onToken }: GoogleButtonProps) {
         <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: C.text3 }}>or</span>
         <div style={{ flex: 1, height: "1px", background: C.borderWeak }} />
       </div>
-      <div ref={containerRef} style={{ display: "flex", justifyContent: "center" }} />
+      <div ref={containerRef} style={{ display: "flex", justifyContent: "center", borderRadius: "4px", overflow: "hidden", colorScheme: "dark" }} />
     </div>
   );
 }
