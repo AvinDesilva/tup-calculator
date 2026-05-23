@@ -22,6 +22,7 @@ app.set("trust proxy", 1);
 app.use(helmet({
   contentSecurityPolicy: false,      // managed by nginx
   strictTransportSecurity: false,    // managed by nginx
+  xFrameOptions: false,             // managed by nginx (DENY)
   crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }, // Google OAuth popup
 }));
 
