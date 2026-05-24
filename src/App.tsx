@@ -10,6 +10,7 @@ import { CompanyScorecard } from "./components/CompanyScorecard";
 import { InsiderTradingTable } from "./components/InsiderTradingTable";
 import { MobileSummary } from "./components/MobileSummary";
 import { MethodologyPage } from "./components/MethodologyPage";
+import { IntegrationGuide } from "./components/IntegrationGuide";
 import { Masthead } from "./components/Masthead";
 import { HeroSearch } from "./components/HeroSearch";
 import { CompactTickerBar } from "./components/CompactTickerBar";
@@ -55,6 +56,7 @@ export default function App() {
   const { incrementSearchCount, shouldShowPrompt, dismissPrompt } = useSearchCount();
 
   const [showMethodology, setShowMethodology] = useState(false);
+  const [showIntegration, setShowIntegration] = useState(false);
   const [showWatchlist, setShowWatchlist] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<"login" | "register">("login");
@@ -160,6 +162,7 @@ export default function App() {
   };
 
   if (showMethodology) return <MethodologyPage onBack={() => setShowMethodology(false)} />;
+  if (showIntegration) return <IntegrationGuide onBack={() => setShowIntegration(false)} />;
 
   if (showWatchlist) return (
     <WatchlistPage
@@ -185,6 +188,7 @@ export default function App() {
 
         <Masthead
           onShowMethodology={() => { setShowMethodology(true); setIsFilterOpen(false); window.scrollTo(0, 0); }}
+          onShowIntegration={() => { setShowIntegration(true); setIsFilterOpen(false); window.scrollTo(0, 0); }}
           onReset={hasSearched ? () => { resetSearch(); window.scrollTo(0, 0); } : undefined}
           onSignIn={openSignIn}
           onWatchlist={() => setShowWatchlist(true)}
