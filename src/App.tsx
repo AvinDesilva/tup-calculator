@@ -14,6 +14,7 @@ import { Masthead } from "./components/Masthead";
 import { HeroSearch } from "./components/HeroSearch";
 import { CompactTickerBar } from "./components/CompactTickerBar";
 import { DataSections } from "./components/DataSections";
+import { YearByYearBreakdown } from "./components/DataSections/YearByYearBreakdown";
 import { PriceProjectionGraph } from "./components/PriceProjectionGraph";
 import { Backtesting } from "./components/Backtesting";
 import { TabNav } from "./components/TabNav";
@@ -266,6 +267,7 @@ export default function App() {
         )}
 
         {hasSearched && activeTab === "analysis" && (
+          <>
           <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr 2px 2fr", gridTemplateRows: "auto 2px auto auto", gap: "0", alignItems: "start", paddingTop: "12px" }}>
 
             {/* Col 1: Verdict */}
@@ -354,6 +356,20 @@ export default function App() {
               );
             })()}
           </div>
+          <YearByYearBreakdown
+            decayMode={inp.decayMode}
+            onDecayModeToggle={(mode) => setInp(p => ({ ...p, decayMode: p.decayMode === mode ? "none" : mode }))}
+            result={result}
+            growthOverrides={inp.growthOverrides}
+            onGrowthChange={(year, val) => {
+              setInp(p => {
+                const overrides = { ...p.growthOverrides };
+                for (let y = year; y <= 30; y++) overrides[y] = val;
+                return { ...p, growthOverrides: overrides };
+              });
+            }}
+          />
+          </>
         )}
 
         {hasSearched && activeTab === "metrics" && (
@@ -418,17 +434,6 @@ export default function App() {
                 if (p === "10yr" && growthYears.long <= growthYears.short) return;
                 setGrowthPeriod(p);
                 setInp(prev => ({ ...prev, historicalGrowth: p === "5yr" ? growthValues.g5 : growthValues.g10, growthOverrides: {} }));
-              }}
-              decayMode={inp.decayMode}
-              onDecayModeToggle={(mode) => setInp(p => ({ ...p, decayMode: p.decayMode === mode ? "none" : mode }))}
-              result={result}
-              growthOverrides={inp.growthOverrides}
-              onGrowthChange={(year, val) => {
-                setInp(p => {
-                  const overrides = { ...p.growthOverrides };
-                  for (let y = year; y <= 30; y++) overrides[y] = val;
-                  return { ...p, growthOverrides: overrides };
-                });
               }}
             />
           </div>
