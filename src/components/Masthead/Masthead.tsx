@@ -43,57 +43,20 @@ export function Masthead({ onShowMethodology, onReset, onSignIn, onWatchlist }: 
       zIndex: 200,
     }}>
       <div className="rsp-header-content">
-        <div className="rsp-header-logo">
+        <div className="rsp-header-subtitle" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           {onReset ? (
             <button
               onClick={onReset}
               aria-label="Reset calculator and return to search"
-              style={{ display: "flex", alignItems: "baseline", gap: "10px", cursor: "pointer", background: "none", border: "none", padding: 0 }}
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: C.text3, fontFamily: "inherit" }}
             >
-              <h1 style={{
-                fontFamily: C.serif,
-                fontWeight: 400,
-                fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
-                lineHeight: 1,
-                letterSpacing: "-0.02em",
-                color: C.text1,
-                margin: 0,
-              }}>TUP</h1>
-              <span style={{
-                fontFamily: C.serif,
-                fontWeight: 400,
-                fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
-                lineHeight: 1,
-                letterSpacing: "-0.02em",
-                color: C.text2,
-              }}>Calculator</span>
+              Time Until Payback
             </button>
           ) : (
-            <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
-              <h1 style={{
-                fontFamily: C.serif,
-                fontWeight: 400,
-                fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
-                lineHeight: 1,
-                letterSpacing: "-0.02em",
-                color: C.text1,
-                margin: 0,
-              }}>TUP</h1>
-              <span style={{
-                fontFamily: C.serif,
-                fontWeight: 400,
-                fontSize: "clamp(2.4rem, 5vw, 3.8rem)",
-                lineHeight: 1,
-                letterSpacing: "-0.02em",
-                color: C.text2,
-              }}>Calculator</span>
-            </div>
+            <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: C.text3 }}>
+              Time Until Payback
+            </span>
           )}
-        </div>
-        <div className="rsp-header-subtitle" style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px" }}>
-          <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: C.text3 }}>
-            Time Until Payback
-          </span>
         </div>
       </div>
 
