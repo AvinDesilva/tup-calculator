@@ -106,16 +106,14 @@ jobs:
         run: |
           rsync -avz \
             -e "ssh -i ~/.ssh/deploy_key" \
-            server/nginx.conf \
-            ubuntu@${{ secrets.EC2_HOST }}:/tmp/nginx-tup.conf
-          rsync -avz \
-            -e "ssh -i ~/.ssh/deploy_key" \
-            server/nginx-rate-limits.conf \
-            ubuntu@${{ secrets.EC2_HOST }}:/tmp/nginx-rate-limits.conf
+            server/nginx-rate-limits.conf server/nginx.conf server/nginx-dev.conf \
+            ubuntu@${{ secrets.EC2_HOST }}:/tmp/
           ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.EC2_HOST }} << 'ENDSSH'
             sudo cp /tmp/nginx-rate-limits.conf /etc/nginx/conf.d/rate-limits.conf
-            sudo cp /tmp/nginx-tup.conf /etc/nginx/sites-available/tupcalculator.org
+            sudo cp /tmp/nginx.conf /etc/nginx/sites-available/tupcalculator.org
+            sudo cp /tmp/nginx-dev.conf /etc/nginx/sites-available/dev.tupcalculator.org
             sudo ln -sf /etc/nginx/sites-available/tupcalculator.org /etc/nginx/sites-enabled/tupcalculator.org
+            sudo ln -sf /etc/nginx/sites-available/dev.tupcalculator.org /etc/nginx/sites-enabled/
             sudo nginx -t && sudo nginx -s reload
           ENDSSH
 
