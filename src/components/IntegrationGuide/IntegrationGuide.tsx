@@ -26,6 +26,27 @@ const MCP_CONFIG_CLAUDE_CODE = `claude mcp add tup-calculator \\
   -e FMP_API_KEY=YOUR_API_KEY_HERE \\
   -- npx -y tup-calculator-mcp@latest`;
 
+const MCP_CONFIG_CLAUDE_PAIRED = `{
+  "mcpServers": {
+    "tup-calculator": {
+      "command": "npx",
+      "args": ["-y", "tup-calculator-mcp@latest"]
+    },
+    "fmp": {
+      "command": "npx",
+      "args": ["-y", "financial-modeling-prep-mcp-server",
+               "--fmp-token=YOUR_API_KEY_HERE"]
+    }
+  }
+}`;
+
+const MCP_CONFIG_CLAUDE_CODE_PAIRED = `# Add both servers:
+claude mcp add tup-calculator -- npx -y tup-calculator-mcp@latest
+
+claude mcp add fmp \\
+  -- npx -y financial-modeling-prep-mcp-server \\
+  --fmp-token=YOUR_API_KEY_HERE`;
+
 const MCP_CONFIG_CHATGPT = `# ChatGPT MCP support is rolling out gradually.
 # When available, add via Settings → Tools → MCP Servers:
 
@@ -127,11 +148,73 @@ function StepNumber({ n }: { n: number }) {
 }
 
 function ClaudeInstructions() {
+  const [setupMode, setSetupMode] = useState<"standalone" | "paired">("standalone");
+
   return (
     <div>
       <h3 style={{ fontFamily: C.display, fontSize: "18px", color: C.text1, margin: "0 0 20px 0", fontWeight: 600 }}>
         Claude Desktop & Claude Code
       </h3>
+
+      {/* Setup mode toggle */}
+      <div style={{ display: "flex", gap: "0", marginBottom: "24px" }}>
+        <button
+          onClick={() => setSetupMode("standalone")}
+          style={{
+            padding: "8px 16px",
+            fontSize: "11px",
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            border: `1px solid ${setupMode === "standalone" ? C.accent : C.borderWeak}`,
+            borderRight: setupMode === "standalone" ? `1px solid ${C.accent}` : "none",
+            background: setupMode === "standalone" ? C.accent : "transparent",
+            color: setupMode === "standalone" ? "#080808" : C.text2,
+            cursor: "pointer",
+            fontFamily: C.body,
+            transition: "all 0.15s",
+          }}
+        >
+          Standalone
+        </button>
+        <button
+          onClick={() => setSetupMode("paired")}
+          style={{
+            padding: "8px 16px",
+            fontSize: "11px",
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            border: `1px solid ${setupMode === "paired" ? C.accentAlt : C.borderWeak}`,
+            background: setupMode === "paired" ? C.accentAlt : "transparent",
+            color: setupMode === "paired" ? "#080808" : C.text2,
+            cursor: "pointer",
+            fontFamily: C.body,
+            transition: "all 0.15s",
+          }}
+        >
+          Paired with FMP MCP
+        </button>
+      </div>
+
+      {setupMode === "paired" && (
+        <div style={{
+          background: "rgba(0,191,165,0.06)",
+          border: `1px solid rgba(0,191,165,0.2)`,
+          padding: "14px 16px",
+          marginBottom: "20px",
+          fontSize: "12px",
+          fontFamily: C.body,
+          color: C.text2,
+          lineHeight: 1.6,
+        }}>
+          <strong style={{ color: C.text1 }}>Power User Setup:</strong> Pair TUP Calculator with the{" "}
+          <a href="https://github.com/imbenrabi/Financial-Modeling-Prep-MCP-Server" target="_blank" rel="noopener noreferrer" style={{ color: C.accentAlt, textDecoration: "none" }}>
+            FMP MCP Server
+          </a>{" "}
+          to get 250+ financial data tools alongside TUP analysis. Your AI fetches data via FMP MCP and runs it through the TUP engine — no duplicate API calls, richer data access.
+        </div>
+      )}
 
       <div style={{ marginBottom: "28px" }}>
         <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
@@ -158,7 +241,7 @@ function ClaudeInstructions() {
           Windows: <code style={{ fontFamily: C.mono, color: C.text1, fontSize: "11px" }}>%APPDATA%\Claude\claude_desktop_config.json</code>
         </p>
         <div style={{ marginLeft: "34px" }}>
-          <CodeBlock code={MCP_CONFIG_CLAUDE} />
+          <CodeBlock code={setupMode === "standalone" ? MCP_CONFIG_CLAUDE : MCP_CONFIG_CLAUDE_PAIRED} />
         </div>
       </div>
 
@@ -166,11 +249,11 @@ function ClaudeInstructions() {
         <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
           <StepNumber n={3} />
           <span style={{ fontSize: "13px", color: C.text1, fontFamily: C.body }}>
-            For <strong>Claude Code</strong> (terminal), run this command
+            For <strong>Claude Code</strong> (terminal), run {setupMode === "paired" ? "these commands" : "this command"}
           </span>
         </div>
         <div style={{ marginLeft: "34px" }}>
-          <CodeBlock code={MCP_CONFIG_CLAUDE_CODE} />
+          <CodeBlock code={setupMode === "standalone" ? MCP_CONFIG_CLAUDE_CODE : MCP_CONFIG_CLAUDE_CODE_PAIRED} />
         </div>
       </div>
 
@@ -192,7 +275,10 @@ function ClaudeInstructions() {
             fontStyle: "italic",
             lineHeight: 1.5,
           }}>
-            "Can you analyze whether AAPL is a good investment using the TUP calculator?"
+            {setupMode === "standalone"
+              ? "\"Can you analyze whether AAPL is a good investment using the TUP calculator?\""
+              : "\"Fetch AAPL's financials and run a TUP analysis — is it a good time to buy?\""
+            }
           </div>
         </div>
       </div>
@@ -424,17 +510,23 @@ export function IntegrationGuide({ onBack }: IntegrationGuideProps) {
         animation: "fadeInUp 0.5s ease 0.15s both",
       }}>
         <h2 style={{ fontFamily: C.display, fontSize: "15px", fontWeight: 600, color: C.accent, margin: "0 0 14px 0", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-          What You Get
+          Tools
         </h2>
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
             <span style={{ color: C.accent, fontFamily: C.mono, fontSize: "14px", lineHeight: "20px" }}>1.</span>
             <span style={{ fontFamily: C.body, fontSize: "13px", color: C.text1, lineHeight: "20px" }}>
-              <strong>analyze_stock</strong> — Full TUP analysis with verdict, payback period, growth assumptions, and year-by-year breakdown
+              <strong>analyze_stock</strong> — Full TUP analysis: fetches data and calculates verdict, payback period, and year-by-year breakdown
             </span>
           </div>
           <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
             <span style={{ color: C.accent, fontFamily: C.mono, fontSize: "14px", lineHeight: "20px" }}>2.</span>
+            <span style={{ fontFamily: C.body, fontSize: "13px", color: C.text1, lineHeight: "20px" }}>
+              <strong>calculate_tup</strong> — Pure TUP calculation from data you provide (no API key needed — pair with the FMP MCP Server)
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+            <span style={{ color: C.accent, fontFamily: C.mono, fontSize: "14px", lineHeight: "20px" }}>3.</span>
             <span style={{ fontFamily: C.body, fontSize: "13px", color: C.text1, lineHeight: "20px" }}>
               <strong>search_tickers</strong> — Find ticker symbols by company name or partial match
             </span>
@@ -503,6 +595,7 @@ export function IntegrationGuide({ onBack }: IntegrationGuideProps) {
             <a href="https://financialmodelingprep.com/developer/docs" target="_blank" rel="noopener noreferrer" style={{ color: C.accent, textDecoration: "none" }}>
               financialmodelingprep.com
             </a>
+            {" "}(not needed if pairing with the FMP MCP Server)
           </li>
           <li>An AI client that supports MCP (Claude Desktop, Claude Code, or similar)</li>
         </ul>
