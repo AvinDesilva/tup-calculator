@@ -356,7 +356,7 @@ export default function App() {
               );
             })()}
           </div>
-          <div style={{ borderTop: `1px solid ${C.borderWeak}`, paddingTop: "12px", paddingLeft: "40px" }}>
+          <div style={{ borderTop: `1px solid ${C.borderWeak}`, paddingTop: "12px" }}>
             <YearByYearBreakdown
               decayMode={inp.decayMode}
               onDecayModeToggle={(mode) => setInp(p => ({ ...p, decayMode: p.decayMode === mode ? "none" : mode }))}
