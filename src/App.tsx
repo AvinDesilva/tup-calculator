@@ -356,19 +356,21 @@ export default function App() {
               );
             })()}
           </div>
-          <YearByYearBreakdown
-            decayMode={inp.decayMode}
-            onDecayModeToggle={(mode) => setInp(p => ({ ...p, decayMode: p.decayMode === mode ? "none" : mode }))}
-            result={result}
-            growthOverrides={inp.growthOverrides}
-            onGrowthChange={(year, val) => {
-              setInp(p => {
-                const overrides = { ...p.growthOverrides };
-                for (let y = year; y <= 30; y++) overrides[y] = val;
-                return { ...p, growthOverrides: overrides };
-              });
-            }}
-          />
+          <div style={{ borderTop: `1px solid ${C.borderWeak}` }}>
+            <YearByYearBreakdown
+              decayMode={inp.decayMode}
+              onDecayModeToggle={(mode) => setInp(p => ({ ...p, decayMode: p.decayMode === mode ? "none" : mode }))}
+              result={result}
+              growthOverrides={inp.growthOverrides}
+              onGrowthChange={(year, val) => {
+                setInp(p => {
+                  const overrides = { ...p.growthOverrides };
+                  for (let y = year; y <= 30; y++) overrides[y] = val;
+                  return { ...p, growthOverrides: overrides };
+                });
+              }}
+            />
+          </div>
           </>
         )}
 
