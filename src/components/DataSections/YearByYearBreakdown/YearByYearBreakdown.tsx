@@ -26,7 +26,6 @@ export function YearByYearBreakdown({
             cursor: "pointer", borderRadius: "0 3px 3px 0", marginLeft: "-1px",
           }}>VDR</button>
         </div>
-        <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.06)" }} />
       </div>
       <Table result={result} growthOverrides={growthOverrides} onGrowthChange={onGrowthChange} />
     </div>
