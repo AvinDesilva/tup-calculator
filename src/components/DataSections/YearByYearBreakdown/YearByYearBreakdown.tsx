@@ -7,7 +7,7 @@ export function YearByYearBreakdown({
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-        <h3 style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888888", margin: 0 }}>Year-by-Year Breakdown</h3>
+        <h3 style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#888888", margin: 0 }}>Year-by-Year Breakdown</h3>
         <div style={{ display: "flex", gap: "0px" }}>
           <button aria-pressed={decayMode === "ff"} aria-label="Toggle fixed friction decay" onClick={() => onDecayModeToggle("ff")} style={{
             fontSize: "9px", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace",
