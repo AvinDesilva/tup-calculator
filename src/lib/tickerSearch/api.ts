@@ -392,21 +392,39 @@ export async function lookupTicker(
     // 4) Income Statement (12 years — need 11 data points for true 10-year CAGR)
     fetchFMP<FMPIncomeStatement[]>(`income-statement?symbol=${t}&limit=12`).then(d => { log("  ✓ /income-statement — revenue, net income (12 yrs)"); return d; }),
 
-    // 5) Analyst Estimates
+    // 5) Analyst Estimates — swallow free-plan 404s, but let RateLimitError
+    //    propagate so rollDice can classify the failure correctly.
     fetchFMP<FMPEstimate[]>(`analyst-estimates?symbol=${t}&period=annual&limit=5`)
       .then(d => { log("  ✓ /analyst-estimates — forward EPS & revenue est."); return d; })
-      .catch(() => { log("  ⚠ /analyst-estimates — not available (free plan)"); return [] as FMPEstimate[]; }),
+      .catch(e => {
+        if (e instanceof RateLimitError) throw e;
+        log("  ⚠ /analyst-estimates — not available (free plan)");
+        return [] as FMPEstimate[];
+      }),
 
     // 6) Cash Flow Statement (12 years — matches income statement window)
     fetchFMP<FMPCashFlow[]>(`cash-flow-statement?symbol=${t}&limit=12`)
       .then(d => { log("  ✓ /cash-flow-statement — operating/investing/financing flows"); return d; })
-      .catch(() => { log("  ⚠ /cash-flow-statement — not available"); return [] as FMPCashFlow[]; }),
+      .catch(e => {
+        if (e instanceof RateLimitError) throw e;
+        log("  ⚠ /cash-flow-statement — not available");
+        return [] as FMPCashFlow[];
+      }),
 
-    // 7) Historical price (monthly-sampled, last 5 years)
+    // 7) Historical price (monthly-sampled, last 5 years). Uses /api/historical-price
+    //    (a separate proxy route), so 429s come back as r.status — surface them as
+    //    RateLimitError to match the FMP path's classification.
     fetch(`/api/historical-price?symbol=${t}`)
-      .then(r => r.ok ? (r.json() as Promise<{ priceHistory: HistoricalPricePoint[] }>) : { priceHistory: [] as HistoricalPricePoint[] })
+      .then(r => {
+        if (r.status === 429) throw new RateLimitError(null);
+        return r.ok ? (r.json() as Promise<{ priceHistory: HistoricalPricePoint[] }>) : { priceHistory: [] as HistoricalPricePoint[] };
+      })
       .then(d => { log("  ✓ /historical-price — monthly price history for graph"); return d; })
-      .catch(() => { log("  ⚠ /historical-price — not available"); return { priceHistory: [] as HistoricalPricePoint[] }; }),
+      .catch(e => {
+        if (e instanceof RateLimitError) throw e;
+        log("  ⚠ /historical-price — not available");
+        return { priceHistory: [] as HistoricalPricePoint[] };
+      }),
 
   ]);
 
@@ -455,7 +473,12 @@ export async function lookupTicker(
       // FMP's stable API exposes forex pairs through /quote with a query-string
       // symbol — the legacy /fx and path-style /quote/{pair} endpoints both
       // return 404/400 on stable and were polluting the console.
-      const fxData = await fetchFMP<Array<{ price?: number; bid?: number; ask?: number }>>(`quote?symbol=${fxSymbol}`).catch(() => []);
+      // Swallow benign FX failures (404/empty), but let RateLimitError propagate
+      // so dice-roll callers can classify the failure correctly.
+      const fxData = await fetchFMP<Array<{ price?: number; bid?: number; ask?: number }>>(`quote?symbol=${fxSymbol}`).catch(e => {
+        if (e instanceof RateLimitError) throw e;
+        return [];
+      });
       let rate    = fxData?.[0]?.price ?? fxData?.[0]?.bid ?? fxData?.[0]?.ask;
       if (!(rate != null && rate > 0) && FALLBACK_FX[fxSymbol]) {
         rate = FALLBACK_FX[fxSymbol];
