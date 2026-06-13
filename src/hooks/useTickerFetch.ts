@@ -245,6 +245,13 @@ export function useTickerFetch(): UseTickerFetchReturn {
       const candidates = shuffled.slice(0, Math.min(MAX_CANDIDATES, shuffled.length));
       const quickMatches: string[] = [];
 
+      // Outcome counters for diagnostic error messages
+      let quickRateLimited = 0;
+      let quickApiErrors   = 0;
+      let quickOutOfRange  = 0;
+      let quickInvalidPb   = 0;
+      let quickAttempted   = 0;
+
       // ── Phase 1: Batched parallel quick screening ──────────────────────────
       for (let batchStart = 0; batchStart < candidates.length; batchStart += BATCH_SIZE) {
         if (diceAbortRef.current) { setRollingDice(false); return; }
@@ -259,22 +266,41 @@ export function useTickerFetch(): UseTickerFetchReturn {
 
         for (let i = 0; i < results.length; i++) {
           if (diceAbortRef.current) { setRollingDice(false); return; }
+          quickAttempted++;
           const r = results[i];
           if (r.status === "fulfilled") {
             const testInp = quickDataToInputState(r.value);
             const testResult = calcTUP(testInp, "standard");
             const pb = testResult?.payback;
             console.log(`[rollDice] ${batch[i]} payback=${pb}`);
-            if (pb && matchesTupRangeWithBuffer(pb, rollFilters.tupRange)) {
+            if (pb != null && Number.isFinite(pb) && pb > 0 && matchesTupRangeWithBuffer(pb, rollFilters.tupRange)) {
               quickMatches.push(batch[i]);
+            } else if (pb != null && Number.isFinite(pb) && pb > 0) {
+              quickOutOfRange++;
+            } else {
+              quickInvalidPb++;
             }
           } else {
-            console.warn(`[rollDice] ${batch[i]} quick failed:`, r.reason instanceof Error ? r.reason.message : r.reason);
+            const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
+            console.warn(`[rollDice] ${batch[i]} quick failed:`, msg);
+            if (msg.includes("rate limit") || msg.includes("429")) {
+              quickRateLimited++;
+            } else {
+              quickApiErrors++;
+            }
           }
+        }
+
+        // Short-circuit if FMP is clearly rate-limiting us
+        if (quickRateLimited > 0 && quickRateLimited >= Math.ceil(quickAttempted / 2)) {
+          console.log("[rollDice] aborting — rate limit dominates:", { quickRateLimited, quickAttempted });
+          break;
         }
       }
 
-      console.log(`[rollDice] quick matches: ${quickMatches.join(", ") || "(none)"}`);
+      console.log(`[rollDice] quick matches: ${quickMatches.join(", ") || "(none)"}`, {
+        quickAttempted, quickRateLimited, quickApiErrors, quickOutOfRange, quickInvalidPb,
+      });
 
       // ── Phase 2: Full fetch on quick matches (first valid match wins) ───────
       for (const t of quickMatches) {
@@ -294,7 +320,18 @@ export function useTickerFetch(): UseTickerFetchReturn {
         }
       }
 
-      if (!diceAbortRef.current) setError("Could not find a suitable stock — try adjusting filters.");
+      if (!diceAbortRef.current) {
+        // Surface a specific error based on what we observed
+        let errMsg = "Could not find a suitable stock — try adjusting filters.";
+        if (quickRateLimited > 0 && quickRateLimited >= Math.ceil(quickAttempted / 2)) {
+          errMsg = "FMP API rate limit hit — wait a minute and try again, or check your API plan.";
+        } else if (quickApiErrors > 0 && quickMatches.length === 0 && quickOutOfRange === 0) {
+          errMsg = "FMP API errors during search — please try again.";
+        } else if (quickMatches.length === 0 && quickOutOfRange > 0) {
+          errMsg = `Searched ${quickAttempted} stocks, none matched your TUP range — try widening the range.`;
+        }
+        setError(errMsg);
+      }
     } catch (e) {
       if (!diceAbortRef.current) setError(e instanceof Error ? e.message : "Failed to roll dice.");
     }
