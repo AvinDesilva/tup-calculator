@@ -426,13 +426,11 @@ export async function lookupTicker(
   if (priceCurrency !== financialsCurrency) {
     const fxSymbol = `${financialsCurrency}${priceCurrency}`;
     try {
-      let fxData = await fetchFMP<Array<{ price?: number; bid?: number; ask?: number }>>(`fx?symbol=${fxSymbol}`).catch(() => []);
-      let rate   = fxData?.[0]?.price ?? fxData?.[0]?.bid ?? fxData?.[0]?.ask;
-      if (!(rate != null && rate > 0)) {
-        log(`  … /fx returned no rate, trying /quote/${fxSymbol}`);
-        fxData = await fetchFMP<Array<{ price?: number; bid?: number }>>(`quote/${fxSymbol}`).catch(() => []);
-        rate   = fxData?.[0]?.price ?? fxData?.[0]?.bid;
-      }
+      // FMP's stable API exposes forex pairs through /quote with a query-string
+      // symbol — the legacy /fx and path-style /quote/{pair} endpoints both
+      // return 404/400 on stable and were polluting the console.
+      const fxData = await fetchFMP<Array<{ price?: number; bid?: number; ask?: number }>>(`quote?symbol=${fxSymbol}`).catch(() => []);
+      let rate    = fxData?.[0]?.price ?? fxData?.[0]?.bid ?? fxData?.[0]?.ask;
       if (!(rate != null && rate > 0) && FALLBACK_FX[fxSymbol]) {
         rate = FALLBACK_FX[fxSymbol];
         log(`  ⚠ FX API returned no rate — using hardcoded ${fxSymbol} fallback: ${rate}`);
