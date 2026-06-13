@@ -1,0 +1,15 @@
+{
+  "name": "tup-calculator-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for TUP (Time Until Payback) stock analysis",
+  "main": "index.js",
+  "bin": {
+    "tup-calculator-mcp": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  }
+}

@@ -3,7 +3,7 @@ import { C, toggleBtn } from "../../lib/theme.ts";
 import { useAuth } from "../../contexts/useAuth.ts";
 import type { MastheadProps } from "./Masthead.types.ts";
 
-export function Masthead({ onShowMethodology, onReset, onSignIn, onWatchlist }: MastheadProps) {
+export function Masthead({ onShowMethodology, onShowIntegration, onReset, onSignIn, onWatchlist }: MastheadProps) {
   const { user, isAuthenticated, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -60,8 +60,27 @@ export function Masthead({ onShowMethodology, onReset, onSignIn, onWatchlist }: 
         </div>
       </div>
 
-      {/* Top-right icons: book + user */}
+      {/* Top-right icons: integration + book + user */}
       <div className="rsp-header-icons" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <button
+          onClick={onShowIntegration}
+          aria-label="AI integration guide"
+          style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", color: C.text2, display: "flex", alignItems: "center" }}
+          onMouseEnter={e => (e.currentTarget.style.color = C.text1)}
+          onMouseLeave={e => (e.currentTarget.style.color = C.text2)}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 2a4 4 0 0 1 4 4v2h1a3 3 0 0 1 3 3v1h-2" />
+            <path d="M8 8V6a4 4 0 0 1 8 0" />
+            <rect x="2" y="11" width="8" height="10" rx="1" />
+            <rect x="14" y="11" width="8" height="10" rx="1" />
+            <path d="M10 16h4" />
+            <circle cx="6" cy="15" r="1" fill="currentColor" stroke="none" />
+            <circle cx="18" cy="15" r="1" fill="currentColor" stroke="none" />
+            <path d="M6 18h0" />
+            <path d="M18 18h0" />
+          </svg>
+        </button>
         <button
           onClick={onShowMethodology}
           aria-label="Read methodology"
