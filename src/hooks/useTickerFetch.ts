@@ -137,7 +137,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
 
   const cancelDice = () => { diceAbortRef.current = true; };
 
-  const doFetch = async (tickerOverride?: string): Promise<number | null> => {
+  const doFetch = async (tickerOverride?: string, opts?: { suppressError?: boolean }): Promise<number | null> => {
     const t = (tickerOverride || ticker).trim().toUpperCase();
     if (!t) { setError("Enter a ticker symbol."); return null; }
     let paybackResult: number | null = null;
@@ -207,6 +207,10 @@ export function useTickerFetch(): UseTickerFetchReturn {
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
       log(`✕ Error: ${msg}`);
+      if (opts?.suppressError) {
+        setLoading(false);
+        throw e;
+      }
       setError(msg);
     }
     setLoading(false);
@@ -218,9 +222,10 @@ export function useTickerFetch(): UseTickerFetchReturn {
     setRollingDice(true);
     setError("");
 
-    const BATCH_SIZE = 4;
-    const MAX_CANDIDATES = 24;
-    const MAX_QUICK_MATCHES = 3;
+    const BATCH_SIZE = 3;
+    const MAX_CANDIDATES = 12;
+    const MAX_QUICK_MATCHES = 2;
+    const BATCH_DELAY_MS = 200;
     const QUICK_TIMEOUT_MS = 6000;
     const FULL_TIMEOUT_MS = 12000;
 
@@ -296,6 +301,12 @@ export function useTickerFetch(): UseTickerFetchReturn {
           console.log("[rollDice] aborting — rate limit dominates:", { quickRateLimited, quickAttempted });
           break;
         }
+
+        // Pause between batches to let the proxy's rate-limit bucket refill
+        const moreBatches = batchStart + BATCH_SIZE < candidates.length;
+        if (moreBatches && quickMatches.length < MAX_QUICK_MATCHES) {
+          await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+        }
       }
 
       console.log(`[rollDice] quick matches: ${quickMatches.join(", ") || "(none)"}`, {
@@ -303,29 +314,48 @@ export function useTickerFetch(): UseTickerFetchReturn {
       });
 
       // ── Phase 2: Full fetch on quick matches (first valid match wins) ───────
+      let fullAttempted   = 0;
+      let fullRateLimited = 0;
+      let fullApiErrors   = 0;
+      let fullDiverged    = 0;
+
       for (const t of quickMatches) {
         if (diceAbortRef.current) { setRollingDice(false); return; }
         console.log(`[rollDice] full fetch: ${t}`);
+        fullAttempted++;
         setTicker(t);
         setIsFilterOpen(false);
         try {
-          const fullPb = await withTimeout(doFetch(t), FULL_TIMEOUT_MS);
+          const fullPb = await withTimeout(doFetch(t, { suppressError: true }), FULL_TIMEOUT_MS);
           if (fullPb && matchesTupRange(fullPb, rollFilters.tupRange)) {
             setRollingDice(false);
             return;
           }
+          fullDiverged++;
           console.log(`[rollDice] ${t} full-fetch payback=${fullPb} — diverged, trying next`);
         } catch (err) {
-          console.warn(`[rollDice] ${t} full fetch failed:`, err instanceof Error ? err.message : err);
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(`[rollDice] ${t} full fetch failed:`, msg);
+          if (msg.includes("rate limit") || msg.includes("429")) fullRateLimited++;
+          else fullApiErrors++;
         }
       }
 
+      console.log(`[rollDice] full phase summary:`, {
+        fullAttempted, fullRateLimited, fullApiErrors, fullDiverged,
+      });
+
       if (!diceAbortRef.current) {
-        // Surface a specific error based on what we observed
+        const totalRateLimited = quickRateLimited + fullRateLimited;
+        const totalApiErrors   = quickApiErrors   + fullApiErrors;
+        const totalAttempted   = quickAttempted   + fullAttempted;
+
         let errMsg = "Could not find a suitable stock — try adjusting filters.";
-        if (quickRateLimited > 0 && quickRateLimited >= Math.ceil(quickAttempted / 2)) {
+        if (totalRateLimited > 0 && totalRateLimited >= Math.ceil(totalAttempted / 2)) {
           errMsg = "FMP API rate limit hit — wait a minute and try again, or check your API plan.";
-        } else if (quickApiErrors > 0 && quickMatches.length === 0 && quickOutOfRange === 0) {
+        } else if (totalRateLimited > 0) {
+          errMsg = "FMP API rate limit hit partway through the search — try again in a moment.";
+        } else if (totalApiErrors > 0 && quickMatches.length === 0 && quickOutOfRange === 0) {
           errMsg = "FMP API errors during search — please try again.";
         } else if (quickMatches.length === 0 && quickOutOfRange > 0) {
           errMsg = `Searched ${quickAttempted} stocks, none matched your TUP range — try widening the range.`;
