@@ -223,7 +223,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
     setError("");
 
     const BATCH_SIZE = 3;
-    const MAX_CANDIDATES = 12;
+    const MAX_CANDIDATES = 8;
     const MAX_QUICK_MATCHES = 2;
     const BATCH_DELAY_MS = 200;
     const QUICK_TIMEOUT_MS = 6000;

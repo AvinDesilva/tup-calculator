@@ -33,11 +33,11 @@ function getClientIP(req) {
   return req.socket.remoteAddress || "unknown";
 }
 
-// ── Rate limiting — 150 requests / minute per IP ──────────────────────────────
-// Each ticker lookup fires ~10 parallel FMP calls, so 30/min only allowed ~3
-// lookups before triggering a false 429. Bumped to 150 to allow ~15 lookups/min
-// while still protecting against abuse (FMP plan allows 750/min).
-const RATE_LIMIT  = 150;
+// ── Rate limiting — 300 requests / minute per IP ──────────────────────────────
+// Dice-roll bursts ~47 parallel FMP calls per click (8 quick lookups + 2 full
+// validations). 300/min keeps abuse protection in place (FMP plan allows
+// 750/min) while letting users roll ~6 times per minute without false 429s.
+const RATE_LIMIT  = 300;
 const RATE_WINDOW = 60 * 1000;
 const MAX_RATE_MAP_SIZE = 10000; // prevent memory exhaustion from spoofed IPs
 const rateMap = new Map();
@@ -54,8 +54,10 @@ function rateLimiter(req, res, next) {
   rateMap.set(ip, entry);
 
   if (entry.count > RATE_LIMIT) {
-    console.warn(`[rate-limit] blocked ${ip} — ${entry.count} requests in window`);
-    return res.status(429).json({ error: "Too many requests. Try again later." });
+    const retryAfter = Math.max(1, Math.ceil((entry.reset - now) / 1000));
+    console.warn(`[rate-limit] blocked ${ip} — ${entry.count} requests in window (retry in ${retryAfter}s)`);
+    res.setHeader("Retry-After", String(retryAfter));
+    return res.status(429).json({ error: "Too many requests. Try again later.", retryAfter });
   }
   next();
 }
