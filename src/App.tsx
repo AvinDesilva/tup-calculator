@@ -34,7 +34,7 @@ import "./App.css";
 export default function App() {
   const {
     // Search / dice UI
-    ticker, setTicker, loading, error, fetchLog,
+    ticker, setTicker, loading, error, retryAfter, fetchLog,
     rollingDice, dicePhrase,
     isFilterOpen, setIsFilterOpen, rollFilters, setRollFilters, hasActiveFilters,
     // Actions
@@ -202,6 +202,7 @@ export default function App() {
             onFetch={handleFetch}
             loading={loading}
             error={error}
+            retryAfter={retryAfter}
             onRollDice={() => { setPriceMode("adj"); setAnimationKey(k => k + 1); rollDice(); }}
             onCancelDice={cancelDice}
             rollingDice={rollingDice}
@@ -225,6 +226,7 @@ export default function App() {
               onFetch={handleFetch}
               loading={loading}
               error={error}
+              retryAfter={retryAfter}
               fetchLog={fetchLog}
               onRollDice={() => { setPriceMode("adj"); setAnimationKey(k => k + 1); rollDice(); }}
               onCancelDice={cancelDice}

@@ -1,14 +1,20 @@
 import { useState, useEffect } from "react";
 import type React from "react";
+import { DEFAULT_RETRY_AFTER_S } from "../../hooks/diceRoll.constants.ts";
 
-export function ErrorDisplay({ error, style }: { error: string; style?: React.CSSProperties }) {
+// `retryAfter` is the seconds value the server asked us to wait. Comes from the
+// Express middleware's Retry-After header / JSON body (`server/middleware.js`).
+// Falls back to DEFAULT_RETRY_AFTER_S when null (nginx-emitted 429s and FMP
+// upstream 429s don't carry the header).
+export function ErrorDisplay({ error, retryAfter, style }: { error: string; retryAfter?: number | null; style?: React.CSSProperties }) {
   const isRateLimit = /rate limit/i.test(error);
-  const [countdown, setCountdown] = useState(5);
+  const initial = retryAfter && retryAfter > 0 ? retryAfter : DEFAULT_RETRY_AFTER_S;
+  const [countdown, setCountdown] = useState(initial);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!isRateLimit) { setCountdown(5); return; }
-    setCountdown(5);
+    if (!isRateLimit) { setCountdown(initial); return; }
+    setCountdown(initial);
     const iv = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) { clearInterval(iv); return 0; }
@@ -16,7 +22,7 @@ export function ErrorDisplay({ error, style }: { error: string; style?: React.CS
       });
     }, 1000);
     return () => clearInterval(iv);
-  }, [error, isRateLimit]);
+  }, [error, isRateLimit, initial]);
 
   if (!error) return null;
 

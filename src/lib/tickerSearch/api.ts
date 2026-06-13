@@ -89,12 +89,38 @@ export async function fetchFilteredPool(filters: RollFilters): Promise<string[]>
 
 // ─── Low-level HTTP wrapper ───────────────────────────────────────────────────
 
+// Thrown for HTTP 429 from any layer (nginx, Express proxy, FMP upstream).
+// Carries `retryAfter` (seconds) when the server provides it — currently only
+// the Express layer sets the header (`server/middleware.js`). Callers should
+// branch on `instanceof RateLimitError` instead of substring-matching messages.
+export class RateLimitError extends Error {
+  retryAfter: number | null;
+  constructor(retryAfter: number | null) {
+    super("API rate limit reached. Try again later.");
+    this.name = "RateLimitError";
+    this.retryAfter = retryAfter;
+  }
+}
+
+function parseRetryAfter(res: Response, body: string): number | null {
+  const header = res.headers.get("Retry-After");
+  if (header) {
+    const n = Number(header);
+    if (Number.isFinite(n) && n > 0) return Math.ceil(n);
+  }
+  try {
+    const json = JSON.parse(body) as { retryAfter?: number };
+    if (typeof json.retryAfter === "number" && json.retryAfter > 0) return Math.ceil(json.retryAfter);
+  } catch { /* body wasn't JSON */ }
+  return null;
+}
+
 export async function fetchFMP<T = unknown>(endpoint: string): Promise<T> {
   const res = await fetch(`/api/fmp/${endpoint}`);
   if (!res.ok) {
     const body = await res.text().catch(() => "(no body)");
     if (res.status === 401) throw new Error("Invalid API key.");
-    if (res.status === 429) throw new Error("API rate limit reached. Try again later.");
+    if (res.status === 429) throw new RateLimitError(parseRetryAfter(res, body));
     if (res.status === 404) { console.warn(`[fetchFMP] 404 /${endpoint}`); }
     else { console.error(`[fetchFMP] FAIL ${res.status} /${endpoint}`, body); }
     throw new Error(`Unable to fetch market data (HTTP ${res.status}: ${endpoint.split("?")[0]}). Please try again.`);

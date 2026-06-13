@@ -22,6 +22,7 @@ export interface UseTickerFetchReturn {
   setTicker: (v: string) => void;
   loading: boolean;
   error: string;
+  retryAfter: number | null;
   fetchLog: string[];
   rollingDice: boolean;
   dicePhrase: string;

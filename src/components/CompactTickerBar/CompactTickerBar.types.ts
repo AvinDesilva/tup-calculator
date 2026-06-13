@@ -7,6 +7,7 @@ export interface CompactTickerBarProps {
   onFetch: () => void;
   loading: boolean;
   error: string;
+  retryAfter: number | null;
   fetchLog: string[];
   onRollDice: () => void;
   onCancelDice: () => void;

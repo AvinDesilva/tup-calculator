@@ -5,7 +5,7 @@ import { ErrorDisplay } from "../primitives";
 import { DiceFilterBar } from "../DiceFilterBar";
 import type { CompactTickerBarProps } from "./CompactTickerBar.types.ts";
 
-export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, fetchLog, onRollDice, onCancelDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onApplyFilters, onResetFilters, hasActiveFilters }: CompactTickerBarProps) {
+export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFetch, loading, error, retryAfter, fetchLog, onRollDice, onCancelDice, rollingDice, dicePhrase, isFilterOpen, onToggleFilter, rollFilters, onApplyFilters, onResetFilters, hasActiveFilters }: CompactTickerBarProps) {
   const [hovered, setHovered] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   return (
@@ -90,7 +90,7 @@ export function CompactTickerBar({ ticker, onTickerChange, onTickerSelect, onFet
           </button>
         </div>
       </div>
-      {error && <div style={{ marginTop: "6px", fontSize: "11px" }}><ErrorDisplay error={error} style={{ fontSize: "11px" }} /></div>}
+      {error && <div style={{ marginTop: "6px", fontSize: "11px" }}><ErrorDisplay error={error} retryAfter={retryAfter} style={{ fontSize: "11px" }} /></div>}
 
       <DiceFilterBar
         isOpen={isFilterOpen}

@@ -7,6 +7,7 @@ export interface HeroSearchProps {
   onFetch: () => void;
   loading: boolean;
   error: string;
+  retryAfter: number | null;
   onRollDice: () => void;
   onCancelDice: () => void;
   rollingDice: boolean;

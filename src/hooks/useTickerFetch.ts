@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 
 import { calcTUP } from "../lib/verdictCard/calcTUP.ts";
-import { lookupTicker, lookupTickerQuick, fetchFilteredPool } from "../lib/tickerSearch/api.ts";
+import { lookupTicker, lookupTickerQuick, fetchFilteredPool, RateLimitError } from "../lib/tickerSearch/api.ts";
 import type { QuickTickerData } from "../lib/tickerSearch/api.ts";
+import {
+  BATCH_SIZE, MAX_CANDIDATES, MAX_QUICK_MATCHES, BATCH_DELAY_MS,
+  QUICK_TIMEOUT_MS, FULL_TIMEOUT_MS,
+} from "./diceRoll.constants.ts";
 import { fetchInsiderTrading } from "../lib/insiderTrading/fetch.ts";
 import type { InputState, GrowthScenario, RollFilters, TupRangeFilter, HistoricalPricePoint } from "../lib/types.ts";
 import * as dev from "../lib/devData.ts";
@@ -72,6 +76,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
   const [ticker, setTicker] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [retryAfter, setRetryAfter] = useState<number | null>(null);
   const [fetchLog, setFetchLog] = useState<string[]>([]);
 
   // Dice roll
@@ -141,7 +146,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
     const t = (tickerOverride || ticker).trim().toUpperCase();
     if (!t) { setError("Enter a ticker symbol."); return null; }
     let paybackResult: number | null = null;
-    setLoading(true); setError(""); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ insiderTrading: null, insiderTradingLoading: false, insiderTradingFetchedAt: 0 }); setScorecard({ cashFlows: [], incomeHistory: [], balanceSheetHistory: [], epsGrowthHistory: [], description: "" }); setStrongBuyPrice(null); setBuyPrice(null); setGuruData(null); setHasSearched(true);
+    setLoading(true); setError(""); setRetryAfter(null); setFetchLog([]); setIsConverted(false); setCurrencyNote(""); setCurrencyMismatchWarning(""); setValuation({ insiderTrading: null, insiderTradingLoading: false, insiderTradingFetchedAt: 0 }); setScorecard({ cashFlows: [], incomeHistory: [], balanceSheetHistory: [], epsGrowthHistory: [], description: "" }); setStrongBuyPrice(null); setBuyPrice(null); setGuruData(null); setHasSearched(true);
     window.scrollTo(0, 0);
 
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
@@ -211,6 +216,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
         setLoading(false);
         throw e;
       }
+      if (e instanceof RateLimitError) setRetryAfter(e.retryAfter);
       setError(msg);
     }
     setLoading(false);
@@ -221,13 +227,16 @@ export function useTickerFetch(): UseTickerFetchReturn {
     diceAbortRef.current = false;
     setRollingDice(true);
     setError("");
+    setRetryAfter(null);
 
-    const BATCH_SIZE = 3;
-    const MAX_CANDIDATES = 8;
-    const MAX_QUICK_MATCHES = 2;
-    const BATCH_DELAY_MS = 200;
-    const QUICK_TIMEOUT_MS = 6000;
-    const FULL_TIMEOUT_MS = 12000;
+    // Largest Retry-After (in seconds) observed across both phases. Surfaces
+    // to ErrorDisplay so the countdown matches what the server actually asked.
+    let observedRetryAfter: number | null = null;
+    const noteRetryAfter = (s: number | null) => {
+      if (s != null && (observedRetryAfter == null || s > observedRetryAfter)) {
+        observedRetryAfter = s;
+      }
+    };
 
     try {
       console.log("[rollDice] filters:", rollFilters);
@@ -286,10 +295,12 @@ export function useTickerFetch(): UseTickerFetchReturn {
               quickInvalidPb++;
             }
           } else {
-            const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
+            const reason = r.reason;
+            const msg = reason instanceof Error ? reason.message : String(reason);
             console.warn(`[rollDice] ${batch[i]} quick failed:`, msg);
-            if (msg.includes("rate limit") || msg.includes("429")) {
+            if (reason instanceof RateLimitError) {
               quickRateLimited++;
+              noteRetryAfter(reason.retryAfter);
             } else {
               quickApiErrors++;
             }
@@ -336,8 +347,12 @@ export function useTickerFetch(): UseTickerFetchReturn {
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           console.warn(`[rollDice] ${t} full fetch failed:`, msg);
-          if (msg.includes("rate limit") || msg.includes("429")) fullRateLimited++;
-          else fullApiErrors++;
+          if (err instanceof RateLimitError) {
+            fullRateLimited++;
+            noteRetryAfter(err.retryAfter);
+          } else {
+            fullApiErrors++;
+          }
         }
       }
 
@@ -360,6 +375,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
         } else if (quickMatches.length === 0 && quickOutOfRange > 0) {
           errMsg = `Searched ${quickAttempted} stocks, none matched your TUP range — try widening the range.`;
         }
+        if (totalRateLimited > 0) setRetryAfter(observedRetryAfter);
         setError(errMsg);
       }
     } catch (e) {
@@ -473,7 +489,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
 
   return {
     // Search / dice UI
-    ticker, setTicker, loading, error, fetchLog,
+    ticker, setTicker, loading, error, retryAfter, fetchLog,
     rollingDice, dicePhrase,
     isFilterOpen, setIsFilterOpen, rollFilters, setRollFilters, hasActiveFilters,
 
