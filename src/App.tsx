@@ -239,10 +239,7 @@ export default function App() {
               onApplyFilters={setRollFilters}
               onResetFilters={() => setRollFilters({ marketCap: [], sector: "", exchange: [], indexEtf: "", tupRange: [] })}
               hasActiveFilters={hasActiveFilters}
-            />
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <TabNav activeTab={activeTab} onTabChange={handleTabChange} />
-              {company && (
+              watchlistSlot={company && (
                 <WatchlistButton
                   ticker={ticker}
                   isInWatchlist={isInWatchlist(ticker)}
@@ -268,7 +265,8 @@ export default function App() {
                   }}
                 />
               )}
-            </div>
+            />
+            <TabNav activeTab={activeTab} onTabChange={handleTabChange} />
           </div>
         )}
 

@@ -26,6 +26,7 @@ export function TabNav({ activeTab, onTabChange }: TabNavProps) {
       className="rsp-tab-nav"
       style={{
         display: "flex",
+        justifyContent: "flex-end",
         borderBottom: `1px solid ${C.borderWeak}`,
         paddingBottom: "0",
         marginBottom: "0",
@@ -46,7 +47,6 @@ export function TabNav({ activeTab, onTabChange }: TabNavProps) {
             onMouseEnter={() => setHoveredTab(id)}
             onMouseLeave={() => setHoveredTab(null)}
             style={{
-              flex: 1,
               background: "transparent",
               border: "none",
               borderBottom: isActive ? `2px solid ${C.accent}` : "2px solid transparent",

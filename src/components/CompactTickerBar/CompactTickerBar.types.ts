@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { RollFilters } from "../../lib/types.ts";
 
 export interface CompactTickerBarProps {
@@ -19,4 +20,5 @@ export interface CompactTickerBarProps {
   onApplyFilters: (f: RollFilters) => void;
   onResetFilters: () => void;
   hasActiveFilters: boolean;
+  watchlistSlot?: ReactNode;
 }
