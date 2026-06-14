@@ -88,11 +88,11 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
         }}>
           <SlotCounter value={result.payback} paybackNote={result.paybackNote} color={v.color} animationKey={animationKey} />
         </div>
-        <div style={{ fontSize: "13px", color: "#888888", marginTop: "12px", letterSpacing: "0.05em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <div style={{ fontSize: "13px", color: "#6a6a6a", marginTop: "12px", letterSpacing: "0.05em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {result.paybackNote ? "Principal Uncalculable" : (
             <>
               Years Until Principal Returned For
-              {companyDisplay && <><br />{companyDisplay}</>}
+              {companyDisplay && <><br /><span style={{ color: v.color }}>{companyDisplay}</span></>}
             </>
           )}
         </div>
@@ -115,11 +115,11 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
           <div className="rsp-verdict-label" style={{ fontSize: "22px", fontWeight: 700, color: v.color, letterSpacing: "-0.01em", fontFamily: "'Barlow Condensed', sans-serif" }}>
             {isSpinning ? (arrowUp ? "▲" : "▼") : v.icon} {v.label}
           </div>
-          <div className="rsp-verdict-sub" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888888", marginTop: "4px", display: "inline-block", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div className="rsp-verdict-sub" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#6a6a6a", marginTop: "4px", display: "inline-block", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {result.paybackNote ? "Principal Uncalculable" : (
               <>
                 Years Until Principal Returned For
-                {companyDisplay && <><br />{companyDisplay}</>}
+                {companyDisplay && <><br /><span style={{ color: v.color }}>{companyDisplay}</span></>}
               </>
             )}
           </div>
