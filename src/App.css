@@ -84,6 +84,9 @@
   .rsp-growth-row {
     flex-wrap: wrap !important;
   }
+  .rsp-tab-nav {
+    justify-content: space-evenly !important;
+  }
   .rsp-container {
     padding-left: 8px !important;
     padding-right: 8px !important;
