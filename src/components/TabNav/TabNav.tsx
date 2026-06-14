@@ -5,9 +5,9 @@ export type Tab = "analysis" | "metrics" | "profile" | "logic" | "backtest";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "analysis", label: "Analysis" },
+  { id: "logic",    label: "Logic"    },
   { id: "metrics",  label: "Metrics"  },
   { id: "profile",  label: "Profile"  },
-  { id: "logic",    label: "Logic"    },
   { id: "backtest", label: "Backtest" },
 ];
 
