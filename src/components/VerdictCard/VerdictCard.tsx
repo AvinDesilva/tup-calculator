@@ -92,7 +92,9 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
           {result.paybackNote ? "Principal Uncalculable" : (
             <>
               Years Until Principal Returned For
-              {companyDisplay && <><br /><span style={{ color: v.color }}>{companyDisplay}</span></>}
+              {companyDisplay && (
+                <div style={{ color: v.color, marginTop: "4px" }}>{companyDisplay}</div>
+              )}
             </>
           )}
         </div>
@@ -119,7 +121,9 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
             {result.paybackNote ? "Principal Uncalculable" : (
               <>
                 Years Until Principal Returned For
-                {companyDisplay && <><br /><span style={{ color: v.color }}>{companyDisplay}</span></>}
+                {companyDisplay && (
+                  <div style={{ color: v.color, marginTop: "4px" }}>{companyDisplay}</div>
+                )}
               </>
             )}
           </div>
