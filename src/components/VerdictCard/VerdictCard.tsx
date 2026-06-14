@@ -5,7 +5,12 @@ import { useHoldRepeat } from "../primitives";
 import { SlotCounter } from "./SlotCounter.tsx";
 import type { VerdictCardProps } from "./VerdictCard.types.ts";
 
-export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, currentPrice, growthScenario, onScenarioChange, hasScenarioData, priceMode, onPriceModeToggle, animationKey }: VerdictCardProps) {
+const STUB_MAX_LEN = 34;
+
+export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, currentPrice, growthScenario, onScenarioChange, hasScenarioData, priceMode, onPriceModeToggle, animationKey, companyName }: VerdictCardProps) {
+  const companyDisplay = companyName
+    ? (companyName.length > STUB_MAX_LEN ? companyName.slice(0, STUB_MAX_LEN - 1).trimEnd() + "…" : companyName)
+    : "";
   const holdDown = useHoldRepeat(() => onGrowthStep(-1));
   const holdUp   = useHoldRepeat(() => onGrowthStep(1));
   const [editingGrowth, setEditingGrowth] = useState(false);
@@ -83,8 +88,13 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
         }}>
           <SlotCounter value={result.payback} paybackNote={result.paybackNote} color={v.color} animationKey={animationKey} />
         </div>
-        <div style={{ fontSize: "13px", color: "#888888", marginTop: "12px", letterSpacing: "0.05em" }}>
-          {result.paybackNote ? "Principal Uncalculable" : "Years Until Principal Returned"}
+        <div style={{ fontSize: "13px", color: "#888888", marginTop: "12px", letterSpacing: "0.05em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {result.paybackNote ? "Principal Uncalculable" : (
+            <>
+              Years Until Principal Returned For
+              {companyDisplay && <><br />{companyDisplay}</>}
+            </>
+          )}
         </div>
       </div>
     );
@@ -105,8 +115,13 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
           <div className="rsp-verdict-label" style={{ fontSize: "22px", fontWeight: 700, color: v.color, letterSpacing: "-0.01em", fontFamily: "'Barlow Condensed', sans-serif" }}>
             {isSpinning ? (arrowUp ? "▲" : "▼") : v.icon} {v.label}
           </div>
-          <div className="rsp-verdict-sub" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888888", marginTop: "4px" }}>
-            {result.paybackNote ? "Principal Uncalculable" : "Years Until Principal Returned"}
+          <div className="rsp-verdict-sub" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#888888", marginTop: "4px", display: "inline-block", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {result.paybackNote ? "Principal Uncalculable" : (
+              <>
+                Years Until Principal Returned For
+                {companyDisplay && <><br />{companyDisplay}</>}
+              </>
+            )}
           </div>
         </div>
       </div>

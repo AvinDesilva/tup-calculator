@@ -12,4 +12,5 @@ export interface VerdictCardProps {
   priceMode: PriceMode;
   onPriceModeToggle: () => void;
   animationKey: number;
+  companyName?: string;
 }

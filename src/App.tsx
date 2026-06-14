@@ -287,6 +287,7 @@ export default function App() {
               )}
 
               <VerdictCard result={result} noiseFilter={false} currentPrice={inp.currentPrice} animationKey={animationKey}
+                companyName={company}
                 growthScenario={growthScenario}
                 onScenarioChange={onScenarioChange}
                 hasScenarioData={hasScenarioData}
