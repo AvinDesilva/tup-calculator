@@ -42,3 +42,12 @@ CREATE TABLE IF NOT EXISTS watchlist_items (
   UNIQUE(user_id, ticker)
 );
 CREATE INDEX IF NOT EXISTS idx_watchlist_user ON watchlist_items(user_id);
+
+CREATE TABLE IF NOT EXISTS search_history (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ticker       TEXT    NOT NULL,
+  searched_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_search_history_user_date
+  ON search_history(user_id, searched_at);

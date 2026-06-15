@@ -38,6 +38,21 @@ function initDB() {
     console.log("[db] Initialized schema v1");
   }
 
+  if (version < 2) {
+    conn.exec(`
+      CREATE TABLE IF NOT EXISTS search_history (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        ticker       TEXT    NOT NULL,
+        searched_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_search_history_user_date
+        ON search_history(user_id, searched_at);
+    `);
+    conn.pragma("user_version = 2");
+    console.log("[db] Migrated schema to v2 (search_history)");
+  }
+
   return conn;
 }
 

@@ -1,6 +1,9 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { C, toggleBtn } from "../../lib/theme.ts";
 import type { WatchlistItem } from "../../lib/api/watchlist.ts";
+import { getDailySearchCounts, type DailySearchCount } from "../../lib/api/searchHistory.ts";
+import { useAuth } from "../../contexts/useAuth.ts";
+import { WatchlistHero } from "./WatchlistHero.tsx";
 
 interface WatchlistPageProps {
   items: WatchlistItem[];
@@ -42,6 +45,17 @@ function formatPayback(years: number | null): string {
 
 export function WatchlistPage({ items, onBack, onSelectTicker, onRemove }: WatchlistPageProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const { user } = useAuth();
+  const [dailyCounts, setDailyCounts] = useState<DailySearchCount[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    getDailySearchCounts(84)
+      .then(d => { if (!cancelled) setDailyCounts(d); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user]);
 
   const toggleExpanded = (ticker: string) => {
     setExpanded(prev => {
@@ -55,8 +69,14 @@ export function WatchlistPage({ items, onBack, onSelectTicker, onRemove }: Watch
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text1, fontFamily: C.body }}>
       <div style={{ maxWidth: "960px", margin: "0 auto", padding: "0 24px" }}>
+        {user && (
+          <WatchlistHero
+            displayName={user.displayName || user.email}
+            dailyCounts={dailyCounts}
+          />
+        )}
         {/* Header */}
-        <div style={{ paddingTop: "28px", paddingBottom: "20px", borderBottom: `2px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ paddingTop: user ? "8px" : "28px", paddingBottom: "20px", borderBottom: `2px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <h1 style={{ fontFamily: C.serif, fontWeight: 400, fontSize: "clamp(1.8rem, 4vw, 2.8rem)", color: C.text1, margin: 0, lineHeight: 1 }}>
               Watchlist

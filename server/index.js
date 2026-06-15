@@ -7,6 +7,7 @@ const { cors, rateLimiter } = require("./middleware");
 const router = require("./routes");
 const authRouter = require("./routes-auth");
 const watchlistRouter = require("./routes-watchlist");
+const searchHistoryRouter = require("./routes-search-history");
 const { initDB } = require("./db");
 
 initDB();
@@ -50,6 +51,7 @@ app.use((req, res, next) => {
 
 app.use("/auth", authRouter);
 app.use("/watchlist", watchlistRouter);
+app.use("/search-history", searchHistoryRouter);
 app.use(router);
 
 // ── Global error handler — never leak stack traces ──────────────────────────

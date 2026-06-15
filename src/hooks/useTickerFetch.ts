@@ -11,6 +11,7 @@ import { fetchInsiderTrading } from "../lib/insiderTrading/fetch.ts";
 import type { InputState, GrowthScenario, RollFilters, TupRangeFilter, HistoricalPricePoint } from "../lib/types.ts";
 import * as dev from "../lib/devData.ts";
 import { computeGuruData } from "../lib/guruRadar/computeGuruData.ts";
+import { logSearch } from "../lib/api/searchHistory.ts";
 import type { GuruRadarData } from "../lib/guruRadar/types.ts";
 
 import type { ValuationState, ScorecardState, UseTickerFetchReturn } from "./useTickerFetch.types.ts";
@@ -152,6 +153,7 @@ export function useTickerFetch(): UseTickerFetchReturn {
     const log = (msg: string) => setFetchLog(p => [...p, msg]);
     try {
       const data = await lookupTicker(t, log);
+      logSearch(t).catch(() => {});
 
       setGuruData(computeGuruData(data));
       setCompany(data.companyName);
