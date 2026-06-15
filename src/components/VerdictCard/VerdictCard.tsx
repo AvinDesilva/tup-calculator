@@ -91,9 +91,9 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
         <div style={{ fontSize: "13px", color: "#6a6a6a", marginTop: "12px", letterSpacing: "0.05em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {result.paybackNote ? "Principal Uncalculable" : (
             <>
-              Years Until Principal Returned For
+              Years Until Principal Returned
               {companyDisplay && (
-                <div style={{ color: v.color, marginTop: "4px" }}>{companyDisplay}</div>
+                <div style={{ color: v.color, marginTop: "4px" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
               )}
             </>
           )}
@@ -120,9 +120,9 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
           <div className="rsp-verdict-sub" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#6a6a6a", marginTop: "4px", display: "inline-block", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {result.paybackNote ? "Principal Uncalculable" : (
               <>
-                Years Until Principal Returned For
+                Years Until Principal Returned
                 {companyDisplay && (
-                  <div style={{ color: v.color, marginTop: "4px" }}>{companyDisplay}</div>
+                  <div style={{ color: v.color, marginTop: "4px" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
                 )}
               </>
             )}
