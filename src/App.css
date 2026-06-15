@@ -191,6 +191,14 @@
     padding: 16px 0;
     border-top: 1px solid rgba(255,255,255,0.06);
   }
+  .rsp-wl-hide-mobile { display: none !important; }
+}
+
+/* ── Watchlist responsive ──────────────────────────────────────────────────── */
+
+.rsp-wl-show-mobile { display: none; }
+@media (max-width: 767px) {
+  .rsp-wl-show-mobile { display: table-cell !important; }
 }
 
 /* ── Guru Radar ────────────────────────────────────────────────────────────── */
