@@ -232,6 +232,16 @@ export function GrowthAssumptions({
           <div style={{ padding: "6px 12px 6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "#444", textAlign: "right" }}>(Hist + Y1) / 2</div>
           <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", fontWeight: 500, color: "#666", textAlign: "right" }}>{f(histBlended)}%</div>
 
+          {/* Y1 Forward Growth (input) */}
+          <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontSize: "10px", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "#555" }}>Y1 Fwd Growth</div>
+          <div style={{ padding: "6px 12px 6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "#444", textAlign: "right" }}>analyst est.</div>
+          <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", fontWeight: 500, color: "#666", textAlign: "right" }}>{f(fwd1)}%</div>
+
+          {/* Y2 Forward Growth (input) */}
+          <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontSize: "10px", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "#555" }}>Y2 Fwd Growth</div>
+          <div style={{ padding: "6px 12px 6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "#444", textAlign: "right" }}>analyst est.</div>
+          <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", fontWeight: 500, color: "#666", textAlign: "right" }}>{f(fwd2)}%</div>
+
           {/* Forward Compound (intermediate) */}
           <div style={{ padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontSize: "10px", fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "#555" }}>Fwd Compound</div>
           <div style={{ padding: "6px 12px 6px 0", borderBottom: "1px solid rgba(255,255,255,0.04)", fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", color: "#444", textAlign: "right" }}>GM(Y1, Y2)</div>
