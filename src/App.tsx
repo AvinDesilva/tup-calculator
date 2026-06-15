@@ -302,7 +302,7 @@ export default function App() {
             <div className="rsp-hairline-v" style={{ background: C.border, width: "2px" }} />
 
             {/* Col 3: Price Projection Graph */}
-            <div className="rsp-right-graph" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "7px", paddingBottom: "28px", animation: "fadeInUp 0.5s 0.2s ease both", alignSelf: "stretch", display: "flex", flexDirection: "column" }}>
+            <div className="rsp-right-graph" style={{ paddingLeft: "40px", paddingRight: "0", paddingTop: "7px", paddingBottom: "28px", animation: "fadeInUp 0.5s 0.2s ease both", alignSelf: "stretch", display: "flex", flexDirection: "column" }}>
               <PriceProjectionGraph
                 priceHistory={priceHistory}
                 currentPrice={inp.currentPrice}
