@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { VERDICT } from "../../lib/constants.ts";
 import { f } from "../../lib/utils.ts";
 import { useHoldRepeat } from "../primitives";
+import { useFitText } from "../../hooks/useFitText.ts";
 import { SlotCounter } from "./SlotCounter.tsx";
 import type { VerdictCardProps } from "./VerdictCard.types.ts";
 
@@ -19,6 +20,8 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
   const [arrowTick, setArrowTick] = useState(0);
   const prevVerdictRef = useRef<string | null>(null);
   const [verdictCompletedFor, setVerdictCompletedFor] = useState<string | null>(null);
+  const { containerRef: fitNoiseContainer, innerRef: fitNoiseInner } = useFitText([companyDisplay, result?.paybackNote]);
+  const { containerRef: fitMainContainer, innerRef: fitMainInner } = useFitText([companyDisplay, result?.paybackNote]);
 
   useEffect(() => {
     if (animationKey === 0) return;
@@ -88,15 +91,17 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
         }}>
           <SlotCounter value={result.payback} paybackNote={result.paybackNote} color={v.color} animationKey={animationKey} />
         </div>
-        <div style={{ fontSize: "13px", color: "#6a6a6a", marginTop: "12px", letterSpacing: "0.05em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {result.paybackNote ? "Principal Uncalculable" : (
-            <>
-              Years Until Principal Returned
-              {companyDisplay && (
-                <div style={{ color: v.color, marginTop: "4px" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
-              )}
-            </>
-          )}
+        <div ref={fitNoiseContainer} style={{ marginTop: "12px", maxWidth: "100%", overflow: "hidden" }}>
+          <div ref={fitNoiseInner} style={{ fontSize: "13px", color: "#6a6a6a", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
+            {result.paybackNote ? "Principal Uncalculable" : (
+              <>
+                Years Until Principal Returned
+                {companyDisplay && (
+                  <div style={{ color: v.color, marginTop: "4px" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -117,15 +122,17 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
           <div className="rsp-verdict-label" style={{ fontSize: "22px", fontWeight: 700, color: v.color, letterSpacing: "-0.01em", fontFamily: "'Barlow Condensed', sans-serif" }}>
             {isSpinning ? (arrowUp ? "▲" : "▼") : v.icon} {v.label}
           </div>
-          <div className="rsp-verdict-sub" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#6a6a6a", marginTop: "4px", display: "inline-block", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {result.paybackNote ? "Principal Uncalculable" : (
-              <>
-                Years Until Principal Returned
-                {companyDisplay && (
-                  <div style={{ color: v.color, marginTop: "4px" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
-                )}
-              </>
-            )}
+          <div ref={fitMainContainer} style={{ marginTop: "4px", maxWidth: "100%", overflow: "hidden" }}>
+            <div ref={fitMainInner} className="rsp-verdict-sub" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#6a6a6a", whiteSpace: "nowrap" }}>
+              {result.paybackNote ? "Principal Uncalculable" : (
+                <>
+                  Years Until Principal Returned
+                  {companyDisplay && (
+                    <div style={{ color: v.color, marginTop: "4px" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
