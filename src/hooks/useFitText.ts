@@ -10,7 +10,7 @@ import { useLayoutEffect, useRef } from "react";
  *
  * Pass deps for content that should trigger re-measurement (e.g. text strings).
  */
-export function useFitText(deps: React.DependencyList, minFontSize: number = 7) {
+export function useFitText(deps: React.DependencyList, minFontSize: number = 6) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const innerRef = useRef<HTMLDivElement | null>(null);
 
@@ -27,7 +27,15 @@ export function useFitText(deps: React.DependencyList, minFontSize: number = 7) 
       const cs = window.getComputedStyle(inner);
       const naturalFontSize = parseFloat(cs.fontSize);
       if (!Number.isFinite(naturalFontSize) || naturalFontSize <= 0) return;
-      const naturalWidth = inner.scrollWidth;
+
+      // Widest natural line: parent's scrollWidth catches inline overflow, but
+      // block children with their own `overflow: hidden` hide their natural
+      // extent from the parent — walk children to include them.
+      let naturalWidth = inner.scrollWidth;
+      for (let i = 0; i < inner.children.length; i++) {
+        const child = inner.children[i] as HTMLElement;
+        if (child.scrollWidth > naturalWidth) naturalWidth = child.scrollWidth;
+      }
 
       if (naturalWidth > containerWidth) {
         const target = Math.max(

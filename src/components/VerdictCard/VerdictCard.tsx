@@ -97,7 +97,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
               <>
                 Years Until Principal Returned
                 {companyDisplay && (
-                  <div style={{ color: v.color, marginTop: "4px", whiteSpace: "normal", overflowWrap: "anywhere" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
+                  <div style={{ color: v.color, marginTop: "4px", overflow: "hidden", textOverflow: "ellipsis" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
                 )}
               </>
             )}
@@ -128,7 +128,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
                 <>
                   Years Until Principal Returned
                   {companyDisplay && (
-                    <div style={{ color: v.color, marginTop: "4px", whiteSpace: "normal", overflowWrap: "anywhere" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
+                    <div style={{ color: v.color, marginTop: "4px", overflow: "hidden", textOverflow: "ellipsis" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
                   )}
                 </>
               )}
