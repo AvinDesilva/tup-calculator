@@ -91,7 +91,7 @@
     padding-left: 8px !important;
     padding-right: 8px !important;
   }
-  .rsp-verdict-num { font-size: clamp(4.4rem, 17.6vw, 6.4rem) !important; }
+  .rsp-verdict-num { font-size: clamp(5.28rem, 21.12vw, 7.68rem) !important; padding-left: 4px !important; }
   .rsp-hero-section {
     padding-bottom: 120px !important;
   }
