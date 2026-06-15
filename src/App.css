@@ -125,6 +125,7 @@
     padding-left: 0 !important;
     padding-right: 0 !important;
     padding-top: 0px !important;
+    min-width: 0 !important;
   }
   .rsp-right-graph {
     padding-left: 0 !important;

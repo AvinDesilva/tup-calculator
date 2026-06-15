@@ -97,7 +97,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
               <>
                 Years Until Principal Returned
                 {companyDisplay && (
-                  <div style={{ color: v.color, marginTop: "4px" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
+                  <div style={{ color: v.color, marginTop: "4px", whiteSpace: "normal", overflowWrap: "anywhere" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
                 )}
               </>
             )}
@@ -118,7 +118,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
         }}>
           <SlotCounter value={result.payback} paybackNote={result.paybackNote} color={v.color} animationKey={animationKey} />
         </div>
-        <div style={{ paddingBottom: "8px" }}>
+        <div style={{ paddingBottom: "8px", minWidth: 0, flex: 1 }}>
           <div className="rsp-verdict-label" style={{ fontSize: "22px", fontWeight: 700, color: v.color, letterSpacing: "-0.01em", fontFamily: "'Barlow Condensed', sans-serif" }}>
             {isSpinning ? (arrowUp ? "▲" : "▼") : v.icon} {v.label}
           </div>
@@ -128,7 +128,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
                 <>
                   Years Until Principal Returned
                   {companyDisplay && (
-                    <div style={{ color: v.color, marginTop: "4px" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
+                    <div style={{ color: v.color, marginTop: "4px", whiteSpace: "normal", overflowWrap: "anywhere" }}><span style={{ color: "#6a6a6a" }}>For</span> {companyDisplay}</div>
                   )}
                 </>
               )}
