@@ -73,10 +73,11 @@ export function WatchlistPage({ items, onBack, onSelectTicker, onRemove }: Watch
           <WatchlistHero
             displayName={user.displayName || user.email}
             dailyCounts={dailyCounts}
+            onBack={onBack}
           />
         )}
         {/* Header */}
-        <div style={{ paddingTop: user ? "8px" : "28px", paddingBottom: "20px", borderBottom: `2px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ paddingTop: user ? "20px" : "28px", paddingBottom: "20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <h1 style={{ fontFamily: C.serif, fontWeight: 400, fontSize: "clamp(1.8rem, 4vw, 2.8rem)", color: C.text1, margin: 0, lineHeight: 1 }}>
               Watchlist
@@ -85,9 +86,11 @@ export function WatchlistPage({ items, onBack, onSelectTicker, onRemove }: Watch
               {items.length} {items.length === 1 ? "stock" : "stocks"} tracked
             </p>
           </div>
-          <button onClick={onBack} style={toggleBtn(false)}>
-            &larr; Back
-          </button>
+          {!user && (
+            <button onClick={onBack} style={toggleBtn(false)}>
+              &larr; Back
+            </button>
+          )}
         </div>
 
         {/* Table */}

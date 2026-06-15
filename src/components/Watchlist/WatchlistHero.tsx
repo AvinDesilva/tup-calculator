@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { C } from "../../lib/theme.ts";
+import { C, toggleBtn } from "../../lib/theme.ts";
 import type { DailySearchCount } from "../../lib/api/searchHistory.ts";
 
 interface WatchlistHeroProps {
   displayName: string;
   dailyCounts: DailySearchCount[];
+  onBack: () => void;
 }
 
 const PHRASES = [
@@ -38,7 +39,7 @@ function cellColor(count: number): string {
   return C.accent;
 }
 
-export function WatchlistHero({ displayName, dailyCounts }: WatchlistHeroProps) {
+export function WatchlistHero({ displayName, dailyCounts, onBack }: WatchlistHeroProps) {
   const [phrase] = useState(
     () => PHRASES[Math.floor(Math.random() * PHRASES.length)],
   );
@@ -84,56 +85,62 @@ export function WatchlistHero({ displayName, dailyCounts }: WatchlistHeroProps) 
       style={{
         paddingTop: "32px",
         paddingBottom: "28px",
+        borderBottom: `2px solid ${C.accent}`,
         display: "flex",
         flexDirection: "column",
         gap: "24px",
         animation: "fadeInUp 0.5s 0.1s ease both",
       }}
     >
-      <div>
-        <div
-          style={{
-            fontSize: "9px",
-            fontWeight: 700,
-            letterSpacing: "0.28em",
-            textTransform: "uppercase",
-            color: C.text3,
-            fontFamily: C.body,
-            marginBottom: "10px",
-          }}
-        >
-          Welcome back
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px" }}>
+        <div>
+          <div
+            style={{
+              fontSize: "9px",
+              fontWeight: 700,
+              letterSpacing: "0.28em",
+              textTransform: "uppercase",
+              color: C.text3,
+              fontFamily: C.body,
+              marginBottom: "10px",
+            }}
+          >
+            Welcome back
+          </div>
+          <h2
+            style={{
+              fontFamily: C.serif,
+              fontWeight: 400,
+              fontSize: "clamp(1.8rem, 4.5vw, 3rem)",
+              color: C.text1,
+              margin: 0,
+              lineHeight: 1.1,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Hello,{" "}
+            <em style={{ color: C.accent, fontStyle: "normal" }}>{displayName}</em>.
+          </h2>
+          <p
+            style={{
+              fontFamily: C.body,
+              fontSize: "14px",
+              color: C.text2,
+              margin: "10px 0 0",
+              lineHeight: 1.5,
+            }}
+          >
+            {phrase}
+          </p>
         </div>
-        <h2
-          style={{
-            fontFamily: C.serif,
-            fontWeight: 400,
-            fontSize: "clamp(1.8rem, 4.5vw, 3rem)",
-            color: C.text1,
-            margin: 0,
-            lineHeight: 1.1,
-            letterSpacing: "-0.01em",
-          }}
-        >
-          Hello,{" "}
-          <em style={{ color: C.accent, fontStyle: "normal" }}>{displayName}</em>.
-        </h2>
-        <p
-          style={{
-            fontFamily: C.body,
-            fontSize: "14px",
-            color: C.text2,
-            margin: "10px 0 0",
-            lineHeight: 1.5,
-          }}
-        >
-          {phrase}
-        </p>
+        <button onClick={onBack} style={{ ...toggleBtn(false), flexShrink: 0 }}>
+          &larr; Back
+        </button>
       </div>
 
       <div
         className="rsp-wl-heatmap-wrap"
-        style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+        style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}
       >
         <div
           style={{
