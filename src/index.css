@@ -7,6 +7,9 @@ html, body, #root {
   padding: 0;
   width: 100%;
   min-height: 100vh;
+  /* Prevent mobile browsers from zooming the page out to fit transient
+     horizontal overflow (e.g. the rotating radar wrapper on the Metrics tab). */
+  overflow-x: clip;
   /* Match app background so iOS Safari status bar and toolbar fade are dark */
   background-color: #080808;
   color-scheme: dark;
