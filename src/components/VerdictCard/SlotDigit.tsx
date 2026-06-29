@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { memo, useState, useEffect } from "react";
 import { C } from "../../lib/theme.ts";
 import { useSpring } from "./useSpring.ts";
 
@@ -11,7 +11,7 @@ interface SlotDigitProps {
 
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-export function SlotDigit({ digit, color, delay, spinKey }: SlotDigitProps) {
+function SlotDigitImpl({ digit, color, delay, spinKey }: SlotDigitProps) {
   const [target, setTarget] = useState(10 + digit);
   const [prevSpinKey, setPrevSpinKey] = useState(spinKey);
   const [prevDigit, setPrevDigit] = useState(digit);
@@ -78,3 +78,5 @@ export function SlotDigit({ digit, color, delay, spinKey }: SlotDigitProps) {
     </span>
   );
 }
+
+export const SlotDigit = memo(SlotDigitImpl);

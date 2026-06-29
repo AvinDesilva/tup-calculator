@@ -159,10 +159,10 @@ export function useChartData(
   );
   useEffect(() => {
     dispatchChartKey({
-      key: `${priceHistory[priceHistory.length - 1]?.date ?? "empty"}-${currentPrice}`,
+      key: `${priceHistory[priceHistory.length - 1]?.date ?? "empty"}`,
       rolling: rollingDice,
     });
-  }, [priceHistory, currentPrice, rollingDice]);
+  }, [priceHistory, rollingDice]);
 
   // Y-axis domain with 10% padding
   const yDomain = useMemo<[number, number]>(() => {

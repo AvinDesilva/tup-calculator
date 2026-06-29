@@ -47,9 +47,20 @@ export function useFitText(deps: React.DependencyList, minFontSize: number = 6) 
     };
 
     measure();
-    const ro = new ResizeObserver(measure);
+    let rafId = 0;
+    const scheduleMeasure = () => {
+      if (rafId !== 0) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        measure();
+      });
+    };
+    const ro = new ResizeObserver(scheduleMeasure);
     if (containerRef.current) ro.observe(containerRef.current);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (rafId !== 0) cancelAnimationFrame(rafId);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, minFontSize]);
 

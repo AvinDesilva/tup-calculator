@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   ReferenceLine, ResponsiveContainer, Tooltip,
@@ -21,7 +21,7 @@ import { ViewWindowToggle } from "./ViewWindowToggle.tsx";
 // 'done'     → all mounted + no button override (growthScenario wins)
 type IntroPhase = "pending" | GrowthScenario | "done";
 
-export function PriceProjectionGraph({
+function PriceProjectionGraphImpl({
   priceHistory,
   currentPrice,
   scenarioValues,
@@ -319,3 +319,5 @@ export function PriceProjectionGraph({
     </div>
   );
 }
+
+export const PriceProjectionGraph = memo(PriceProjectionGraphImpl);
