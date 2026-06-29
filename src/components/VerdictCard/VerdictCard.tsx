@@ -295,7 +295,7 @@ function VerdictCardImpl({ result, noiseFilter, onGrowthStep, onGrowthSet, curre
         </div>
       </div>
 
-      <div className="rsp-verdict-warnings">
+      <div className="rsp-verdict-warnings" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)" }}>
 
       {/* Payback note — shown when calculation is broken */}
       {result.paybackNote && (
