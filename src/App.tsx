@@ -280,7 +280,7 @@ export default function App() {
 
         {hasSearched && activeTab === "analysis" && (
           <>
-          <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "max-content 2px 1fr", gridTemplateRows: "auto 2px auto auto", gap: "0", alignItems: "start", paddingTop: "12px" }}>
+          <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "clamp(400px, 38vw, 560px) 2px 1fr", gridTemplateRows: "auto 2px auto auto", gap: "0", alignItems: "start", paddingTop: "12px" }}>
 
             {/* Col 1: Verdict */}
             <div className="rsp-left-verdict" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "12px", paddingBottom: "0", animation: "fadeInUp 0.5s 0.15s ease both" }}>
