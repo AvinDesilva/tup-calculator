@@ -27,19 +27,28 @@ export function useSearchCount() {
   const { isAuthenticated } = useAuth();
   const [searchCount, setSearchCount] = useState(() => getCookieInt(SEARCH_COUNT_KEY));
   const [dismissed, setDismissed] = useState(() => getCookie(DISMISSED_KEY) === "1");
+  // The prompt is only armed by a search made in this session; otherwise a
+  // stale count cookie (>= 5 from earlier visits) pops it on bare page load.
+  const [searchedThisSession, setSearchedThisSession] = useState(false);
 
   const incrementSearchCount = useCallback(() => {
     const next = getCookieInt(SEARCH_COUNT_KEY) + 1;
     setCookie(SEARCH_COUNT_KEY, String(next), COUNT_DAYS);
     setSearchCount(next);
+    setSearchedThisSession(true);
   }, []);
 
   const dismissPrompt = useCallback(() => {
     setCookie(DISMISSED_KEY, "1", DISMISS_DAYS);
     setDismissed(true);
+    // Restart the count so the prompt re-arms only after 5 fresh searches
+    // once the dismissal window expires, instead of staying >= 5 forever.
+    setCookie(SEARCH_COUNT_KEY, "0", COUNT_DAYS);
+    setSearchCount(0);
   }, []);
 
-  const shouldShowPrompt = !isAuthenticated && (FORCE_PROMPT || (searchCount >= 5 && !dismissed));
+  const shouldShowPrompt = !isAuthenticated &&
+    (FORCE_PROMPT || (searchedThisSession && searchCount >= 5 && !dismissed));
 
   return { searchCount, incrementSearchCount, shouldShowPrompt, dismissPrompt };
 }
