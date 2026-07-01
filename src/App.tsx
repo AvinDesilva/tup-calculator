@@ -128,7 +128,7 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "instant" });
   };
 
-  const handleGrowthStep = (d: number) => {
+  const handleGrowthStep = useCallback((d: number) => {
     setGrowthScenario("base");
     setInp(p => ({
       ...p,
@@ -139,27 +139,35 @@ export default function App() {
       fwdCAGR: p.fwdCAGR != null ? Math.max(0, p.fwdCAGR + d) : null,
       growthOverrides: {},
     }));
-  };
+  }, [setGrowthScenario, setInp]);
 
-  const handleGrowthSet = (val: number) => {
+  const handleGrowthSet = useCallback((val: number) => {
     setGrowthScenario("base");
-    const adjusted = Math.max(0, val - (inp.dividendYield || 0));
-    setInp(p => ({
-      ...p,
-      historicalGrowth: adjusted,
-      analystGrowth: adjusted,
-      fwdGrowthY1: adjusted,
-      fwdGrowthY2: p.fwdGrowthY2 != null ? adjusted : null,
-      fwdCAGR: p.fwdCAGR != null ? adjusted : null,
-      growthOverrides: {},
-    }));
-  };
+    setInp(p => {
+      const adjusted = Math.max(0, val - (p.dividendYield || 0));
+      return {
+        ...p,
+        historicalGrowth: adjusted,
+        analystGrowth: adjusted,
+        fwdGrowthY1: adjusted,
+        fwdGrowthY2: p.fwdGrowthY2 != null ? adjusted : null,
+        fwdCAGR: p.fwdCAGR != null ? adjusted : null,
+        growthOverrides: {},
+      };
+    });
+  }, [setGrowthScenario, setInp]);
 
-  const onScenarioChange = (s: GrowthScenario) => {
+  const onScenarioChange = useCallback((s: GrowthScenario) => {
     setGrowthScenario(s);
-    const v = scenarioValues[s];
-    setInp(p => ({ ...p, fwdGrowthY1: v.y1, fwdGrowthY2: v.y2, fwdCAGR: v.cagr, growthOverrides: {} }));
-  };
+    setInp(p => {
+      const v = scenarioValues[s];
+      return { ...p, fwdGrowthY1: v.y1, fwdGrowthY2: v.y2, fwdCAGR: v.cagr, growthOverrides: {} };
+    });
+  }, [setGrowthScenario, setInp, scenarioValues]);
+
+  const onPriceModeToggle = useCallback(() => {
+    setPriceMode(m => m === "adj" ? "listed" : "adj");
+  }, []);
 
   if (showMethodology) return <MethodologyPage onBack={() => setShowMethodology(false)} />;
   if (showIntegration) return <IntegrationGuide onBack={() => setShowIntegration(false)} />;
@@ -272,7 +280,7 @@ export default function App() {
 
         {hasSearched && activeTab === "analysis" && (
           <>
-          <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "max-content 2px 1fr", gridTemplateRows: "auto 2px auto auto", gap: "0", alignItems: "start", paddingTop: "12px" }}>
+          <div className="rsp-main-grid" style={{ display: "grid", gridTemplateColumns: "clamp(400px, 38vw, 560px) 2px 1fr", gridTemplateRows: "auto 2px auto auto", gap: "0", alignItems: "start", paddingTop: "12px" }}>
 
             {/* Col 1: Verdict */}
             <div className="rsp-left-verdict" style={{ paddingLeft: "40px", paddingRight: "40px", paddingTop: "12px", paddingBottom: "0", animation: "fadeInUp 0.5s 0.15s ease both" }}>
@@ -292,7 +300,7 @@ export default function App() {
                 onScenarioChange={onScenarioChange}
                 hasScenarioData={hasScenarioData}
                 priceMode={priceMode}
-                onPriceModeToggle={() => setPriceMode(m => m === "adj" ? "listed" : "adj")}
+                onPriceModeToggle={onPriceModeToggle}
                 onGrowthStep={handleGrowthStep}
                 onGrowthSet={handleGrowthSet} />
 

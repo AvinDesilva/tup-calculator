@@ -5,9 +5,10 @@ interface SlotCounterProps {
   animationKey: number;
 }
 
+import { memo } from "react";
 import { SlotDigit } from "./SlotDigit.tsx";
 
-export function SlotCounter({ value, paybackNote, color, animationKey }: SlotCounterProps) {
+function SlotCounterImpl({ value, paybackNote, color, animationKey }: SlotCounterProps) {
   // N/A case
   if (paybackNote) {
     return (
@@ -56,3 +57,5 @@ export function SlotCounter({ value, paybackNote, color, animationKey }: SlotCou
     </>
   );
 }
+
+export const SlotCounter = memo(SlotCounterImpl);

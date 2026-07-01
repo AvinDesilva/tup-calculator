@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { memo, useState, useEffect, useRef } from "react";
 import { VERDICT } from "../../lib/constants.ts";
 import { f } from "../../lib/utils.ts";
 import { useHoldRepeat } from "../primitives";
@@ -8,7 +8,7 @@ import type { VerdictCardProps } from "./VerdictCard.types.ts";
 
 const STUB_MAX_LEN = 34;
 
-export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, currentPrice, growthScenario, onScenarioChange, hasScenarioData, priceMode, onPriceModeToggle, animationKey, companyName }: VerdictCardProps) {
+function VerdictCardImpl({ result, noiseFilter, onGrowthStep, onGrowthSet, currentPrice, growthScenario, onScenarioChange, hasScenarioData, priceMode, onPriceModeToggle, animationKey, companyName }: VerdictCardProps) {
   const companyDisplay = companyName
     ? (companyName.length > STUB_MAX_LEN ? companyName.slice(0, STUB_MAX_LEN - 1).trimEnd() + "…" : companyName)
     : "";
@@ -295,7 +295,7 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
         </div>
       </div>
 
-      <div className="rsp-verdict-warnings">
+      <div className="rsp-verdict-warnings" style={{ contain: "inline-size" }}>
 
       {/* Payback note — shown when calculation is broken */}
       {result.paybackNote && (
@@ -363,3 +363,5 @@ export function VerdictCard({ result, noiseFilter, onGrowthStep, onGrowthSet, cu
     </>
   );
 }
+
+export const VerdictCard = memo(VerdictCardImpl);
