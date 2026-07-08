@@ -4,7 +4,7 @@ import { classifyLifecycle } from "../companyScorecard/lifecycle.ts";
 import type {
   TickerData, HistoricalPricePoint, LifecycleStage, RollFilters,
   FMPProfile, FMPQuote, FMPBalanceSheet, FMPIncomeStatement,
-  FMPEstimate,
+  FMPEstimate, FMPDividend, FMPDividendHistory,
   FMPCashFlow, EpsGrowthPoint,
 } from "../types.ts";
 
@@ -188,6 +188,121 @@ export function deriveShares(
   return fmpSharesOut;
 }
 
+// ─── Forward dividend yield resolver ──────────────────────────────────────────
+// Exported (and pure) so it can be unit-tested directly rather than through a
+// re-implemented copy. Resolves an annualised forward yield via a 3-tier
+// waterfall, most-authoritative first:
+//   1. /dividends history — explicit per-payment amount × payout frequency.
+//   2. quote.dividendYield — only present on some FMP API shapes.
+//   3. profile.lastDividend — FMP stable's trailing annual dividend per share.
+// When the profile reports a dividend but none of the tiers can produce a yield
+// (e.g. the /dividends feed failed and there's no live price), the result is
+// flagged `unavailable` so callers can surface that rather than a silent 0%.
+
+export interface DividendResolution {
+  /** Annualised forward yield as a percentage (e.g. 1.34), or 0 if none/unresolved. */
+  dividendYield: number;
+  divNote: string;
+  /** True when a dividend is known to exist but no yield could be computed. */
+  unavailable: boolean;
+}
+
+const DIV_FREQ_MAP: Record<string, number> = {
+  quarterly: 4, "semi-annual": 2, semiannual: 2, "bi-annual": 2, biannual: 2,
+  monthly: 12, annual: 1, yearly: 1,
+};
+
+/** Infer payout frequency from the spacing of recent dividend records. */
+function inferDivFreq(records: FMPDividend[]): number {
+  if (records.length < 2) return 4;
+  const dates = records.slice(0, 4).map(d => new Date(d.date ?? "").getTime()).sort((a, b) => b - a);
+  const gaps: number[] = [];
+  for (let i = 0; i < dates.length - 1; i++) gaps.push((dates[i] - dates[i + 1]) / (1000 * 60 * 60 * 24));
+  const avgGap = gaps.reduce((s, g) => s + g, 0) / gaps.length;
+  if (avgGap < 45)  return 12;
+  if (avgGap < 110) return 4;
+  if (avgGap < 200) return 2;
+  return 1;
+}
+
+/** Normalise a raw yield value: reject junk (<=0 or >25%), scale fractions to %. */
+function normDivYield(raw: number | null | undefined): number {
+  if (!raw || raw <= 0 || raw > 25) return 0;
+  return raw < 1 ? raw * 100 : raw;
+}
+
+export function resolveDividendYield(args: {
+  divHistory: FMPDividend[] | FMPDividendHistory | null | undefined;
+  quote: Pick<FMPQuote, "dividendYield">;
+  profile: Pick<FMPProfile, "lastDividend" | "lastDiv">;
+  livePrice: number;
+  epsScale: number;
+  fxRate: number;
+  log?: (msg: string) => void;
+}): DividendResolution {
+  const { divHistory, quote, profile, livePrice, epsScale, fxRate } = args;
+  const log = args.log ?? (() => {});
+
+  let dividendYield = 0;
+  let divNote       = "";
+
+  // Tier 1: /dividends endpoint — authoritative (explicit amount + frequency).
+  // Require a recurring pattern (>=2 records) and filter special dividends.
+  const divRecs: FMPDividend[] = Array.isArray(divHistory)
+    ? divHistory
+    : (divHistory?.historical ?? []);
+  if (divRecs.length >= 2 && livePrice > 0) {
+    const amounts = divRecs.map(d => d.adjDividend || d.dividend || 0).filter(a => a > 0);
+    if (amounts.length >= 2) {
+      const latest = amounts[0];
+      const sorted = [...amounts].sort((a, b) => a - b);
+      const mid    = Math.floor(sorted.length / 2);
+      const median = sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      // Latest > 3× median ⇒ likely a special dividend; use the median instead.
+      const wasSpecial = latest > median * 3;
+      const adjDiv     = wasSpecial ? median : latest;
+      const freqStr    = (divRecs[0].frequency || "").toLowerCase().replace(/[^a-z-]/g, "");
+      const multiplier = DIV_FREQ_MAP[freqStr] || inferDivFreq(divRecs);
+      dividendYield    = (adjDiv * multiplier / livePrice) * 100;
+      divNote          = `adjDiv $${adjDiv.toFixed(4)} × ${multiplier} (${divRecs[0].frequency || `inferred×${multiplier}`}) ÷ $${livePrice.toFixed(2)}${wasSpecial ? " [special div filtered]" : ""}`;
+      log(`  ✓ Fwd div yield (dividends): ${dividendYield.toFixed(2)}%`);
+    }
+  } else if (divRecs.length === 1 && livePrice > 0) {
+    log(`  … /dividends — only 1 record, skipping (may be special dividend)`);
+  }
+
+  // Tier 2: quote.dividendYield (present on some FMP shapes, not stable /quote).
+  if (dividendYield === 0) {
+    const y2 = normDivYield(quote.dividendYield);
+    if (y2 > 0) {
+      dividendYield = y2;
+      divNote       = `quote.dividendYield = ${quote.dividendYield}`;
+      log(`  ✓ Fwd div yield (quote): ${dividendYield.toFixed(2)}%`);
+    }
+  }
+
+  // Tier 3: profile.lastDividend — FMP stable's trailing annual dividend per
+  // share (already annualised, so no frequency multiplier). Falls back to the
+  // legacy `lastDiv` alias if present.
+  const profileAnnualDiv = profile.lastDividend ?? profile.lastDiv ?? 0;
+  if (dividendYield === 0 && profileAnnualDiv > 0 && livePrice > 0) {
+    const annualConverted = (profileAnnualDiv / epsScale) * fxRate;
+    dividendYield         = (annualConverted / livePrice) * 100;
+    divNote               = `lastDividend ${profileAnnualDiv.toFixed(4)} ÷ ${epsScale} × ${fxRate.toFixed(4)} ÷ $${livePrice.toFixed(2)}`;
+    log(`  ✓ Fwd div yield (profile lastDividend): ${dividendYield.toFixed(2)}%`);
+  }
+
+  // A dividend is known to exist (profile reports one) but no tier resolved a
+  // yield — surface "unavailable" rather than silently reporting 0%.
+  if (dividendYield === 0 && profileAnnualDiv > 0) {
+    log(`  ⚠ Dividend present (lastDividend=${profileAnnualDiv}) but yield unresolved — marking unavailable`);
+    return { dividendYield: 0, divNote: "Dividend data unavailable", unavailable: true };
+  }
+
+  if (dividendYield === 0) log(`  … No dividend data — yield defaulting to 0.00%`);
+  return { dividendYield, divNote, unavailable: false };
+}
+
 // ─── Quick data fetch (4 endpoints — for dice roll validation) ────────────────
 
 export interface QuickTickerData {
@@ -318,12 +433,11 @@ export async function lookupTickerQuick(ticker: string): Promise<QuickTickerData
   const targetMargin = netMargin > 0 ? Math.min(netMargin * 1.2, 40) : 15;
   const breakEvenYear = netIncome > 0 ? 0 : 2;
 
-  // Dividend yield — simple from quote
-  const normYield = (raw: number | null | undefined): number => {
-    if (!raw || raw <= 0 || raw > 25) return 0;
-    return raw < 1 ? raw * 100 : raw;
-  };
-  const dividendYield = normYield(q.dividendYield);
+  // Dividend yield — screening path skips the /dividends call to stay lean, so
+  // resolve from quote → profile.lastDividend (both already fetched).
+  const { dividendYield } = resolveDividendYield({
+    divHistory: null, quote: q, profile: p, livePrice: price, epsScale: 1, fxRate,
+  });
 
   // Operating margin (percentage)
   const operatingIncome = (inc[0]?.operatingIncome || 0) * fxRate;
@@ -379,7 +493,7 @@ export async function lookupTicker(
 
   log(`Fetching data for ${t} from FMP endpoints...`);
 
-  const [profile, quote, balanceSheet, income, estimates, cashFlows, histData] = await Promise.all([
+  const [profile, quote, balanceSheet, income, estimates, divHistory, cashFlows, histData] = await Promise.all([
     // 1) Company Profile
     fetchFMP<FMPProfile[]>(`profile?symbol=${t}`).then(d => { log("  ✓ /profile — company info, market cap"); return d; }),
 
@@ -402,7 +516,18 @@ export async function lookupTicker(
         return [] as FMPEstimate[];
       }),
 
-    // 6) Cash Flow Statement (12 years — matches income statement window)
+    // 6) Dividend history — authoritative source for forward dividend yield.
+    //    Non-fatal: swallow errors so a missing/free-plan dividend feed can't
+    //    fail the whole lookup (yield then falls back to profile.lastDividend).
+    fetchFMP<FMPDividend[] | FMPDividendHistory>(`dividends?symbol=${t}&limit=8`)
+      .then(d => { log("  ✓ /dividends — dividend history for forward yield"); return d; })
+      .catch(e => {
+        if (e instanceof RateLimitError) throw e;
+        log("  ⚠ /dividends — not available");
+        return [] as FMPDividend[];
+      }),
+
+    // 7) Cash Flow Statement (12 years — matches income statement window)
     fetchFMP<FMPCashFlow[]>(`cash-flow-statement?symbol=${t}&limit=12`)
       .then(d => { log("  ✓ /cash-flow-statement — operating/investing/financing flows"); return d; })
       .catch(e => {
@@ -411,7 +536,7 @@ export async function lookupTicker(
         return [] as FMPCashFlow[];
       }),
 
-    // 7) Historical price (monthly-sampled, last 5 years). Uses /api/historical-price
+    // 8) Historical price (monthly-sampled, last 5 years). Uses /api/historical-price
     //    (a separate proxy route), so 429s come back as r.status — surface them as
     //    RateLimitError to match the FMP path's classification.
     fetch(`/api/historical-price?symbol=${t}`)
@@ -774,33 +899,10 @@ export async function lookupTicker(
   }
 
   // ── Forward Dividend Yield ────────────────────────────────────────────────
-  const normYield = (raw: number | null | undefined): number => {
-    if (!raw || raw <= 0 || raw > 25) return 0;
-    return raw < 1 ? raw * 100 : raw;
-  };
-
-  let dividendYield = 0;
-  let divNote       = "";
-  const livePrice   = q.price || p.price || 0;
-
-  // Tier 1: quote.dividendYield
-  const y1 = normYield(q.dividendYield);
-  if (y1 > 0) {
-    dividendYield = y1;
-    divNote       = `quote.dividendYield = ${q.dividendYield}`;
-    log(`  ✓ Fwd div yield (quote): ${dividendYield.toFixed(2)}%`);
-  }
-
-  // Tier 2: manual from profile.lastDiv
-  if (dividendYield === 0 && p.lastDiv && p.lastDiv > 0 && livePrice > 0) {
-    const freq             = epsScale > 1 ? 2 : 4;
-    const lastDivConverted = (p.lastDiv / epsScale) * fxRate;
-    dividendYield          = (lastDivConverted * freq) / livePrice * 100;
-    divNote                = `lastDiv ${p.lastDiv.toFixed(4)} ÷ ${epsScale} × ${fxRate.toFixed(4)} × ${freq} ÷ $${livePrice.toFixed(2)}`;
-    log(`  ✓ Fwd div yield (lastDiv): ${dividendYield.toFixed(2)}%`);
-  }
-
-  if (dividendYield === 0) log(`  … No dividend data — yield defaulting to 0.00%`);
+  const livePrice = q.price || p.price || 0;
+  const { dividendYield, divNote } = resolveDividendYield({
+    divHistory, quote: q, profile: p, livePrice, epsScale, fxRate, log,
+  });
 
   // ── Valuation indicators ──────────────────────────────────────────────────
   const blendedGrowth   = fallbackHistGrowth;

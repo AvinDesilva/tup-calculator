@@ -6,7 +6,7 @@ import {
   FALLBACK_FX,
   EXCHANGE_CCY,
 } from "../constants.ts";
-import { deriveShares, sanitizedNetIncome } from "./api.ts";
+import { deriveShares, sanitizedNetIncome, resolveDividendYield } from "./api.ts";
 
 // ── A. Currency resolution priority ──────────────────────────────────────────
 // ADR_FINANCIALS_CCY must override FMP-reported "USD" for NYSE-listed ADRs.
@@ -769,61 +769,179 @@ describe("bear/bull analyst EPS scaling", () => {
   });
 });
 
-// ── K. Dividend yield — Tier 3 (profile.lastDiv with epsScale) ───────────────
-// When Tiers 1 and 2 produce no dividend yield, Tier 3 falls back to
-// profile.lastDiv with epsScale-aware conversion (api.ts:789-793):
+// ── K. Forward dividend yield — resolveDividendYield waterfall ───────────────
+// Exercises the REAL production resolver (api.ts) rather than a re-implemented
+// copy, so the tiers can't silently drift out of sync with the pipeline.
 //
-//   const freq             = epsScale > 1 ? 2 : 4;
-//   const lastDivConverted = (p.lastDiv / epsScale) * fxRate;
-//   dividendYield          = (lastDivConverted * freq) / livePrice * 100;
-//
-// epsScale > 1 infers a semi-annual payout (typical for many non-US ADRs);
-// dividing by epsScale converts a per-ordinary-share amount to per-ADR-unit.
+// Regression context: FMP's stable API has no quote.dividendYield field and
+// renamed profile.lastDiv → profile.lastDividend, and commit 8870829 dropped
+// the /dividends tier. Together that made yield resolve to 0% for every
+// dividend payer (e.g. WSM), silently shaving ~1.3pp off the blended rate.
 
-describe("dividend yield Tier 3 — profile.lastDiv with epsScale", () => {
-  function tier3Yield(
-    lastDiv: number,
-    epsScale: number,
-    fxRate: number,
-    livePrice: number,
-  ): number {
-    if (!lastDiv || lastDiv <= 0 || livePrice <= 0) return 0;
-    const freq             = epsScale > 1 ? 2 : 4;
-    const lastDivConverted = (lastDiv / epsScale) * fxRate;
-    return (lastDivConverted * freq) / livePrice * 100;
-  }
-
-  it("domestic / NVO / TSM (epsScale=1): freq=4, no division by epsScale", () => {
-    // epsScale=1 → freq=4 (quarterly assumption), lastDivConverted = lastDiv × fxRate
-    const yld = tier3Yield(1.00, 1, 1, 100);
-    expect(yld).toBeCloseTo((1.00 * 4) / 100 * 100, 4); // 4%
+describe("resolveDividendYield — Tier 1 (/dividends history)", () => {
+  // WSM regression: ~$0.76 quarterly dividend at ~$227.53 ⇒ ~1.34% forward yield.
+  it("WSM resolves to ≈1.3–1.4%, not 0", () => {
+    const res = resolveDividendYield({
+      divHistory: [
+        { date: "2025-05-23", adjDividend: 0.76, frequency: "Quarterly" },
+        { date: "2025-02-21", adjDividend: 0.76, frequency: "Quarterly" },
+        { date: "2024-11-22", adjDividend: 0.66, frequency: "Quarterly" },
+        { date: "2024-08-23", adjDividend: 0.66, frequency: "Quarterly" },
+      ],
+      quote: { dividendYield: undefined },        // stable /quote omits this field
+      profile: { lastDividend: 3.04 },
+      livePrice: 227.53,
+      epsScale: 1,
+      fxRate: 1,
+    });
+    expect(res.dividendYield).toBeGreaterThan(1.3);
+    expect(res.dividendYield).toBeLessThan(1.4);
+    expect(res.dividendYield).toBeCloseTo((0.76 * 4) / 227.53 * 100, 2); // ≈1.336%
+    expect(res.unavailable).toBe(false);
   });
 
-  it("epsScale=8 ticker: freq=2, lastDiv divided by 8 before FX", () => {
-    // epsScale > 1 → freq=2 (semi-annual inference), lastDivConverted = (lastDiv / 8) × fxRate
-    // Models a hypothetical ADR where FMP reports lastDiv per ordinary share in home currency
-    const yld = tier3Yield(8, 8, 0.138, 50);
-    const expected = ((8 / 8) * 0.138 * 2) / 50 * 100;
-    expect(yld).toBeCloseTo(expected, 4);
+  it("filters an outlier special dividend (>3× median) using the median", () => {
+    const res = resolveDividendYield({
+      divHistory: [
+        { date: "2025-05-23", adjDividend: 5.00, frequency: "Quarterly" }, // special
+        { date: "2025-02-21", adjDividend: 0.50, frequency: "Quarterly" },
+        { date: "2024-11-22", adjDividend: 0.50, frequency: "Quarterly" },
+        { date: "2024-08-23", adjDividend: 0.50, frequency: "Quarterly" },
+      ],
+      quote: {},
+      profile: {},
+      livePrice: 100,
+      epsScale: 1,
+      fxRate: 1,
+    });
+    // Uses median $0.50 × 4 / $100 = 2%, not the $5.00 special.
+    expect(res.dividendYield).toBeCloseTo(2, 4);
   });
 
-  it("epsScale=20 ticker: freq=2, lastDiv divided by 20 before FX", () => {
-    // Formula test with epsScale=20 (hypothetical — no current ticker uses this in practice)
-    const yld = tier3Yield(20, 20, 0.058, 25);
-    const expected = ((20 / 20) * 0.058 * 2) / 25 * 100;
-    expect(yld).toBeCloseTo(expected, 4);
+  it("infers frequency from record spacing when the frequency field is absent", () => {
+    const res = resolveDividendYield({
+      divHistory: [
+        { date: "2025-06-01", adjDividend: 0.25 },
+        { date: "2025-03-01", adjDividend: 0.25 },
+        { date: "2024-12-01", adjDividend: 0.25 },
+      ],
+      quote: {},
+      profile: {},
+      livePrice: 50,
+      epsScale: 1,
+      fxRate: 1,
+    });
+    // ~90-day gaps ⇒ quarterly (×4): 0.25 × 4 / 50 = 2%.
+    expect(res.dividendYield).toBeCloseTo(2, 4);
+  });
+});
+
+describe("resolveDividendYield — Tier 2 (quote.dividendYield)", () => {
+  it("scales a fractional quote yield to a percentage", () => {
+    const res = resolveDividendYield({
+      divHistory: null,
+      quote: { dividendYield: 0.0134 },   // fraction form
+      profile: {},
+      livePrice: 227.53,
+      epsScale: 1,
+      fxRate: 1,
+    });
+    expect(res.dividendYield).toBeCloseTo(1.34, 4);
   });
 
-  it("zero lastDiv → yield = 0 regardless of epsScale", () => {
-    expect(tier3Yield(0, 1, 1, 100)).toBe(0);
-    expect(tier3Yield(0, 10, 0.0067, 50)).toBe(0);
+  it("passes through an already-percent quote yield", () => {
+    const res = resolveDividendYield({
+      divHistory: null,
+      quote: { dividendYield: 2.5 },
+      profile: {},
+      livePrice: 100,
+      epsScale: 1,
+      fxRate: 1,
+    });
+    expect(res.dividendYield).toBeCloseTo(2.5, 4);
+  });
+});
+
+describe("resolveDividendYield — Tier 3 (profile.lastDividend)", () => {
+  it("treats stable profile.lastDividend as the annual rate (no frequency multiplier)", () => {
+    const res = resolveDividendYield({
+      divHistory: null,
+      quote: {},
+      profile: { lastDividend: 3.04 },   // trailing annual dividend per share
+      livePrice: 227.53,
+      epsScale: 1,
+      fxRate: 1,
+    });
+    expect(res.dividendYield).toBeCloseTo(3.04 / 227.53 * 100, 4); // ≈1.336%
+    expect(res.unavailable).toBe(false);
   });
 
-  it("epsScale boundary: epsScale=1 uses freq=4, epsScale=2 uses freq=2", () => {
-    const withScale1 = tier3Yield(1, 1, 1, 100);
-    const withScale2 = tier3Yield(1, 2, 1, 100);
-    // freq=4 vs freq=2 (but also divided by 2), so net yield is same
-    expect(withScale1).toBeCloseTo(4, 4);   // (1/1 × 1 × 4) / 100 × 100 = 4%
-    expect(withScale2).toBeCloseTo(1, 4);   // (1/2 × 1 × 2) / 100 × 100 = 1%
+  it("accepts the legacy lastDiv alias when lastDividend is absent", () => {
+    const res = resolveDividendYield({
+      divHistory: null,
+      quote: {},
+      profile: { lastDiv: 3.04 },
+      livePrice: 227.53,
+      epsScale: 1,
+      fxRate: 1,
+    });
+    expect(res.dividendYield).toBeCloseTo(3.04 / 227.53 * 100, 4);
+  });
+
+  it("applies epsScale and fxRate for foreign ADRs", () => {
+    const res = resolveDividendYield({
+      divHistory: null,
+      quote: {},
+      profile: { lastDividend: 8 },      // per-ordinary-share, home currency
+      livePrice: 50,
+      epsScale: 8,
+      fxRate: 0.138,
+    });
+    expect(res.dividendYield).toBeCloseTo((8 / 8) * 0.138 / 50 * 100, 4);
+  });
+});
+
+describe("resolveDividendYield — never silently zero for a known payer", () => {
+  // General guard: any ticker with a nonzero dividend on the profile endpoint
+  // must NOT silently resolve to 0% — either a real yield or "unavailable".
+  it("surfaces 'unavailable' when a dividend exists but no yield can be computed", () => {
+    const res = resolveDividendYield({
+      divHistory: [],                     // /dividends feed failed / empty
+      quote: {},                          // no quote yield
+      profile: { lastDividend: 3.04 },    // profile confirms a dividend exists
+      livePrice: 0,                       // …but no live price to compute against
+      epsScale: 1,
+      fxRate: 1,
+    });
+    expect(res.dividendYield).toBe(0);
+    expect(res.unavailable).toBe(true);
+    expect(res.divNote).toMatch(/unavailable/i);
+  });
+
+  it("falls back to the profile yield when the /dividends feed is empty but a price exists", () => {
+    const res = resolveDividendYield({
+      divHistory: [],
+      quote: {},
+      profile: { lastDividend: 3.04 },
+      livePrice: 227.53,
+      epsScale: 1,
+      fxRate: 1,
+    });
+    // Must not silently zero out — resolves via Tier 3 instead.
+    expect(res.dividendYield).toBeGreaterThan(0);
+    expect(res.unavailable).toBe(false);
+  });
+
+  it("returns a clean 0 (not 'unavailable') for a genuine non-payer", () => {
+    const res = resolveDividendYield({
+      divHistory: [],
+      quote: {},
+      profile: {},                        // no dividend anywhere
+      livePrice: 100,
+      epsScale: 1,
+      fxRate: 1,
+    });
+    expect(res.dividendYield).toBe(0);
+    expect(res.unavailable).toBe(false);
   });
 });

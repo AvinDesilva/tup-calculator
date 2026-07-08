@@ -95,6 +95,9 @@ export interface FMPProfile {
   sector?: string;
   industry?: string;
   mktCap?: number;
+  /** FMP stable /profile: trailing annual dividend per share. */
+  lastDividend?: number;
+  /** Legacy FMP v3 field name for the dividend rate — kept as a fallback alias. */
   lastDiv?: number;
   price?: number;
   beta?: number;
@@ -149,6 +152,17 @@ export interface FMPEstimate {
 }
 
 
+
+export interface FMPDividend {
+  adjDividend?: number;
+  dividend?: number;
+  frequency?: string;
+  date?: string;
+}
+
+export interface FMPDividendHistory {
+  historical?: FMPDividend[];
+}
 
 export interface FMPCashFlow {
   calendarYear?: string | number;
