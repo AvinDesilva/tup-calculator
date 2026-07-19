@@ -45,6 +45,8 @@ function VerdictCardImpl({ result, noiseFilter, onGrowthStep, onGrowthSet, curre
   if (!result) return null;
   const v   = VERDICT[result.verdict];
   const paybackPct = Math.min(100, ((result.payback || 30) / 30) * 100);
+  // Machine-readable payback (SlotCounter's DOM is animation strips, not parseable text)
+  const paybackValue = result.paybackNote ? "N/A" : result.payback == null ? "30+" : String(result.payback);
 
   const labelStyle = {
     fontSize: "13px", fontWeight: 700, letterSpacing: "0.15em",
@@ -84,7 +86,7 @@ function VerdictCardImpl({ result, noiseFilter, onGrowthStep, onGrowthSet, curre
         <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase", color: "#888888", marginBottom: "16px" }}>
           Ignore the price. Focus on
         </div>
-        <div style={{
+        <div data-agent-target="payback-years" data-agent-value={paybackValue} style={{
           fontFamily: "'DM Serif Display', serif", fontWeight: 400,
           fontSize: result.paybackNote ? "clamp(2.64rem, 8.8vw, 5.28rem)" : "clamp(4.4rem, 12.32vw, 7.92rem)", lineHeight: 1,
           letterSpacing: "-0.03em",
@@ -111,7 +113,7 @@ function VerdictCardImpl({ result, noiseFilter, onGrowthStep, onGrowthSet, curre
     <>
       {/* Giant number + verdict label */}
       <div className="rsp-verdict-hero" style={{ display: "flex", alignItems: "flex-end", gap: "20px", marginBottom: "12px" }}>
-        <div className="rsp-verdict-num" style={{
+        <div className="rsp-verdict-num" data-agent-target="payback-years" data-agent-value={paybackValue} style={{
           fontFamily: "'DM Serif Display', serif", fontWeight: 400,
           fontSize: result.paybackNote ? "clamp(2.64rem, 8.8vw, 5.28rem)" : "clamp(4.4rem, 12.32vw, 7.92rem)", lineHeight: 1,
           letterSpacing: "-0.03em",
@@ -120,7 +122,10 @@ function VerdictCardImpl({ result, noiseFilter, onGrowthStep, onGrowthSet, curre
         </div>
         <div style={{ paddingBottom: "8px", minWidth: 0, flex: 1 }}>
           <div className="rsp-verdict-label" style={{ fontSize: "22px", fontWeight: 700, color: v.color, letterSpacing: "-0.01em", fontFamily: "'Barlow Condensed', sans-serif" }}>
-            {isSpinning ? (arrowUp ? "▲" : "▼") : v.icon} {v.label}
+            {isSpinning ? (arrowUp ? "▲" : "▼") : v.icon}{" "}
+            <output data-agent-target="tup-verdict" data-agent-value={result.verdict} style={{ font: "inherit", color: "inherit" }}>
+              {v.label}
+            </output>
           </div>
           <div ref={fitMainContainer} style={{ marginTop: "4px", maxWidth: "100%", overflow: "hidden" }}>
             <div ref={fitMainInner} className="rsp-verdict-sub" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#6a6a6a", whiteSpace: "nowrap" }}>
@@ -176,7 +181,7 @@ function VerdictCardImpl({ result, noiseFilter, onGrowthStep, onGrowthSet, curre
                     <span style={{ fontSize: "10px", color: "#555" }}>→</span>
                   </>
                 )}
-                <span style={valueStyle}>${f(result.adjPrice)}</span>
+                <output data-agent-target="adjusted-price" aria-live="off" style={valueStyle}>{`$${f(result.adjPrice)}`}</output>
               </>
             ) : (
               <span style={valueStyle}>${f(currentPrice)}</span>
@@ -186,7 +191,7 @@ function VerdictCardImpl({ result, noiseFilter, onGrowthStep, onGrowthSet, curre
         {/* EPS Base */}
         <div style={{ padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={labelStyle}>EPS Base</div>
-          <div style={valueStyle}>${f(result.epsBase)}</div>
+          <div style={valueStyle}><output data-agent-target="base-eps" aria-live="off">{`$${f(result.epsBase)}`}</output></div>
         </div>
         {/* Growth + step buttons */}
         <div style={{ padding: "10px 0" }}>
@@ -197,6 +202,7 @@ function VerdictCardImpl({ result, noiseFilter, onGrowthStep, onGrowthSet, curre
                 // eslint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
                 aria-label="Edit growth rate"
+                data-agent-target="blended-growth"
                 value={editGrowthVal}
                 onChange={e => {
                   const s = e.target.value;
@@ -226,6 +232,8 @@ function VerdictCardImpl({ result, noiseFilter, onGrowthStep, onGrowthSet, curre
               <button
                 onClick={() => { setEditingGrowth(true); setEditGrowthVal(f(grPct)); }}
                 aria-label={`Edit growth rate, currently ${f(grPct)}%`}
+                data-agent-target="blended-growth"
+                data-agent-value={f(grPct)}
                 style={{
                   background: "none", border: "none", padding: "1px 2px",
                   fontFamily: "'JetBrains Mono', monospace", fontSize: "15px", fontWeight: 600, color: "#10d97e",
@@ -322,7 +330,7 @@ function VerdictCardImpl({ result, noiseFilter, onGrowthStep, onGrowthSet, curre
               <div style={{ fontSize: "11px", fontWeight: 700, color: "#00BFA5", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>
                 Technically Sound
               </div>
-              <p style={{ fontSize: "11px", color: "rgba(0,191,165,0.7)", lineHeight: 1.75, margin: 0 }}>
+              <p data-agent-target="momentum-score" data-agent-value="above-200d-sma" style={{ fontSize: "11px", color: "rgba(0,191,165,0.7)", lineHeight: 1.75, margin: 0 }}>
                 Price is trading above the 200-day SMA{result.sma200 > 0 ? ` of $${f(result.sma200)}` : ""}, confirming an uptrend.
               </p>
             </div>
@@ -337,7 +345,7 @@ function VerdictCardImpl({ result, noiseFilter, onGrowthStep, onGrowthSet, curre
               <div style={{ fontSize: "11px", fontWeight: 700, color: "#f5a020", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>
                 Warning: Technically Weak
               </div>
-              <p style={{ fontSize: "11px", color: "#d4923c", lineHeight: 1.75, margin: 0 }}>
+              <p data-agent-target="momentum-score" data-agent-value="below-200d-sma" style={{ fontSize: "11px", color: "#d4923c", lineHeight: 1.75, margin: 0 }}>
                 The math suggests a Buy, but the stock is in a downtrend (trading below its 200-day SMA
                 {result.sma200 > 0 ? ` of $${f(result.sma200)}` : ""}).{" "}
                 Consider scaling in <strong style={{ color: "#f5a020" }}>only after price stabilizes above the 200-day SMA</strong>.
@@ -349,7 +357,7 @@ function VerdictCardImpl({ result, noiseFilter, onGrowthStep, onGrowthSet, curre
       {result.fallingKnife && result.verdict === "avoid" && (
         <div style={{ marginTop: "12px", padding: "10px 14px", borderLeft: "2px solid #ff4136", borderTop: "1px solid rgba(255,65,54,0.15)", borderRight: "1px solid rgba(255,65,54,0.15)", borderBottom: "1px solid rgba(255,65,54,0.15)", display: "flex", gap: "8px", alignItems: "center" }}>
           <span style={{ color: "#ff4136" }}>⚠</span>
-          <span style={{ fontSize: "11px", color: "#ff4136" }}>Falling Knife — Price below 200-day SMA. Technical avoid.</span>
+          <span data-agent-target="momentum-score" data-agent-value="below-200d-sma" style={{ fontSize: "11px", color: "#ff4136" }}>Falling Knife — Price below 200-day SMA. Technical avoid.</span>
         </div>
       )}
       {result.tamWarning && (

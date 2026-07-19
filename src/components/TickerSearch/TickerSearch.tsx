@@ -15,7 +15,7 @@ export function TickerSearch({
   const [isLoading, setIsLoading] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLFormElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const suppressRef = useRef(false);
   const hasFocusRef = useRef(false);
@@ -133,15 +133,22 @@ export function TickerSearch({
   }, [showDropdown, updatePosition]);
 
   return (
-    <div ref={containerRef} style={{ position: "relative", width: "100%", flex: 1, minWidth: 0 }}>
+    <form
+      ref={containerRef}
+      role="search"
+      onSubmit={e => { e.preventDefault(); onSubmit(); }}
+      style={{ position: "relative", width: "100%", flex: 1, minWidth: 0, margin: 0 }}
+    >
       <input
         type="text"
+        id="ticker-input"
+        name="ticker"
         role="combobox"
         aria-autocomplete="list"
         aria-expanded={showDropdown}
         aria-controls={listboxId}
         aria-activedescendant={activeIndex >= 0 ? `ticker-option-${activeIndex}` : undefined}
-        aria-label="Search by company name or ticker symbol"
+        aria-label="Enter stock ticker"
         value={value}
         onChange={e => onChange(e.target.value.toUpperCase())}
         onKeyDown={handleKeyDown}
@@ -159,6 +166,10 @@ export function TickerSearch({
         autoFocus={autoFocus}
         style={inputStyle}
       />
+      {/* Hidden submit target for automated agents; Enter is handled in onKeyDown */}
+      <button type="submit" className="sr-only" tabIndex={-1}>
+        Search
+      </button>
       <div className="sr-only" aria-live="polite">
         {showDropdown && !isLoading && results.length > 0 ? `${results.length} results available` : ""}
       </div>
@@ -173,6 +184,6 @@ export function TickerSearch({
         listRef={listRef}
         listboxId={listboxId}
       />
-    </div>
+    </form>
   );
 }
